@@ -30,7 +30,7 @@ public interface ServidorMapper {
     @Mapping(target = "dataDesligamento", ignore = true)
     Servidor toEntity(ServidorRequestDTO dto);
 
-    ServidorResponseDTO toDto(Servidor entity);
+    ServidorResponseDTO toDTO(Servidor entity);
 
     // Mapeamento para Update (PUT)
     @Mapping(source = "cargoId", target = "cargo.id")
