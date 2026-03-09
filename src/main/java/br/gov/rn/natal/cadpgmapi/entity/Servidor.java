@@ -15,7 +15,7 @@ import java.util.Set;
 public class Servidor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Integer id;
 
     @Column(nullable = false, length = 150)
     private String nome;
@@ -63,7 +63,7 @@ public class Servidor {
     @JoinColumn(name = "vinculo_id")
     private Vinculo vinculo;
 
-    // Relacionamentos N:N mapeando as tabelas associativas do diagrama
+    // Relacionamentos NN mapeando as tabelas associativas do diagrama
     @ManyToMany
     @JoinTable(name = "servidor_sistema",
             joinColumns = @JoinColumn(name = "servidor_id"),
