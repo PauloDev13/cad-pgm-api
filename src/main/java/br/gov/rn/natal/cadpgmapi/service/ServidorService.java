@@ -3,18 +3,28 @@ package br.gov.rn.natal.cadpgmapi.service;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
+import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
+import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.mapper.ServidorMapper;
+import br.gov.rn.natal.cadpgmapi.repository.AliasRepository;
+import br.gov.rn.natal.cadpgmapi.repository.ProcuradorRepository;
 import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
+import br.gov.rn.natal.cadpgmapi.repository.SistemaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class ServidorService {
     private final ServidorRepository servidorRepository;
+    private final SistemaRepository sistemaRepository;
+    private final AliasRepository aliasRepository;
+    private final ProcuradorRepository procuradorRepository;
     private final ServidorMapper servidorMapper;
 
     @Transactional
@@ -40,13 +50,18 @@ public class ServidorService {
 
     @Transactional
     public ServidorResponseDTO update(Integer id, ServidorRequestDTO dto) {
+        // 1. Busca a entidade existente no banco (Entity em estado 'Managed' pelo Hibernate)
         Servidor entity = servidorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
 
         // Em um cenário real, usar mapper.updateEntityFromDTO(dto, entity)
 //        entity.setNome(dto.nome());
-        // ... atualiza demais campos
+
+        // 2. Atualiza os dados básicos e relacionamentos N:1 mapeados usando MapStruct
         servidorMapper.updateEntityFromDTO(dto, entity);
+
+        // 3. Reassocia as coleções N para N (Sistemas, Aliases, Procuradores) tratadas via Service
+        associarRelacoesMuitosParaMuitos(entity, dto);
 
         return servidorMapper.toDTO(servidorRepository.save(entity));
     }
@@ -58,5 +73,32 @@ public class ServidorService {
         }
         servidorRepository.deleteById(id);
     }
-}
+
+    /**
+     * Recebe a entidade (já mapeada com os dados básicos pelo MapStruct)
+     * e os IDs vindos do DTO para fazer a associação otimizada.
+     */
+    private void associarRelacoesMuitosParaMuitos(Servidor entity, ServidorRequestDTO dto) {
+
+        // Associa Sistemas
+        if (dto.sistemaIds() != null) {
+            entity.setSistemas(dto.sistemaIds().stream()
+                    .map(sistemaRepository::getReferenceById) // Otimização: cria proxy sem SELECT
+                    .collect(Collectors.toSet()));
+        }
+
+        // Associa Aliases de E-mail
+        if (dto.aliasIds() != null) {
+            entity.setAliases(dto.aliasIds().stream()
+                    .map(aliasRepository::getReferenceById)
+                    .collect(Collectors.toSet()));
+        }
+
+        // Associa Procuradores
+        if (dto.procuradorIds() != null) {
+            entity.setProcuradores(dto.procuradorIds().stream()
+                    .map(procuradorRepository::getReferenceById)
+                    .collect(Collectors.toSet()));
+        }
+    }
 }
