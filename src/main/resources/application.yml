@@ -4,11 +4,11 @@ spring:
   datasource:
     url: jdbc:mariadb://localhost:3306/cad_serv_pgm_db
     username: root
-    password: password
+    password: root
     driver-class-name: org.mariadb.jdbc.Driver
   jpa:
     hibernate:
-      ddl-auto: validate # 'none' ou 'validate' para produção
+      ddl-auto: validate # 'none' ou 'validate' para produÃ§Ã£o
     show-sql: true
     open-in-view: false
     properties:
