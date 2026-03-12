@@ -32,6 +32,11 @@ public class ServidorService {
         if (servidorRepository.existsByCpf(dto.cpf())) {
             throw new BusinessException("Já existe um servidor cadastrado com este CPF.");
         }
+
+        if (servidorRepository.existsByMatricula(dto.matricula())) {
+            throw new BusinessException("Já existe um servidor cadastrado com esta Matrícula.");
+        }
+
         Servidor entity = servidorMapper.toEntity(dto);
         return servidorMapper.toDTO(servidorRepository.save(entity));
     }
@@ -41,6 +46,30 @@ public class ServidorService {
         Servidor entity = servidorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
         return servidorMapper.toDTO(entity);
+    }
+
+    @Transactional(readOnly = true)
+    public ServidorResponseDTO findByCpfOrMatricula(String cpf, String matricula) {
+        // Se enviou o CPF, prioriza a busca por CPF
+        if (cpf != null && !cpf.isBlank()) {
+            return servidorRepository.findByCpf(cpf)
+                    .map(servidorMapper::toDTO)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Servidor não encontrado com o CPF: " + cpf
+                    ));
+        }
+
+        // Se não enviou CPF, mas enviou Matrícula, busca por Matrícula
+        if (matricula != null && !matricula.isBlank()) {
+            return servidorRepository.findByMatricula(matricula)
+                    .map(servidorMapper::toDTO)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Servidor não encontrado com a Matrícula: " + matricula
+                    ));
+        }
+
+        // Se não enviou nenhum dos dois, lança um erro de regra de negócio
+        throw new BusinessException("É obrigatório informar o CPF ou a Matrícula para realizar a busca.");
     }
 
     @Transactional(readOnly = true)
