@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,8 +38,22 @@ public class ServidorService {
             throw new BusinessException("Já existe um servidor cadastrado com esta Matrícula.");
         }
 
+//        Servidor entity = servidorMapper.toEntity(dto);
+//        return servidorMapper.toDTO(servidorRepository.save(entity));
+
+        // 1. Converte o DTO para Entidade
         Servidor entity = servidorMapper.toEntity(dto);
-        return servidorMapper.toDTO(servidorRepository.save(entity));
+
+        // 2. SALVA PRIMEIRO! (Isso gera o ID do Servidor no banco de dados)
+        // Agora a entidade está "Managed" e tem um ID válido.
+        entity = servidorRepository.save(entity);
+
+        // 3. Associa as relações N:N (Sistemas, Aliases, Procuradores)
+        associarRelacoesMuitosParaMuitos(entity, dto);
+
+        // O Hibernate, ao final do méthod @Transactional, vai perceber que
+        // as listas mudaram e vai fazer os INSERTs nas tabelas de junção sozinho!
+        return servidorMapper.toDTO(entity);
     }
 
     @Transactional(readOnly = true)
@@ -108,26 +123,53 @@ public class ServidorService {
      * e os IDs vindos do DTO para fazer a associação otimizada.
      */
     private void associarRelacoesMuitosParaMuitos(Servidor entity, ServidorRequestDTO dto) {
-
         // Associa Sistemas
-        if (dto.sistemaIds() != null) {
-            entity.setSistemas(dto.sistemaIds().stream()
-                    .map(sistemaRepository::getReferenceById) // Otimização: cria proxy sem SELECT
-                    .collect(Collectors.toSet()));
+        if (dto.sistemaIds() != null && !dto.sistemaIds().isEmpty()) {
+            // Cria uma lista caso ela seja nula ou limpa a lista se ela existir
+            if (entity.getSistemas() == null) {
+                entity.setSistemas(new HashSet<>());
+            } else {
+                entity.getSistemas().clear();
+            }
+
+            dto.sistemaIds().forEach(id -> {
+                entity.getSistemas().add(sistemaRepository.getReferenceById(id));
+            });
+//            entity.setSistemas(dto.sistemaIds().stream()
+//                    .map(sistemaRepository::getReferenceById) // Otimização: cria proxy sem SELECT
+//                    .collect(Collectors.toSet()));
         }
 
         // Associa Aliases de E-mail
-        if (dto.aliasIds() != null) {
-            entity.setAliases(dto.aliasIds().stream()
-                    .map(aliasRepository::getReferenceById)
-                    .collect(Collectors.toSet()));
+        if (dto.aliasIds() != null && !dto.aliasIds().isEmpty()) {
+            if (entity.getAliases() == null) {
+                entity.setAliases(new HashSet<>());
+            } else {
+                entity.getAliases().clear();
+            }
+
+            dto.aliasIds().forEach(id -> {
+                entity.getAliases().add(aliasRepository.getReferenceById(id));
+            });
+//            entity.setAliases(dto.aliasIds().stream()
+//                    .map(aliasRepository::getReferenceById)
+//                    .collect(Collectors.toSet()));
         }
 
         // Associa Procuradores
-        if (dto.procuradorIds() != null) {
-            entity.setProcuradores(dto.procuradorIds().stream()
-                    .map(procuradorRepository::getReferenceById)
-                    .collect(Collectors.toSet()));
+        if (dto.procuradorIds() != null && !dto.procuradorIds().isEmpty()) {
+            if (entity.getProcuradores() == null) {
+                entity.setProcuradores(new HashSet<>());
+            } else {
+                entity.getProcuradores().clear();
+            }
+
+            dto.procuradorIds().forEach(id -> {
+                entity.getProcuradores().add(procuradorRepository.getReferenceById(id));
+            });
+//            entity.setProcuradores(dto.procuradorIds().stream()
+//                    .map(procuradorRepository::getReferenceById)
+//                    .collect(Collectors.toSet()));
         }
     }
 }

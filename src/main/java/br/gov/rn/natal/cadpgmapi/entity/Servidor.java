@@ -68,6 +68,7 @@ public class Servidor {
     @JoinTable(name = "servidor_sistema",
             joinColumns = @JoinColumn(name = "servidor_id"),
             inverseJoinColumns = @JoinColumn(name = "sistema_id"))
+    @Builder.Default
     private Set<Sistema> sistemas = new HashSet<>();
 
     @ManyToMany
