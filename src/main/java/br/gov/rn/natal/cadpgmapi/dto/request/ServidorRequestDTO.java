@@ -29,7 +29,7 @@ public record ServidorRequestDTO(
         @Size(max = 100)
         String emailPessoal,
 
-        @Email(message = "E-mail pessoal inválido")
+        @Email(message = "E-mail institucional inválido")
         @Size(max = 100)
         String emailInstitucional,
 
@@ -41,19 +41,19 @@ public record ServidorRequestDTO(
 
         // IDs das relações N:1
         @NotNull(message = "O cargo é obrigatório")
-        int cargoId,
+        Integer cargoId,
 
         @NotNull(message = "O setor é obrigatório")
-        int setorId,
+        Integer setorId,
 
         @NotNull(message = "A lotação é obrigatória")
-        int lotacaoId,
+        Integer lotacaoId,
 
         @NotNull(message = "O status é obrigatório")
-        int vinculoId,
+        Integer vinculoId,
 
         @NotNull(message = "O vínculo é obrigatório")
-        int statusId,
+        Integer statusId,
 
         // IDs das relações N:N
         Set<Integer>sistemaIds,

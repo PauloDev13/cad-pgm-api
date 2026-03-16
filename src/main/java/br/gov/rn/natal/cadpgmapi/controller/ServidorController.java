@@ -26,7 +26,7 @@ public class ServidorController {
 
     @PostMapping
     @Operation(summary = "Cadastrar novo servidor")
-    public ResponseEntity<ServidorResponseDTO> create(@RequestBody @Valid ServidorRequestDTO dto) {
+    public ResponseEntity<ServidorResponseDTO> create(@Valid @RequestBody ServidorRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(dto));
     }
 
