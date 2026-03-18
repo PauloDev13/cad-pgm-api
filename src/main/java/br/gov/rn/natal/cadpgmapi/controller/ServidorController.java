@@ -33,7 +33,7 @@ public class ServidorController {
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}").buildAndExpand(novoServidor.id()).toUri();
 
-        return ResponseEntity.created(location).body(service.create(dto));
+        return ResponseEntity.created(location).body(novoServidor);
     }
 
     @GetMapping
