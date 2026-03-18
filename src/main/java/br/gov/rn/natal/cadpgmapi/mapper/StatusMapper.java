@@ -6,6 +6,8 @@ import br.gov.rn.natal.cadpgmapi.entity.Status;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 
+import java.util.List;
+
 @Mapper(componentModel = "spring")
 public interface StatusMapper {
     Status toEntity(StatusRequestDTO dto);
@@ -16,4 +18,6 @@ public interface StatusMapper {
             Status entity,
             StatusRequestDTO dto
     );
+
+    List<StatusResponseDTO> toDtoList(List<Status> entities);
 }

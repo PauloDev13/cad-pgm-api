@@ -6,6 +6,8 @@ import br.gov.rn.natal.cadpgmapi.entity.Vinculo;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 
+import java.util.List;
+
 @Mapper(componentModel = "spring")
 public interface VinculoMapper {
     Vinculo toEntity(VinculoRequestDTO dto);
@@ -16,4 +18,6 @@ public interface VinculoMapper {
             Vinculo entity,
             VinculoRequestDTO dto
     );
+
+    List<VinculoResponseDTO> toDtoList(List<Vinculo> entities);
 }

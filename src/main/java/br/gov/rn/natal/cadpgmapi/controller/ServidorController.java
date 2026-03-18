@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/servidores")
 @RequiredArgsConstructor
 @Tag(name = "Servidores", description = "API de Gestão de Servidores")
-
 public class ServidorController {
     private final ServidorService service;
 

@@ -6,6 +6,8 @@ import br.gov.rn.natal.cadpgmapi.entity.Procurador;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 
+import java.util.List;
+
 @Mapper(componentModel = "spring")
 public interface ProcuradorMapper {
     Procurador toEntity(ProcuradorRequestDTO dto);
@@ -16,4 +18,6 @@ public interface ProcuradorMapper {
             Procurador entity,
             ProcuradorRequestDTO dto
     );
+
+    List<ProcuradorResponseDTO> toDtoList(List<Procurador> entities);
 }

@@ -6,6 +6,8 @@ import br.gov.rn.natal.cadpgmapi.entity.Setor;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 
+import java.util.List;
+
 @Mapper(componentModel = "spring")
 public interface SetorMapper {
     Setor toEntity(SetorRequestDTO dto);
@@ -16,4 +18,7 @@ public interface SetorMapper {
             Setor entity,
             SetorRequestDTO dto
     );
+
+    // EGera um "for" chamando o méthod toDTO(entity) para cada item!
+    List<SetorResponseDTO> toDtoList(List<Setor> entities);
 }
