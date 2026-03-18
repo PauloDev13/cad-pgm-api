@@ -15,6 +15,9 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
 
 @RestController
 @RequestMapping("/api/v1/servidores")
@@ -26,43 +29,47 @@ public class ServidorController {
     @PostMapping
     @Operation(summary = "Cadastrar novo servidor")
     public ResponseEntity<ServidorResponseDTO> create(@Valid @RequestBody ServidorRequestDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(dto));
+        ServidorResponseDTO novoServidor = service.create(dto);
+        // Monta a URL dinâmica: http://localhost:8080/api/v1/cargoes/5
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}").buildAndExpand(novoServidor.id()).toUri();
+
+        return ResponseEntity.created(location).body(service.create(dto));
     }
 
     @GetMapping
     @Operation(summary = "Listar servidores com paginação")
-    public ResponseEntity<Page<ServidorResponseDTO>> findAll(
+    public Page<ServidorResponseDTO> findAll(
             @ParameterObject
             @PageableDefault(sort = "nome", direction = Sort.Direction.ASC)
             Pageable pageable
     ) {
-        return ResponseEntity.ok(service.findAll(pageable));
+        return service.findAll(pageable);
     }
 
     @GetMapping("/busca")
     @Operation(summary = "Buscar servidor por CPF ou Matrícula",
             description = "Informe o CPF ou a Matrícula via query parameter. Exemplo: /busca?cpf=00011122233")
-    public ResponseEntity<ServidorResponseDTO> findByCpfOrMatricula(
+    public ServidorResponseDTO findByCpfOrMatricula(
             @RequestParam(required = false) String cpf,
             @RequestParam(required = false) String matricula) {
 
-        ServidorResponseDTO response = service.findByCpfOrMatricula(cpf, matricula);
-        return ResponseEntity.ok(response);
+        return service.findByCpfOrMatricula(cpf, matricula);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Buscar servidor por ID")
-    public ResponseEntity<ServidorResponseDTO> findById(@PathVariable Integer id) {
-        return ResponseEntity.ok(service.findById(id));
+    public ServidorResponseDTO findById(@PathVariable Integer id) {
+        return service.findById(id);
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Atualizar servidor existente")
-    public ResponseEntity<ServidorResponseDTO> update(
+    public ServidorResponseDTO update(
             @PathVariable Integer id,
             @RequestBody @Valid ServidorRequestDTO dto
     ) {
-        return ResponseEntity.ok(service.update(id, dto));
+        return service.update(id, dto);
     }
 
     @DeleteMapping("/{id}")
