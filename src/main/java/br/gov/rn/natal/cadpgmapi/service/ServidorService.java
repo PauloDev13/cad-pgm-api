@@ -39,10 +39,7 @@ public class ServidorService {
             throw new BusinessException("Já existe um servidor cadastrado com esta Matrícula.");
         }
 
-//        Servidor entity = servidorMapper.toEntity(dto);
-//        return servidorMapper.toDTO(servidorRepository.save(entity));
-
-        // 1. Converte o DTO para Entidade
+        // Converte o DTO para Entidade
         Servidor entity = servidorMapper.toEntity(dto);
 
         // 2. SALVA PRIMEIRO! (Isso gera o ID do Servidor no banco de dados)
@@ -72,26 +69,31 @@ public class ServidorService {
         Specification<Servidor> spec = (root, query, cb) -> {
             Predicate predicate = cb.conjunction(); // Começa neutro (1=1)
 
+            // Se o CPF for imformado, monta o SQL de busca por CPF
             if (cpf != null && !cpf.trim().isEmpty()) {
                 predicate = cb.and(predicate, cb.like(root.get("cpf"), "%" + cpf.trim() + "%"));
             }
 
+            // Se a Matrícula for imformada, monta o SQL de busca por matrícula
             if (matricula != null && !matricula.trim().isEmpty()) {
                 predicate = cb.and(predicate, cb.like(
                         cb.lower(root.get("matricula")), "%" + matricula.trim().toLowerCase() + "%")
                 );
             }
 
+            // Se o ID do Status for imformado, monta o SQL de busca pelo ID do Status
             if (statusId != null) {
                 predicate = cb.and(predicate, cb.equal(root.get("status").get("id"), statusId));
             }
 
-            return predicate; // <-- RETORNO 1: Encerra a montagem das regras
+            // Encerra a montagem das regras
+            return predicate;
         };
 
         // BLOCO DE EXECUÇÃO: Vai no banco e converte para DTO
+        // O retorno real que vai para o Controller
         return servidorRepository.findAll(spec, pageable)
-                .map(servidorMapper::toDTO); // <-- RETORNO 2: O retorno real que vai para o Controller
+                .map(servidorMapper::toDTO);
     }
 
     @Transactional(readOnly = true)
@@ -111,13 +113,10 @@ public class ServidorService {
             }
         }
 
-        // Em um cenário real, usar mapper.updateEntityFromDTO(dto, entity)
-//        entity.setNome(dto.nome());
-
-        // 2. Atualiza os dados básicos e relacionamentos N:1 mapeados usando MapStruct
+        // Atualiza os dados básicos e relacionamentos N:1 mapeados usando MapStruct
         servidorMapper.updateEntityFromDTO(dto, entity);
 
-        // 3. Reassocia as coleções N para N (Sistemas, Aliases, Procuradores) tratadas via Service
+        // Reassocia as coleções N para N (Sistemas, Aliases, Procuradores) tratadas via Service
         associarRelacoesMuitosParaMuitos(entity, dto);
 
         return servidorMapper.toDTO(servidorRepository.save(entity));
@@ -136,8 +135,10 @@ public class ServidorService {
      * e os IDs vindos do DTO para fazer a associação otimizada.
      */
     private void associarRelacoesMuitosParaMuitos(Servidor entity, ServidorRequestDTO dto) {
+
         // Associa Sistemas
         if (dto.sistemaIds() != null && !dto.sistemaIds().isEmpty()) {
+
             // Cria uma lista caso ela seja nula ou limpa a lista se ela existir
             if (entity.getSistemas() == null) {
                 entity.setSistemas(new HashSet<>());
@@ -145,6 +146,7 @@ public class ServidorService {
                 entity.getSistemas().clear();
             }
 
+            // Adiciona os IDs à tabela de junção
             dto.sistemaIds().forEach(id -> {
                 entity.getSistemas().add(sistemaRepository.getReferenceById(id));
             });

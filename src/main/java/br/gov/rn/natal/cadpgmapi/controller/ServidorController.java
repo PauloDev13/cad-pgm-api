@@ -29,7 +29,9 @@ public class ServidorController {
     @Operation(summary = "Cadastrar novo servidor")
     public ResponseEntity<ServidorResponseDTO> create(@Valid @RequestBody ServidorRequestDTO dto) {
         ServidorResponseDTO novoServidor = service.create(dto);
+
         // Monta a URL dinâmica: http://localhost:8080/api/v1/cargoes/5
+        // que será retornada no cabeçalho da resposta
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}").buildAndExpand(novoServidor.id()).toUri();
 

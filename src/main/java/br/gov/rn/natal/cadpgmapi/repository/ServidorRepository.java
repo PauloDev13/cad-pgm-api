@@ -15,18 +15,4 @@ import java.util.Optional;
 public interface ServidorRepository extends JpaRepository<Servidor, Integer>, JpaSpecificationExecutor<Servidor> {
     boolean existsByCpf(String cpf);
     boolean existsByMatricula(String matricula);
-
-    Optional<Servidor> findByCpf(String cpf);
-    Optional<Servidor> findByMatricula(String matricula);
-
-//    @Query("SELECT s FROM Servidor s WHERE " +
-//            "(:cpf IS NULL OR s.cpf LIKE CONCAT('%', :cpf, '%')) AND " +
-//            "(:matricula IS NULL OR LOWER(s.matricula) LIKE LOWER(CONCAT('%', :matricula, '%'))) AND " +
-//            "(:statusId IS NULL OR s.status.id =: statusId)")
-//    Page<Servidor> findByFilterDynamic(
-//            @Param("cpf") String cpf,
-//            @Param("matricula") String matricula,
-//            @Param("statusId") Integer statusId,
-//            Pageable pageable
-//    );
 }
