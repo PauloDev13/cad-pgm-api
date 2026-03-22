@@ -53,7 +53,7 @@ public class ServidorController {
     public Page<ServidorResponseDTO> findByFilters(
             @RequestParam(required = false) String cpf,
             @RequestParam(required = false) String matricula,
-            @RequestParam(required = false, defaultValue = "1") Integer statusId,
+            @RequestParam(required = false) Integer statusId,
             @ParameterObject @PageableDefault(
                     sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
     ) {

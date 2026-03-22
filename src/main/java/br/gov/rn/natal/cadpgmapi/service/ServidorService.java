@@ -10,9 +10,11 @@ import br.gov.rn.natal.cadpgmapi.repository.AliasRepository;
 import br.gov.rn.natal.cadpgmapi.repository.ProcuradorRepository;
 import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
 import br.gov.rn.natal.cadpgmapi.repository.SistemaRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -66,8 +68,30 @@ public class ServidorService {
     public Page<ServidorResponseDTO> findByFilters(
             String cpf, String matricula, Integer statusId, Pageable pageable
     ) {
-        return servidorRepository.findByFilterDynamic(cpf, matricula, statusId, pageable)
-                .map(servidorMapper::toDTO);
+        // BLOCO DA SPECIFICATION: Monta as regras (a "receita" do SQL)
+        Specification<Servidor> spec = (root, query, cb) -> {
+            Predicate predicate = cb.conjunction(); // Começa neutro (1=1)
+
+            if (cpf != null && !cpf.trim().isEmpty()) {
+                predicate = cb.and(predicate, cb.like(root.get("cpf"), "%" + cpf.trim() + "%"));
+            }
+
+            if (matricula != null && !matricula.trim().isEmpty()) {
+                predicate = cb.and(predicate, cb.like(
+                        cb.lower(root.get("matricula")), "%" + matricula.trim().toLowerCase() + "%")
+                );
+            }
+
+            if (statusId != null) {
+                predicate = cb.and(predicate, cb.equal(root.get("status").get("id"), statusId));
+            }
+
+            return predicate; // <-- RETORNO 1: Encerra a montagem das regras
+        };
+
+        // BLOCO DE EXECUÇÃO: Vai no banco e converte para DTO
+        return servidorRepository.findAll(spec, pageable)
+                .map(servidorMapper::toDTO); // <-- RETORNO 2: O retorno real que vai para o Controller
     }
 
     @Transactional(readOnly = true)
