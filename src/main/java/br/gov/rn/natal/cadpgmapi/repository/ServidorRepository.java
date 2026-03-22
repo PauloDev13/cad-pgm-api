@@ -21,7 +21,7 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer> {
     @Query("SELECT s FROM Servidor s WHERE " +
             "(:cpf IS NULL OR s.cpf LIKE CONCAT('%', :cpf, '%')) AND " +
             "(:matricula IS NULL OR LOWER(s.matricula) LIKE LOWER(CONCAT('%', :matricula, '%'))) AND " +
-            "(:statusId IS NULL OR s.status.id =:statusId)")
+            "(:statusId IS NULL OR s.status.id =: statusId)")
     Page<Servidor> findByFilterDynamic(
             @Param("cpf") String cpf,
             @Param("matricula") String matricula,
