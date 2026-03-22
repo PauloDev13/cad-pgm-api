@@ -46,14 +46,19 @@ public class ServidorController {
         return service.findAll(pageable);
     }
 
-    @GetMapping("/busca")
-    @Operation(summary = "Buscar servidor por CPF ou Matrícula",
-            description = "Informe o CPF ou a Matrícula via query parameter. Exemplo: /busca?cpf=00011122233")
-    public ServidorResponseDTO findByCpfOrMatricula(
+    @GetMapping("/searchFilter")
+    @Operation(summary = "Buscar servidor por CPF, Matrícula e Status",
+            description = "Informe o CPF ou a Matrícula ou o Status via query parameter. " +
+                    "Exemplo: /searchFilter?cpf=00011122233&matricula=T0001")
+    public Page<ServidorResponseDTO> findByFilters(
             @RequestParam(required = false) String cpf,
-            @RequestParam(required = false) String matricula) {
+            @RequestParam(required = false) String matricula,
+            @RequestParam(required = false, defaultValue = "1") Integer statusId,
+            @ParameterObject @PageableDefault(
+                    sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
 
-        return service.findByCpfOrMatricula(cpf, matricula);
+        return service.findByFilters(cpf, matricula, statusId, pageable);
     }
 
     @GetMapping("/{id}")

@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -48,7 +47,7 @@ public class ServidorService {
         // Agora a entidade está "Managed" e tem um ID válido.
         entity = servidorRepository.save(entity);
 
-        // 3. Associa as relações N:N (Sistemas, Aliases, Procuradores)
+        // 3. Associa as relações NN (Sistemas, Aliases, Procuradores)
         associarRelacoesMuitosParaMuitos(entity, dto);
 
         // O Hibernate, ao final do méthod @Transactional, vai perceber que
@@ -64,27 +63,11 @@ public class ServidorService {
     }
 
     @Transactional(readOnly = true)
-    public ServidorResponseDTO findByCpfOrMatricula(String cpf, String matricula) {
-        // Se enviou o CPF, prioriza a busca por CPF
-        if (cpf != null && !cpf.isBlank()) {
-            return servidorRepository.findByCpf(cpf)
-                    .map(servidorMapper::toDTO)
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Servidor não encontrado com o CPF: " + cpf
-                    ));
-        }
-
-        // Se não enviou CPF, mas enviou Matrícula, busca por Matrícula
-        if (matricula != null && !matricula.isBlank()) {
-            return servidorRepository.findByMatricula(matricula)
-                    .map(servidorMapper::toDTO)
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Servidor não encontrado com a Matrícula: " + matricula
-                    ));
-        }
-
-        // Se não enviou nenhum dos dois, lança um erro de regra de negócio
-        throw new BusinessException("É obrigatório informar o CPF ou a Matrícula para realizar a busca.");
+    public Page<ServidorResponseDTO> findByFilters(
+            String cpf, String matricula, Integer statusId, Pageable pageable
+    ) {
+        return servidorRepository.findByFilterDynamic(cpf, matricula, statusId, pageable)
+                .map(servidorMapper::toDTO);
     }
 
     @Transactional(readOnly = true)
@@ -97,6 +80,12 @@ public class ServidorService {
         // 1. Busca a entidade existente no banco (Entity em estado 'Managed' pelo Hibernate)
         Servidor entity = servidorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
+
+        if (!entity.getMatricula().equals(dto.matricula())) {
+            if (servidorRepository.existsByMatricula(dto.matricula())) {
+                throw new BusinessException("Já existe um servidor cadastrado com esta Matrícula.");
+            }
+        }
 
         // Em um cenário real, usar mapper.updateEntityFromDTO(dto, entity)
 //        entity.setNome(dto.nome());
@@ -135,9 +124,6 @@ public class ServidorService {
             dto.sistemaIds().forEach(id -> {
                 entity.getSistemas().add(sistemaRepository.getReferenceById(id));
             });
-//            entity.setSistemas(dto.sistemaIds().stream()
-//                    .map(sistemaRepository::getReferenceById) // Otimização: cria proxy sem SELECT
-//                    .collect(Collectors.toSet()));
         }
 
         // Associa Aliases de E-mail
@@ -151,9 +137,6 @@ public class ServidorService {
             dto.aliasIds().forEach(id -> {
                 entity.getAliases().add(aliasRepository.getReferenceById(id));
             });
-//            entity.setAliases(dto.aliasIds().stream()
-//                    .map(aliasRepository::getReferenceById)
-//                    .collect(Collectors.toSet()));
         }
 
         // Associa Procuradores
@@ -167,9 +150,6 @@ public class ServidorService {
             dto.procuradorIds().forEach(id -> {
                 entity.getProcuradores().add(procuradorRepository.getReferenceById(id));
             });
-//            entity.setProcuradores(dto.procuradorIds().stream()
-//                    .map(procuradorRepository::getReferenceById)
-//                    .collect(Collectors.toSet()));
         }
     }
 }
