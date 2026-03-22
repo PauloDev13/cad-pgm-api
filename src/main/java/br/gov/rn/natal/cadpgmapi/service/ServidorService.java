@@ -63,15 +63,18 @@ public class ServidorService {
 
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> findByFilters(
-            String cpf, String matricula, Integer statusId, Pageable pageable
+            String cpf, String matricula, String nome, Integer statusId, Pageable pageable
     ) {
         // BLOCO DA SPECIFICATION: Monta as regras (a "receita" do SQL)
         Specification<Servidor> spec = (root, query, cb) -> {
-            Predicate predicate = cb.conjunction(); // Começa neutro (1=1)
+            // Começa neutro (1=1)
+            Predicate predicate = cb.conjunction();
 
             // Se o CPF for imformado, monta o SQL de busca por CPF
             if (cpf != null && !cpf.trim().isEmpty()) {
-                predicate = cb.and(predicate, cb.like(root.get("cpf"), "%" + cpf.trim() + "%"));
+                predicate = cb.and(predicate, cb.like(
+                        root.get("cpf"), "%" + cpf.trim() + "%")
+                );
             }
 
             // Se a Matrícula for imformada, monta o SQL de busca por matrícula
@@ -79,6 +82,14 @@ public class ServidorService {
                 predicate = cb.and(predicate, cb.like(
                         cb.lower(root.get("matricula")), "%" + matricula.trim().toLowerCase() + "%")
                 );
+            }
+
+            if (nome!= null && !nome.trim().isEmpty()) {
+                predicate = cb.and(
+                        predicate, cb.like(
+                        cb.lower(root.get("nome")), "%" + nome.trim().toLowerCase() + "%")
+                );
+
             }
 
             // Se o ID do Status for imformado, monta o SQL de busca pelo ID do Status

@@ -55,12 +55,13 @@ public class ServidorController {
     public Page<ServidorResponseDTO> findByFilters(
             @RequestParam(required = false) String cpf,
             @RequestParam(required = false) String matricula,
+            @RequestParam(required = false) String nome,
             @RequestParam(required = false) Integer statusId,
             @ParameterObject @PageableDefault(
                     sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
     ) {
 
-        return service.findByFilters(cpf, matricula, statusId, pageable);
+        return service.findByFilters(cpf, matricula, nome, statusId, pageable);
     }
 
     @GetMapping("/{id}")
