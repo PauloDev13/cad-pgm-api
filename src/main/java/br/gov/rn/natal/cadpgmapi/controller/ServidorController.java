@@ -49,7 +49,7 @@ public class ServidorController {
     }
 
     @GetMapping("/searchFilter")
-    @Operation(summary = "Buscar servidor por CPF, Matrícula e Status",
+    @Operation(summary = "Buscar servidor por CPF, Matrícula, Nome e Status",
             description = "Informe o CPF ou a Matrícula ou o Status via query parameter. " +
                     "Exemplo: /searchFilter?cpf=00011122233&matricula=T0001")
     public Page<ServidorResponseDTO> findByFilters(
