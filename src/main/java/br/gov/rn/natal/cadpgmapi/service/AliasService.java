@@ -55,9 +55,10 @@ public class AliasService {
     }
 
     public void delete(Integer id) {
-        if (aliasRepository.existsById(id)){
-            throw new ResourceNotFoundException("Alias não encontrado");
-        }
-        aliasRepository.deleteById(id);
+        Alias entity = aliasRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Alias não encontrado para o ID: " + id
+                ));
+        aliasRepository.delete(entity);
     }
 }

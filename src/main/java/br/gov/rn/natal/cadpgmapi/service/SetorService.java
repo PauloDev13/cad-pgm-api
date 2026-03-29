@@ -55,9 +55,10 @@ public class SetorService {
     }
 
     public void delete(Integer id) {
-        if (setorRepository.existsById(id)){
-            throw new ResourceNotFoundException("Servidor não encontrado");
-        }
-        setorRepository.deleteById(id);
+        Setor entity = setorRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Setor não encontrado para o ID: " + id
+                ));
+        setorRepository.delete(entity);
     }
 }

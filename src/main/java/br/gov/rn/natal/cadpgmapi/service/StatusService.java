@@ -55,9 +55,10 @@ public class StatusService {
     }
 
     public void delete(Integer id) {
-        if (statusRepository.existsById(id)){
-            throw new ResourceNotFoundException("Status não encontrado");
-        }
-        statusRepository.deleteById(id);
+        Status entity = statusRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Status não encontrado para o ID: " + id
+                ));
+        statusRepository.delete(entity);
     }
 }

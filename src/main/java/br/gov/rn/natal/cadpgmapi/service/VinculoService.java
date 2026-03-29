@@ -55,9 +55,10 @@ public class VinculoService {
     }
 
     public void delete(Integer id) {
-        if (vinculoRepository.existsById(id)){
-            throw new ResourceNotFoundException("Vinculo não encontrado");
-        }
-        vinculoRepository.deleteById(id);
+        Vinculo entity = vinculoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Vinculo não encontrado para o ID: " + id
+                ));
+        vinculoRepository.delete(entity);
     }
 }

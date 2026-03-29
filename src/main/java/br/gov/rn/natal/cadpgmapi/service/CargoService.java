@@ -55,9 +55,10 @@ public class CargoService {
     }
 
     public void delete(Integer id) {
-        if (cargoRepository.existsById(id)){
-            throw new ResourceNotFoundException("Cargo não encontrado");
-        }
-        cargoRepository.deleteById(id);
+        Cargo entity = cargoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Cargo não encontrado para o ID: " + id
+                ));
+        cargoRepository.delete(entity);
     }
 }

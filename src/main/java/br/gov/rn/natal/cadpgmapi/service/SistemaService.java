@@ -55,9 +55,10 @@ public class SistemaService {
     }
 
     public void delete(Integer id) {
-        if (sistemaRepository.existsById(id)){
-            throw new ResourceNotFoundException("Sistema não encontrado");
-        }
-        sistemaRepository.deleteById(id);
+        Sistema entity = sistemaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Sistema não encontrado para o ID: " + id
+                ));
+        sistemaRepository.delete(entity);
     }
 }

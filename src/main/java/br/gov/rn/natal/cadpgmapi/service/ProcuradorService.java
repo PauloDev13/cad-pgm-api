@@ -55,9 +55,10 @@ public class ProcuradorService {
     }
 
     public void delete(Integer id) {
-        if (procuradorRepository.existsById(id)){
-            throw new ResourceNotFoundException("Procurador não encontrado");
-        }
-        procuradorRepository.deleteById(id);
+        Procurador entity = procuradorRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Procurador não encontrado para o ID: " + id
+                ));
+        procuradorRepository.delete(entity);
     }
 }
