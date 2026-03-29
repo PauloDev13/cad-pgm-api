@@ -13,8 +13,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 public class CargoService {
@@ -41,8 +39,8 @@ public class CargoService {
     }
 
     @Transactional(readOnly = true)
-    public List<CargoResponseDTO> findAll() {
-        return cargoMapper.toDtoList(cargoRepository.findAll());
+    public Page<CargoResponseDTO> findAll( Pageable pageable) {
+        return cargoRepository.findAll(pageable).map(cargoMapper::toDto);
     }
 
     public Page<CargoResponseDTO> findByFilterName(String filter, Pageable pageable) {
