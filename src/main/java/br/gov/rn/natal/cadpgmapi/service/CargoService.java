@@ -8,6 +8,8 @@ import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.mapper.CargoMapper;
 import br.gov.rn.natal.cadpgmapi.repository.CargoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +43,18 @@ public class CargoService {
     @Transactional(readOnly = true)
     public List<CargoResponseDTO> findAll() {
         return cargoMapper.toDtoList(cargoRepository.findAll());
+    }
+
+    public Page<CargoResponseDTO> findByFilterName(String filter, Pageable pageable) {
+        // Se o nome vier nulo ou vazio, você pode optar por retornar todos os registros
+        if (filter == null || filter.trim().isEmpty()) {
+            return cargoRepository.findAll(pageable)
+                    .map(cargoMapper::toDto);
+        }
+
+        // Executa a busca filtrada e paginada
+        return cargoRepository.findByNomeContainingIgnoreCase(filter.trim(), pageable)
+                .map(cargoMapper::toDto);
     }
 
     @Transactional
