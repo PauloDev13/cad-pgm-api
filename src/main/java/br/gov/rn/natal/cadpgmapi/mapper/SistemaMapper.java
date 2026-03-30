@@ -3,21 +3,9 @@ package br.gov.rn.natal.cadpgmapi.mapper;
 import br.gov.rn.natal.cadpgmapi.dto.request.SistemaRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.SistemaResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Sistema;
+import br.gov.rn.natal.cadpgmapi.mapper.generic.BaseMapper;
 import org.mapstruct.Mapper;
-import org.mapstruct.MappingTarget;
-
-import java.util.List;
 
 @Mapper(componentModel = "spring")
-public interface SistemaMapper {
-    Sistema toEntity(SistemaRequestDTO dto);
-    SistemaResponseDTO toDto(Sistema entity);
-
-    void updateEntityFromDTO(
-            @MappingTarget
-            Sistema entity,
-            SistemaRequestDTO dto
-    );
-
-    List<SistemaResponseDTO> toDtoList(List<Sistema> entities);
+public interface SistemaMapper extends BaseMapper<Sistema, SistemaRequestDTO, SistemaResponseDTO> {
 }
