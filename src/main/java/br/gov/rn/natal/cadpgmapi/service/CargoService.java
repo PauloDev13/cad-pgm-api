@@ -15,9 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class CargoService extends BaseGenericService<Cargo, CargoRequestDTO, CargoResponseDTO, Integer> {
     private final CargoRepository cargoRepository;
 
-    public CargoService(CargoRepository cargoRepository, CargoMapper mapper, CargoRepository repository) {
+    public CargoService(CargoMapper mapper, CargoRepository repository) {
         super(repository, mapper);
-        this.cargoRepository = cargoRepository;
+        this.cargoRepository = repository;
     }
 
     @Transactional(readOnly = true)

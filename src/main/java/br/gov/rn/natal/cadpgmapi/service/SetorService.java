@@ -14,8 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SetorService extends BaseGenericService<Setor, SetorRequestDTO, SetorResponseDTO, Integer> {
     private final SetorRepository setorRepository;
-    public SetorService(SetorRepository repository, SetorMapper mapper, SetorRepository setorRepository) {
-        super(repository, mapper);
+    public SetorService(SetorRepository setorRepository, SetorMapper mapper) {
+        super(setorRepository, mapper);
         this.setorRepository = setorRepository;
     }
 
