@@ -8,10 +8,10 @@ import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.mapper.SetorMapper;
 import br.gov.rn.natal.cadpgmapi.repository.SetorRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -39,8 +39,20 @@ public class SetorService {
     }
 
     @Transactional(readOnly = true)
-    public List<SetorResponseDTO> findAll() {
-        return setorMapper.toDtoList(setorRepository.findAll());
+    public Page<SetorResponseDTO> findAll(Pageable pageable) {
+        return setorRepository.findAll(pageable).map(setorMapper::toDto);
+    }
+
+    public Page<SetorResponseDTO> findByFilterName(String filter, Pageable pageable) {
+        // Se a descrição vier nulo ou vazio, você pode optar por retornar todos os registros
+        if (filter == null || filter.trim().isEmpty()) {
+            return setorRepository.findAll(pageable)
+                    .map(setorMapper::toDto);
+        }
+
+        // Executa a busca filtrada e paginada
+        return setorRepository.findByNomeContainingIgnoreCase(filter.trim(), pageable)
+                .map(setorMapper::toDto);
     }
 
     @Transactional

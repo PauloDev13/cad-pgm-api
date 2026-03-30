@@ -7,13 +7,17 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/setores")
@@ -35,8 +39,21 @@ public class SetorController {
 
     @GetMapping
     @Operation(summary = "Listar todos os Setores")
-    public List<SetorResponseDTO> findAll() {
-        return setorService.findAll();
+    public Page<SetorResponseDTO> findAll(
+            @ParameterObject
+            @PageableDefault(sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        return setorService.findAll(pageable);
+    }
+
+    @GetMapping("/searchFilter")
+    @Operation(summary = "Buscar setores por nome com paginação")
+    public ResponseEntity<Page<SetorResponseDTO>> findByNome(
+            @RequestParam(required = false) String nome,
+            @ParameterObject @PageableDefault(
+                    sort = "nome", direction = Sort.Direction.ASC) Pageable pageable) {
+
+        return ResponseEntity.ok(setorService.findByFilterName(nome, pageable));
     }
 
     @GetMapping("/{id}")
