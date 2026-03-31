@@ -36,9 +36,15 @@ public class SistemaController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar todos os Sistema")
+    @Operation(summary = "Listar os Sistema com paginação")
     public Page<SistemaResponseDTO> findAll(Pageable pageable) {
         return sistemaService.findAll(pageable);
+    }
+
+    @GetMapping("/select")
+    @Operation(summary = "Listar os Sistema sem paginação")
+    public List<SistemaResponseDTO> findAllSelect() {
+        return sistemaService.findAllSelect();
     }
 
     @GetMapping("/{id}")

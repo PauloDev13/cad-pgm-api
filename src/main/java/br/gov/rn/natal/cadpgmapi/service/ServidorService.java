@@ -1,7 +1,9 @@
 package br.gov.rn.natal.cadpgmapi.service;
 
+import br.gov.rn.natal.cadpgmapi.dto.request.CargoRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
+import br.gov.rn.natal.cadpgmapi.entity.Cargo;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
@@ -47,14 +49,6 @@ public class ServidorService extends BaseGenericService<
     @Override
     @Transactional
     public ServidorResponseDTO create(ServidorRequestDTO dto) {
-        if (servidorRepository.existsByCpf(dto.cpf())) {
-            throw new BusinessException("Já existe cadastro para o CPF " + dto.cpf());
-        }
-
-        if (servidorRepository.existsByMatricula(dto.matricula())) {
-            throw new BusinessException("Já existe cadastro para a Matrícula " + dto.matricula());
-        }
-
         // Converte o DTO para Entidade
         Servidor entity = mapper.toEntity(dto);
 
@@ -69,13 +63,6 @@ public class ServidorService extends BaseGenericService<
         // as listas mudaram e vai fazer os INSERTs nas tabelas de junção sozinho!
         return mapper.toDto(entity);
     }
-
-//    @Transactional(readOnly = true)
-//    public ServidorResponseDTO findById(Integer id) {
-//        Servidor entity = servidorRepository.findById(id)
-//                .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
-//        return servidorMapper.toDTO(entity);
-//    }
 
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> findByFilters(
@@ -123,29 +110,12 @@ public class ServidorService extends BaseGenericService<
                 .map(mapper::toDto);
     }
 
-//    @Transactional(readOnly = true)
-//    public Page<ServidorResponseDTO> findAll(Pageable pageable) {
-//        return servidorRepository.findAll(pageable).map(servidorMapper::toDTO);
-//    }
-
     @Override
     @Transactional
     public ServidorResponseDTO update(Integer id, ServidorRequestDTO dto) {
         // 1. Busca a entidade existente no banco (Entity em estado 'Managed' pelo Hibernate)
         Servidor entity = servidorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
-
-        if (!entity.getMatricula().equals(dto.matricula())) {
-            if (servidorRepository.existsByMatricula(dto.matricula())) {
-                throw new BusinessException("Já existe cadastro para a Matrícula " + dto.matricula());
-            }
-        }
-
-        if (!entity.getCpf().equals(dto.cpf())) {
-            if (servidorRepository.existsByCpf(dto.cpf())) {
-                throw new BusinessException("Já existe cadastro para o CPF " + dto.cpf());
-            }
-        }
 
         // Atualiza os dados básicos e relacionamentos N:1 mapeados usando MapStruct
         mapper.updateEntityFromDTO(entity, dto);
@@ -155,14 +125,6 @@ public class ServidorService extends BaseGenericService<
 
         return mapper.toDto(servidorRepository.save(entity));
     }
-//
-//    @Transactional
-//    public void delete(Integer id) {
-//        if (!servidorRepository.existsById(id)) {
-//            throw new ResourceNotFoundException("Servidor não encontrado");
-//        }
-//        servidorRepository.deleteById(id);
-//    }
 
     /**
      * Recebe a entidade (já mapeada com os dados básicos pelo MapStruct)
@@ -210,6 +172,24 @@ public class ServidorService extends BaseGenericService<
             dto.procuradorIds().forEach(id -> {
                 entity.getProcuradores().add(procuradorRepository.getReferenceById(id));
             });
+        }
+    }
+
+    // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
+    @Override
+    protected void beforeCreate(ServidorRequestDTO dto) {
+        if (servidorRepository.existsByCpf(dto.cpf().trim())) {
+            throw new BusinessException("CPF (" + dto.cpf() + ") já cadastrado");
+        }
+    }
+
+    @Override
+    protected void beforeUpdate(ServidorRequestDTO dto, Servidor existingServidor) {
+        // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
+        if (!existingServidor.getMatricula().equalsIgnoreCase(dto.matricula())) {
+            if (servidorRepository.existsByMatricula(dto.matricula())) {
+                throw new BusinessException("Este CPF já está sendo usado por outro servidor");
+            }
         }
     }
 }

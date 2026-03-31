@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/cargos")
@@ -43,6 +44,12 @@ public class CargoController {
             @ParameterObject
             @PageableDefault(sort = "nome", direction = Sort.Direction.ASC)Pageable pageable) {
         return cargoService.findAll(pageable);
+    }
+
+    @GetMapping("select")
+    @Operation(summary = "Listar Cargos sem paginação")
+    public List<CargoResponseDTO> findAllSelect() {
+        return cargoService.findAllSelect();
     }
 
     @GetMapping("/{id}")

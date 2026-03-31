@@ -34,7 +34,7 @@ public class VinculoController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar todos os Vínculos")
+    @Operation(summary = "Listar os Vínculos")
     public List<VinculoResponseDTO> findAll() {
         return vinculoService.findAll();
     }

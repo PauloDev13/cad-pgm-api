@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/setores")
@@ -38,12 +39,18 @@ public class SetorController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar todos os Setores")
+    @Operation(summary = "Listar os Setores com paginação")
     public Page<SetorResponseDTO> findAll(
             @ParameterObject
             @PageableDefault(sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         return setorService.findAll(pageable);
+    }
+
+    @GetMapping("/select")
+    @Operation(summary = "Listar os Setores sem paginação")
+    public List<SetorResponseDTO> findAllSelect() {
+        return setorService.findAllSelect();
     }
 
     @GetMapping("/searchFilter")

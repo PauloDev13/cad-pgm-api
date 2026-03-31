@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 public abstract class BaseGenericService<E, Req, Res, ID> {
     protected final JpaRepository<E, ID> repository;
     protected final BaseMapper<E, Req, Res> mapper;
@@ -38,6 +40,11 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
     @Transactional(readOnly = true)
     public Page<Res> findAll(Pageable pageable) {
         return repository.findAll(pageable).map(mapper::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Res> findAllSelect() {
+        return mapper.toDtoList(repository.findAll());
     }
 
     @Transactional(readOnly = true)

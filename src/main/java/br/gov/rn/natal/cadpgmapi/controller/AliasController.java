@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/alias")
@@ -35,9 +36,15 @@ public class AliasController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar todos os Alias com paginação")
+    @Operation(summary = "Listar os Alias com paginação")
     public Page<AliasResponseDTO> findAll(Pageable pageable) {
         return aliasService.findAll(pageable);
+    }
+
+    @GetMapping("/select")
+    @Operation(summary = "Listar os Alias sem paginação")
+    public List<AliasResponseDTO> findAllSelect() {
+        return aliasService.findAllSelect();
     }
 
     @GetMapping("/{id}")
