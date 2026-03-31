@@ -11,6 +11,7 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
     protected final JpaRepository<E, ID> repository;
     protected final BaseMapper<E, Req, Res> mapper;
 
+    // Construtor
     protected BaseGenericService(
             JpaRepository<E, ID> repository,
             BaseMapper<E, Req, Res> mapper
@@ -19,8 +20,17 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
         this.mapper = mapper;
     }
 
+    // HOOKS (GANCHOS)
+    // Eles ficam vazios por padrão. Os filhos sobrescrevem se precisarem.
+    protected void beforeCreate(Req dto) {}
+    protected void beforeUpdate(Req dto, E existingEntity) {}
+    protected void beforeDelete(E entity) {}
+
     @Transactional
     public Res create(Req dto) {
+        // O pai chama o gancho. Se o filho sobrescreveu e lançar erro, a execução para aqui!
+        beforeCreate(dto);
+
         E entity = mapper.toEntity(dto);
         return mapper.toDto(repository.save(entity));
     }
@@ -40,14 +50,17 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
     @Transactional
     public Res update(ID id, Req dto) {
         // Busca o registro do banco ou lança erro se não existir
-        E exitingEntity = repository.findById(id)
+        E existingEntity = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Registro não encontrado"));
 
-        // Usa o méthod criado no BaseMapper para atualizar os campos da entidade buscada
-        mapper.updateEntityFromDTO(exitingEntity, dto);
+        // O pai chama o gancho e já entrega a entidade mastigada pro filho!
+        beforeUpdate(dto, existingEntity);
 
-        // Salva e converte para DTO de resposta
-        E updatedEntity = repository.save(exitingEntity);
+        // Usa o méthod criado no BaseMapper para atualizar os campos da entidade buscada
+        mapper.updateEntityFromDTO(existingEntity, dto);
+
+        // Atualiza e salva
+        E updatedEntity = repository.save(existingEntity);
 
         // Usa o méthod criado no BaseMapper para transformar a entidade salva em DTO
         // e retorna o DTO
@@ -56,11 +69,14 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
 
     @Transactional
     public void delete(ID id) {
-        // Consulta se o registro existe no banco ou lança erro se não existir
-        if (!repository.existsById(id)) {
-            throw new ResourceNotFoundException("Registro não encontrado");
-        }
-        // Remove o registro do banco
-        repository.deleteById(id);
+        // Centralizamos a busca e a exceção de 404 (uma única ida ao banco)
+        E existingEntity = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Registro não encontrado para exclusão."));
+
+        // 2. Chamamos o gancho. Se o filho lançar uma BusinessException, a exclusão é abortada!
+        beforeDelete(existingEntity);
+
+        // 3. Se o gancho passar em silêncio, deletamos a entidade
+        repository.delete(existingEntity);
     }
 }

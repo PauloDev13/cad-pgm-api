@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,8 +37,8 @@ public class SistemaController {
 
     @GetMapping
     @Operation(summary = "Listar todos os Sistema")
-    public List<SistemaResponseDTO> findAll() {
-        return sistemaService.findAll();
+    public Page<SistemaResponseDTO> findAll(Pageable pageable) {
+        return sistemaService.findAll(pageable);
     }
 
     @GetMapping("/{id}")

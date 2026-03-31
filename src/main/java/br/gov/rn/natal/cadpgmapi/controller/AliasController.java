@@ -7,13 +7,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/alias")
@@ -34,9 +35,9 @@ public class AliasController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar todos os Alias")
-    public List<AliasResponseDTO> findAll() {
-        return aliasService.findAll();
+    @Operation(summary = "Listar todos os Alias com paginação")
+    public Page<AliasResponseDTO> findAll(Pageable pageable) {
+        return aliasService.findAll(pageable);
     }
 
     @GetMapping("/{id}")

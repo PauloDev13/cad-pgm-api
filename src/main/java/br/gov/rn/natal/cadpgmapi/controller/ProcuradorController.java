@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,8 +37,8 @@ public class ProcuradorController {
 
     @GetMapping
     @Operation(summary = "Listar todos os Procuradores")
-    public List<ProcuradorResponseDTO> findAll() {
-        return procuradorService.findAll();
+    public Page<ProcuradorResponseDTO> findAll(Pageable pageable) {
+        return procuradorService.findAll(pageable);
     }
 
     @GetMapping("/{id}")

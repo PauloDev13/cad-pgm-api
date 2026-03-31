@@ -7,58 +7,48 @@ import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.mapper.AliasMapper;
 import br.gov.rn.natal.cadpgmapi.repository.AliasRepository;
-import lombok.RequiredArgsConstructor;
+import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
-@RequiredArgsConstructor
-public class AliasService {
+public class AliasService extends BaseGenericService<Alias, AliasRequestDTO, AliasResponseDTO, Integer> {
     private final AliasRepository aliasRepository;
-    private final AliasMapper aliasMapper;
 
-    @Transactional
-    public AliasResponseDTO create(AliasRequestDTO dto) {
-        if (aliasRepository.existsByEmail(dto.email())){
-            throw new BusinessException("Alias já cadastrado!");
+    // Construtor
+    public AliasService(AliasRepository repository, AliasMapper mapper) {
+        super(repository, mapper);
+        this.aliasRepository = repository;
+    }
+
+    // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
+    @Override
+    protected void beforeCreate(AliasRequestDTO dto) {
+        if (aliasRepository.existsByEmail(dto.email().trim())) {
+            throw new BusinessException("Já existe um Alias cadastrado como este e-mail " + dto.email());
+        }
+    }
+
+    @Override
+    protected void beforeUpdate(AliasRequestDTO dto, Alias existingAlias) {
+        // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
+        if (!existingAlias.getEmail().equalsIgnoreCase(dto.email())) {
+            if (aliasRepository.existsByEmail(dto.email())) {
+                throw new BusinessException("Este e-mail já está sendo usado por outro alias.");
+            }
+        }
+    }
+
+
+    @Transactional(readOnly = true)
+    public Page<AliasResponseDTO> findByFilterEmail(String filter, Pageable pageable) {
+        if (filter == null || filter.trim().isEmpty()) {
+            return super.findAll(pageable); // Reaproveita o método do BaseCrudService!
         }
 
-        Alias entity = aliasMapper.toEntity(dto);
-        return aliasMapper.toDto(aliasRepository.save(entity));
-    }
-
-    @Transactional(readOnly = true)
-    public AliasResponseDTO findById(Integer id) {
-        Alias entity = aliasRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Alias não encontrado para o ID: " + id
-                ));
-        return aliasMapper.toDto(entity);
-    }
-
-    @Transactional(readOnly = true)
-    public List<AliasResponseDTO> findAll() {
-        return aliasMapper.toDtoList(aliasRepository.findAll());
-    }
-
-    @Transactional
-    public AliasResponseDTO update(Integer id, AliasRequestDTO dto) {
-        Alias entity = aliasRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Alias não encontrado para o ID: " + id
-                ));
-
-        aliasMapper.updateEntityFromDTO(entity, dto);
-        return aliasMapper.toDto(aliasRepository.save(entity));
-    }
-
-    public void delete(Integer id) {
-        Alias entity = aliasRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Alias não encontrado para o ID: " + id
-                ));
-        aliasRepository.delete(entity);
+        return aliasRepository.findByEmailContainingIgnoreCase(filter.trim(), pageable)
+                .map(mapper::toDto); // Usamos o mapper genérico da classe pai
     }
 }
