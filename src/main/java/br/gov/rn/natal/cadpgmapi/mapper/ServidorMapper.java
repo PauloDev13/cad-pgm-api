@@ -3,6 +3,7 @@ package br.gov.rn.natal.cadpgmapi.mapper;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.*;
+import br.gov.rn.natal.cadpgmapi.mapper.generic.BaseMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -14,8 +15,9 @@ import org.mapstruct.MappingTarget;
         StatusMapper.class,
         VinculoMapper.class
 })
-public interface ServidorMapper {
+public interface ServidorMapper extends BaseMapper<Servidor, ServidorRequestDTO, ServidorResponseDTO> {
     // Mapeia os IDs recebidos no DTO para as entidades de referência do JPA
+    @Override
     @Mapping(source = "cargoId", target = "cargo")
     @Mapping(source = "setorId", target = "setor")
     @Mapping(source = "lotacaoId", target = "lotacao")
@@ -30,9 +32,11 @@ public interface ServidorMapper {
     @Mapping(target = "dataDesligamento", ignore = true)
     Servidor toEntity(ServidorRequestDTO dto);
 
-    ServidorResponseDTO toDTO(Servidor entity);
+    @Override
+    ServidorResponseDTO toDto(Servidor entity);
 
     // Mapeamento para Update (PUT)
+    @Override
     @Mapping(source = "cargoId", target = "cargo")
     @Mapping(source = "setorId", target = "setor")
     @Mapping(source = "lotacaoId", target = "lotacao")
@@ -42,7 +46,7 @@ public interface ServidorMapper {
     @Mapping(target = "aliases", ignore = true)
     @Mapping(target = "procuradores", ignore = true)
     @Mapping(target = "dataDesligamento", ignore = true)
-    void updateEntityFromDTO(ServidorRequestDTO dto, @MappingTarget Servidor entity);
+    void updateEntityFromDTO(@MappingTarget Servidor entity, ServidorRequestDTO dto);
 
     // --- Métodos Auxiliares para Conversão de IDs em Entidades --- //
     default Cargo mapCargo(Integer id) {

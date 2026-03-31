@@ -10,6 +10,7 @@ import br.gov.rn.natal.cadpgmapi.repository.AliasRepository;
 import br.gov.rn.natal.cadpgmapi.repository.ProcuradorRepository;
 import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
 import br.gov.rn.natal.cadpgmapi.repository.SistemaRepository;
+import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,26 +22,41 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashSet;
 
 @Service
-@RequiredArgsConstructor
-public class ServidorService {
+public class ServidorService extends BaseGenericService<
+        Servidor, ServidorRequestDTO, ServidorResponseDTO, Integer> {
     private final ServidorRepository servidorRepository;
     private final SistemaRepository sistemaRepository;
     private final AliasRepository aliasRepository;
     private final ProcuradorRepository procuradorRepository;
-    private final ServidorMapper servidorMapper;
 
+    // Construtor
+    public ServidorService(
+            ServidorRepository repository,
+            ServidorMapper mapper,
+            SistemaRepository sistemaRepository,
+            AliasRepository aliasRepository,
+            ProcuradorRepository procuradorRepository
+    ){
+        super(repository, mapper);
+        this.servidorRepository = repository;
+        this.sistemaRepository = sistemaRepository;
+        this.aliasRepository = aliasRepository;
+        this.procuradorRepository = procuradorRepository;
+    }
+
+    @Override
     @Transactional
     public ServidorResponseDTO create(ServidorRequestDTO dto) {
         if (servidorRepository.existsByCpf(dto.cpf())) {
-            throw new BusinessException("Já existe um servidor cadastrado com este CPF.");
+            throw new BusinessException("Já existe cadastro para o CPF " + dto.cpf());
         }
 
         if (servidorRepository.existsByMatricula(dto.matricula())) {
-            throw new BusinessException("Já existe um servidor cadastrado com esta Matrícula.");
+            throw new BusinessException("Já existe cadastro para a Matrícula " + dto.matricula());
         }
 
         // Converte o DTO para Entidade
-        Servidor entity = servidorMapper.toEntity(dto);
+        Servidor entity = mapper.toEntity(dto);
 
         // 2. SALVA PRIMEIRO! (Isso gera o ID do Servidor no banco de dados)
         // Agora a entidade está "Managed" e tem um ID válido.
@@ -51,15 +67,15 @@ public class ServidorService {
 
         // O Hibernate, ao final do méthod @Transactional, vai perceber que
         // as listas mudaram e vai fazer os INSERTs nas tabelas de junção sozinho!
-        return servidorMapper.toDTO(entity);
+        return mapper.toDto(entity);
     }
 
-    @Transactional(readOnly = true)
-    public ServidorResponseDTO findById(Integer id) {
-        Servidor entity = servidorRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
-        return servidorMapper.toDTO(entity);
-    }
+//    @Transactional(readOnly = true)
+//    public ServidorResponseDTO findById(Integer id) {
+//        Servidor entity = servidorRepository.findById(id)
+//                .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
+//        return servidorMapper.toDTO(entity);
+//    }
 
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> findByFilters(
@@ -104,14 +120,15 @@ public class ServidorService {
         // BLOCO DE EXECUÇÃO: Vai no banco e converte para DTO
         // O retorno real que vai para o Controller
         return servidorRepository.findAll(spec, pageable)
-                .map(servidorMapper::toDTO);
+                .map(mapper::toDto);
     }
 
-    @Transactional(readOnly = true)
-    public Page<ServidorResponseDTO> findAll(Pageable pageable) {
-        return servidorRepository.findAll(pageable).map(servidorMapper::toDTO);
-    }
+//    @Transactional(readOnly = true)
+//    public Page<ServidorResponseDTO> findAll(Pageable pageable) {
+//        return servidorRepository.findAll(pageable).map(servidorMapper::toDTO);
+//    }
 
+    @Override
     @Transactional
     public ServidorResponseDTO update(Integer id, ServidorRequestDTO dto) {
         // 1. Busca a entidade existente no banco (Entity em estado 'Managed' pelo Hibernate)
@@ -120,26 +137,32 @@ public class ServidorService {
 
         if (!entity.getMatricula().equals(dto.matricula())) {
             if (servidorRepository.existsByMatricula(dto.matricula())) {
-                throw new BusinessException("Já existe um servidor cadastrado com esta Matrícula.");
+                throw new BusinessException("Já existe cadastro para a Matrícula " + dto.matricula());
+            }
+        }
+
+        if (!entity.getCpf().equals(dto.cpf())) {
+            if (servidorRepository.existsByCpf(dto.cpf())) {
+                throw new BusinessException("Já existe cadastro para o CPF " + dto.cpf());
             }
         }
 
         // Atualiza os dados básicos e relacionamentos N:1 mapeados usando MapStruct
-        servidorMapper.updateEntityFromDTO(dto, entity);
+        mapper.updateEntityFromDTO(entity, dto);
 
         // Reassocia as coleções N para N (Sistemas, Aliases, Procuradores) tratadas via Service
         associarRelacoesMuitosParaMuitos(entity, dto);
 
-        return servidorMapper.toDTO(servidorRepository.save(entity));
+        return mapper.toDto(servidorRepository.save(entity));
     }
-
-    @Transactional
-    public void delete(Integer id) {
-        if (!servidorRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Servidor não encontrado");
-        }
-        servidorRepository.deleteById(id);
-    }
+//
+//    @Transactional
+//    public void delete(Integer id) {
+//        if (!servidorRepository.existsById(id)) {
+//            throw new ResourceNotFoundException("Servidor não encontrado");
+//        }
+//        servidorRepository.deleteById(id);
+//    }
 
     /**
      * Recebe a entidade (já mapeada com os dados básicos pelo MapStruct)
