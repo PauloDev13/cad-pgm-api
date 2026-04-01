@@ -1,7 +1,6 @@
 package br.gov.rn.natal.cadpgmapi.controller.generic;
 
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
-import io.swagger.v3.oas.annotations.Parameters;
 import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;

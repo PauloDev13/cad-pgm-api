@@ -6,7 +6,7 @@ import br.gov.rn.natal.cadpgmapi.dto.response.CargoResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Cargo;
 import br.gov.rn.natal.cadpgmapi.service.CargoService;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.*;;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/cargos")
