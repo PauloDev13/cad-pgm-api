@@ -13,14 +13,4 @@ import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface CargoMapper extends BaseMapper<Cargo, CargoRequestDTO, CargoResponseDTO> {
-//    Cargo toEntity(CargoRequestDTO dto);
-//    CargoResponseDTO toDto(Cargo entity);
-//
-//    void updateEntityFromDTO(
-//            @MappingTarget
-//            Cargo entity,
-//            CargoRequestDTO dto
-//    );
-//
-//    List<CargoResponseDTO> toDtoList(List<Cargo> entities);
 }

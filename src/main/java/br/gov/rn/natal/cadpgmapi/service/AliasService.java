@@ -4,7 +4,6 @@ import br.gov.rn.natal.cadpgmapi.dto.request.AliasRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.AliasResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Alias;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
-import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.mapper.AliasMapper;
 import br.gov.rn.natal.cadpgmapi.repository.AliasRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;

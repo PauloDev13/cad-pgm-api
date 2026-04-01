@@ -4,61 +4,49 @@ import br.gov.rn.natal.cadpgmapi.dto.request.StatusRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.StatusResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Status;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
-import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.mapper.StatusMapper;
 import br.gov.rn.natal.cadpgmapi.repository.StatusRepository;
-import lombok.RequiredArgsConstructor;
+import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
-@RequiredArgsConstructor
-public class StatusService {
+public class StatusService extends BaseGenericService<Status, StatusRequestDTO, StatusResponseDTO, Integer> {
     private final StatusRepository statusRepository;
-    private final StatusMapper statusMapper;
 
-    @Transactional
-    public StatusResponseDTO create(StatusRequestDTO dto) {
-        if (statusRepository.existsByDescricao(dto.descricao())){
-            throw new BusinessException("Status já cadastrado!");
+    protected StatusService(StatusRepository repository, StatusMapper mapper) {
+        super(repository, mapper);
+        this.statusRepository = repository;
+    }
+
+    // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
+    @Override
+    protected void beforeCreate(StatusRequestDTO dto) {
+        if (statusRepository.existsByDescricao(dto.descricao().trim())) {
+            throw new BusinessException("Já existe um Status cadastrado como este nome " + dto.descricao());
+        }
+    }
+
+    @Override
+    protected void beforeUpdate(StatusRequestDTO dto, Status existingStatus) {
+        // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
+        if (!existingStatus.getDescricao().equalsIgnoreCase(dto.descricao())) {
+            if (statusRepository.existsByDescricao(dto.descricao())) {
+                throw new BusinessException("Este nome já está sendo usado por outro status.");
+            }
+        }
+    }
+
+
+    @Transactional(readOnly = true)
+    public Page<StatusResponseDTO> findByFilterDescricao(String filter, Pageable pageable) {
+        if (filter == null || filter.trim().isEmpty()) {
+            return super.findAll(pageable); // Reaproveita o méthod do BaseCrudService!
         }
 
-        Status entity = statusMapper.toEntity(dto);
-        return statusMapper.toDto(statusRepository.save(entity));
-    }
-
-    @Transactional(readOnly = true)
-    public StatusResponseDTO findById(Integer id) {
-        Status entity = statusRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Status não encontrado para o ID: " + id
-                ));
-        return statusMapper.toDto(entity);
-    }
-
-    @Transactional(readOnly = true)
-    public List<StatusResponseDTO> findAll() {
-        return statusMapper.toDtoList(statusRepository.findAll());
-    }
-
-    @Transactional
-    public StatusResponseDTO update(Integer id, StatusRequestDTO dto) {
-        Status entity = statusRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Status não encontrado para o ID: " + id
-                ));
-
-        statusMapper.updateEntityFromDTO(entity, dto);
-        return statusMapper.toDto(statusRepository.save(entity));
-    }
-
-    public void delete(Integer id) {
-        Status entity = statusRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Status não encontrado para o ID: " + id
-                ));
-        statusRepository.delete(entity);
+        return statusRepository.findByDescricaoContainingIgnoreCase(filter.trim(), pageable)
+                .map(mapper::toDto); // Usamos o mapper genérico da classe pai
     }
 }

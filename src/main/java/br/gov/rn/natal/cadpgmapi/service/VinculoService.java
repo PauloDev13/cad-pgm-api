@@ -4,61 +4,35 @@ import br.gov.rn.natal.cadpgmapi.dto.request.VinculoRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.VinculoResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Vinculo;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
-import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.mapper.VinculoMapper;
 import br.gov.rn.natal.cadpgmapi.repository.VinculoRepository;
-import lombok.RequiredArgsConstructor;
+import br.gov.rn.natal.cadpgmapi.service.generic.BaseNameGenericService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
-@RequiredArgsConstructor
-public class VinculoService {
+public class VinculoService extends BaseNameGenericService<Vinculo, VinculoRequestDTO, VinculoResponseDTO, Integer> {
     private final VinculoRepository vinculoRepository;
-    private final VinculoMapper vinculoMapper;
+    
+    protected VinculoService(VinculoRepository repository, VinculoMapper mapper) {
+        super(repository, mapper);
+        this.vinculoRepository = repository;
+    }
 
-    @Transactional
-    public VinculoResponseDTO create(VinculoRequestDTO dto) {
-        if (vinculoRepository.existsByNome(dto.nome())){
-            throw new BusinessException("Vinculo já cadastrado!");
+    // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
+    @Override
+    protected void beforeCreate(VinculoRequestDTO dto) {
+        if (vinculoRepository.existsByNome(dto.nome().trim())) {
+            throw new BusinessException("Já existe um Vinculo cadastrado como " + dto.nome());
         }
-
-        Vinculo entity = vinculoMapper.toEntity(dto);
-        return vinculoMapper.toDto(vinculoRepository.save(entity));
     }
 
-    @Transactional(readOnly = true)
-    public VinculoResponseDTO findById(Integer id) {
-        Vinculo entity = vinculoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Vinculo não encontrado para o ID: " + id
-                ));
-        return vinculoMapper.toDto(entity);
-    }
-
-    @Transactional(readOnly = true)
-    public List<VinculoResponseDTO> findAll() {
-        return vinculoMapper.toDtoList(vinculoRepository.findAll());
-    }
-
-    @Transactional
-    public VinculoResponseDTO update(Integer id, VinculoRequestDTO dto) {
-        Vinculo entity = vinculoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Vinculo não encontrado para o ID: " + id
-                ));
-
-        vinculoMapper.updateEntityFromDTO(entity, dto);
-        return vinculoMapper.toDto(vinculoRepository.save(entity));
-    }
-
-    public void delete(Integer id) {
-        Vinculo entity = vinculoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Vinculo não encontrado para o ID: " + id
-                ));
-        vinculoRepository.delete(entity);
+    @Override
+    protected void beforeUpdate(VinculoRequestDTO dto, Vinculo existingVinculo) {
+        // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
+        if (!existingVinculo.getNome().equalsIgnoreCase(dto.nome())) {
+            if (vinculoRepository.existsByNome(dto.nome())) {
+                throw new BusinessException("Este Vinculo (" + dto.nome() + ") já foi cadastrado");
+            }
+        }
     }
 }

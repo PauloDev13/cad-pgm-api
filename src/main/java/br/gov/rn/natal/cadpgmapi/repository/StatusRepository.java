@@ -9,6 +9,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface StatusRepository extends JpaRepository<Status, Integer> {
-    boolean existsByDescricao(String descricao);
     Page<Status> findByDescricaoContainingIgnoreCase(String descricao, Pageable pageable);
+    boolean existsByDescricao(String descricao);
 }
