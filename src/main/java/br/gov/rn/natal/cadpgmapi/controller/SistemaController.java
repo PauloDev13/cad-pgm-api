@@ -1,6 +1,6 @@
 package br.gov.rn.natal.cadpgmapi.controller;
 
-import br.gov.rn.natal.cadpgmapi.controller.generic.BaseController;
+import br.gov.rn.natal.cadpgmapi.controller.generic.BaseNameController;
 import br.gov.rn.natal.cadpgmapi.dto.request.SistemaRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.SistemaResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Sistema;
@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/sistemas")
 @Tag(name = "Sistemas", description = "API de gestão de sistemas")
-public class SistemaController extends BaseController<Sistema, SistemaRequestDTO, SistemaResponseDTO, Integer> {
+public class SistemaController extends BaseNameController<Sistema, SistemaRequestDTO, SistemaResponseDTO, Integer> {
     // Construtor
     public SistemaController(SistemaService service) {
         super(service);
