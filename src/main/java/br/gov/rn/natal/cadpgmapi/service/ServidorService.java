@@ -49,6 +49,9 @@ public class ServidorService extends BaseGenericService<
     @Override
     @Transactional
     public ServidorResponseDTO create(ServidorRequestDTO dto) {
+        // Chama a validação antes de criar um servidor
+        beforeCreate(dto);
+
         // Converte o DTO para Entidade
         Servidor entity = mapper.toEntity(dto);
 
@@ -117,6 +120,9 @@ public class ServidorService extends BaseGenericService<
         Servidor entity = servidorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
 
+        // Chama a validação antes de atualizar
+        beforeUpdate(dto, entity);
+
         // Atualiza os dados básicos e relacionamentos N:1 mapeados usando MapStruct
         mapper.updateEntityFromDTO(entity, dto);
 
@@ -181,15 +187,42 @@ public class ServidorService extends BaseGenericService<
         if (servidorRepository.existsByCpf(dto.cpf().trim())) {
             throw new BusinessException("CPF (" + dto.cpf() + ") já cadastrado");
         }
+
+        if (servidorRepository.existsByMatricula(dto.matricula().trim())) {
+            throw new BusinessException("Matrícula (" + dto.matricula() + ") já cadastrada.");
+        }
     }
 
     @Override
     protected void beforeUpdate(ServidorRequestDTO dto, Servidor existingServidor) {
-        // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
-        if (!existingServidor.getMatricula().equalsIgnoreCase(dto.matricula())) {
-            if (servidorRepository.existsByMatricula(dto.matricula())) {
-                throw new BusinessException("Este CPF já está sendo usado por outro servidor");
+        // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o CPF
+        if (!existingServidor.getCpf().equalsIgnoreCase(dto.cpf())) {
+            if (servidorRepository.existsByCpf(dto.cpf())) {
+                throw new BusinessException("Este CPF (" + dto.cpf() + ") já está sendo usado por outro servidor.");
             }
         }
+
+        // Só valida duplicidade se o usuário estiver de fato tentando MUDAR a matrícula
+        if (!existingServidor.getMatricula().equalsIgnoreCase(dto.matricula())) {
+            if (servidorRepository.existsByMatricula(dto.matricula())) {
+                throw new BusinessException("Esta matrícula (" + dto.matricula() + ") já está sendo usada por outro servidor.");
+            }
+        }
+    }
+
+    @Override
+    protected void beforeDelete(Servidor entity) {
+        // Programação Defensiva: Verifica se o servidor tem um status associado para evitar NullPointerException
+        if (entity.getStatus() == null) {
+            throw new BusinessException("Não é possível excluir um servidor sem status definido");
+        }
+        // Compara a descrição ignorando maiúsculas e minúsculas
+        if (!entity.getStatus().getDescricao().equalsIgnoreCase("Inativo")) {
+            throw new BusinessException(
+                    "O servidor só pode ser removido se o status for 'INATIVO'. " +
+                            "Status atual: " + entity.getStatus().getDescricao().toUpperCase()
+            );
+        }
+
     }
 }
