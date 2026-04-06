@@ -27,6 +27,8 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
     protected void beforeCreate(Req dto) {}
     protected void beforeUpdate(Req dto, E existingEntity) {}
     protected void beforeDelete(E entity) {}
+    // Roda antes de ir para banco, mas DEPOIS do mapper!
+    protected void beforeSave(E entity) {}
 
     @Transactional
     public Res create(Req dto) {
@@ -34,6 +36,9 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
         beforeCreate(dto);
 
         E entity = mapper.toEntity(dto);
+        // O pai dá a chance do filho alterar a entidade (ex: criptografar senha)
+        beforeSave(entity);
+
         return mapper.toDto(repository.save(entity));
     }
 
@@ -65,6 +70,9 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
 
         // Usa o méthod criado no BaseMapper para atualizar os campos da entidade buscada
         mapper.updateEntityFromDTO(existingEntity, dto);
+
+        // O gancho atua aqui também, já com os dados novos do DTO aplicados!
+        beforeSave(existingEntity);
 
         // Atualiza e salva
         E updatedEntity = repository.save(existingEntity);

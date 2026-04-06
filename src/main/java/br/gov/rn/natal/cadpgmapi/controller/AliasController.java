@@ -19,9 +19,9 @@ public class AliasController extends BaseController<Alias, AliasRequestDTO, Alia
     private final AliasService aliasService;
 
     // Construtor
-    public AliasController(AliasService service, AliasService aliasService) {
+    public AliasController(AliasService service) {
         super(service);
-        this.aliasService = aliasService;
+        this.aliasService = service;
     }
     // Implementação obrigatória do méthod abstrato do pai!
     @Override
