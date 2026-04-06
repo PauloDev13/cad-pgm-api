@@ -2,6 +2,7 @@ package br.gov.rn.natal.cadpgmapi.auth.controller;
 
 import br.gov.rn.natal.cadpgmapi.auth.dto.LoginRequestDTO;
 import br.gov.rn.natal.cadpgmapi.auth.dto.LoginResponseDTO;
+import br.gov.rn.natal.cadpgmapi.auth.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -15,9 +16,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/auth")
 @Tag(name = "Autenticação", description = "Endpoints para login e emissão de tokens de acesso")
 public class AuthController {
+    private final AuthService authService;
+
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
+
+
     @PostMapping("/login")
-    @Operation(
-            summary = "Realizar login no sistema",
+    @Operation(summary = "Realizar login no sistema",
             description = "Recebe as credenciais do usuário e " +
                     "devolve um token JWT para acesso às rotas protegidas. (Em fase de implementação)"
     )
@@ -28,11 +35,8 @@ public class AuthController {
 
         // Retorno "Mockado" (Falso) apenas para o frontend já ir testando a integração
         // e o Swagger renderizar a documentação corretamente.
-        LoginResponseDTO mockResponse = new LoginResponseDTO(
-                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock-token-temporario-123456",
-                "Bearer"
-        );
+        LoginResponseDTO response = authService.authenticate(dto);
 
-        return ResponseEntity.ok(mockResponse);
+        return ResponseEntity.ok(response);
     }
 }
