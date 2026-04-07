@@ -33,8 +33,6 @@ public class AuthController {
         // TODO: Fase 2 - Chamar o AuthenticationManager do Spring Security para validar login/senha no banco
         // TODO: Fase 2 - Chamar o TokenService para gerar o JWT real com base no usuário autenticado
 
-        // Retorno "Mockado" (Falso) apenas para o frontend já ir testando a integração
-        // e o Swagger renderizar a documentação corretamente.
         LoginResponseDTO response = authService.authenticate(dto);
 
         return ResponseEntity.ok(response);
