@@ -35,8 +35,8 @@ public class AuthService {
 
         // Autenticação com sucesso! Retorna o token Fake
         return new LoginResponseDTO(
-                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock-token-temporario-123456",
-                "Bearer"
+                usuario.getUserName(),
+                usuario.getPermissions()
         );
     }
 }
