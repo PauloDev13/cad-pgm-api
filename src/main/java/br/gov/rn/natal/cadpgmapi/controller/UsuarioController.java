@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -38,11 +40,14 @@ public class UsuarioController extends BaseController<Usuario, UsuarioRequestDTO
 
     // O ENDPOINT DE FILTRO CUSTOMIZADO SÓ DELE
     @GetMapping("/searchFilter")
-    @Operation(summary = "Buscar Usuário por Login com paginação")
-    public Page<UsuarioResponseDTO> findByUserName(
+    @Operation(summary = "Buscar Usuário por nome, login e email com paginação")
+    public Page<UsuarioResponseDTO> findByFilters(
+            @RequestParam(required = false) String name,
             @RequestParam(required = false) String userName,
-            @ParameterObject Pageable pageable) {
+            @RequestParam(required = false) String email,
+            @ParameterObject @PageableDefault(
+                    sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
 
-        return usuarioService.findByFilterUserName(userName, pageable);
+        return usuarioService.findByFilters(name, userName, email, pageable);
     }
 }

@@ -7,8 +7,10 @@ import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.UsuarioMapper;
 import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,48 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         this.usuarioRepository = repository;
 //        this.passwordEncoder = passwordEncoder;
     }
+
+    @Transactional(readOnly = true)
+    public Page<UsuarioResponseDTO> findByFilters(
+            String name, String userName, String email, Pageable pageable
+    ) {
+        // BLOCO DA SPECIFICATION: Monta as regras (a "receita" do SQL)
+        Specification<Usuario> spec = (root, query, cb) -> {
+            // Começa neutro (1=1)
+            Predicate predicate = cb.conjunction();
+
+            // Se o Nome for informado, monta o SQL de busca por Nome
+            if (name != null && !name.trim().isEmpty()) {
+                predicate = cb.and(predicate, cb.like(
+                        root.get("name"), "%" + name.trim() + "%")
+                );
+            }
+
+            // Se o userName for informado, monta o SQL de busca por userName
+            if (userName != null && !userName.trim().isEmpty()) {
+                predicate = cb.and(predicate, cb.like(
+                        cb.lower(root.get("userName")), "%" + userName.trim().toLowerCase() + "%")
+                );
+            }
+
+            if (email!= null && !email.trim().isEmpty()) {
+                predicate = cb.and(
+                        predicate, cb.like(
+                                cb.lower(root.get("email")), "%" + email.trim().toLowerCase() + "%")
+                );
+
+            }
+
+            // Encerra a montagem das regras
+            return predicate;
+        };
+
+        // BLOCO DE EXECUÇÃO: Vai no banco e converte para DTO
+        // O retorno real que vai para o Controller
+        return usuarioRepository.findAll(spec, pageable)
+                .map(mapper::toDto);
+    }
+
 
     // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
     @Override
@@ -62,15 +106,5 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         // Pega a senha em texto puro (que o mapper colocou) e transforma no Hash BCrypt
         // String senhaCriptografada = passwordEncoder.encode(entity.getPassword());
         // entity.setPassword(senhaCriptografada);
-    }
-
-    @Transactional(readOnly = true)
-    public Page<UsuarioResponseDTO> findByFilterUserName(String filter, Pageable pageable) {
-        if (filter == null || filter.trim().isEmpty()) {
-            return super.findAll(pageable); // Reaproveita o méthod do BaseCrudService!
-        }
-
-        return usuarioRepository.findByUserNameContainingIgnoreCase(filter.trim(), pageable)
-                .map(mapper::toDto); // Usamos o mapper genérico da classe pai
     }
 }
