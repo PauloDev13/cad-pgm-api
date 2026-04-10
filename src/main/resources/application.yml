@@ -14,4 +14,15 @@ spring:
     properties:
       hibernate:
         format_sql: true
-#        dialect: org.hibernate.dialect.MariaDBDialect
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD} # Vai buscar a senha nas variáveis de ambiente do Windows/Linux/Docker
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
