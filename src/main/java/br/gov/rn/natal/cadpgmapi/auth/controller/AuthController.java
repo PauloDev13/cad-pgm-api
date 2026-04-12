@@ -1,7 +1,8 @@
 package br.gov.rn.natal.cadpgmapi.auth.controller;
 
-import br.gov.rn.natal.cadpgmapi.auth.dto.LoginRequestDTO;
-import br.gov.rn.natal.cadpgmapi.auth.dto.LoginResponseDTO;
+import br.gov.rn.natal.cadpgmapi.auth.dto.request.ForceChangePasswordRequestDTO;
+import br.gov.rn.natal.cadpgmapi.auth.dto.request.LoginRequestDTO;
+import br.gov.rn.natal.cadpgmapi.auth.dto.response.LoginResponseDTO;
 import br.gov.rn.natal.cadpgmapi.auth.service.AuthService;
 import br.gov.rn.natal.cadpgmapi.dto.request.email.ForgotPasswordRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.email.ResetPasswordRequestDTO;
@@ -61,5 +62,12 @@ public class AuthController {
         passwordResetService.redefinirSenha(dto.token(), dto.newPassword());
 
         return ResponseEntity.ok("Senha redefinida com sucesso. Você já pode fazer login.");
+    }
+
+    @PostMapping("/force-password-change")
+    @Operation(summary = "Usuário: Troca obrigatória de senha", description = "Finaliza o fluxo de troca de senha no primeiro acesso.")
+    public ResponseEntity<Void> forcarTrocaSenha(@Valid @RequestBody ForceChangePasswordRequestDTO dto) {
+        authService.finalizeRequiredPasswordChange(dto);
+        return ResponseEntity.noContent().build();
     }
 }

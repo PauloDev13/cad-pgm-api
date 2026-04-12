@@ -45,4 +45,9 @@ public class Usuario {
     @Column(name = "permissao", nullable = false, length = 100)
     @Builder.Default
     private Set<String> permissions = new HashSet<>();
+
+    @Column(name = "force_password_change")
+    private boolean forcePasswordChange = false;
+
+    
 }

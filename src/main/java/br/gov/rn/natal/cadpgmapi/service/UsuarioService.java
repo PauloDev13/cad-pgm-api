@@ -1,5 +1,6 @@
 package br.gov.rn.natal.cadpgmapi.service;
 
+import br.gov.rn.natal.cadpgmapi.auth.dto.response.AdminResetPasswordResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
@@ -13,6 +14,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.security.SecureRandom;
+import java.util.stream.Collectors;
 
 @Service
 public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDTO, UsuarioResponseDTO, Integer> {
@@ -67,6 +71,29 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
                 .map(mapper::toDto);
     }
 
+    public AdminResetPasswordResponseDTO resetPasswordByAdmin(Integer id) {
+        Usuario usuario = repository.findById(id)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+
+        String temporaryPassword = generateRandomPassword(8);
+
+        // TODO: Usar passwordEncoder.encode(senhaTemporária) no futuro
+        usuario.setPassword(temporaryPassword);
+        usuario.setForcePasswordChange(true);
+        repository.save(usuario);
+
+        return new AdminResetPasswordResponseDTO(temporaryPassword);
+    }
+
+    private String generateRandomPassword(int length) {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+        SecureRandom random = new SecureRandom();
+        return random.ints(length, 0, chars.length())
+                .mapToObj(chars::charAt)
+                .map(Object::toString)
+                .collect(Collectors.joining());
+    }
+
 
     // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
     @Override
@@ -102,8 +129,8 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     // Criptografa a senha
     @Override
     protected void beforeSave(Usuario entity) {
-    // TODO: implementer o código abaixo
-        // Pega a senha em texto puro (que o mapper colocou) e transforma no Hash BCrypt
+    // TODO: implementer o código abaixo:
+        //  Pega a senha em texto puro (que o mapper colocou) e transforma no Hash BCrypt
         // String senhaCriptografada = passwordEncoder.encode(entity.getPassword());
         // entity.setPassword(senhaCriptografada);
     }

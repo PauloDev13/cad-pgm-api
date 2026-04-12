@@ -1,10 +1,12 @@
 package br.gov.rn.natal.cadpgmapi.auth.service;
 
-import br.gov.rn.natal.cadpgmapi.auth.dto.LoginRequestDTO;
-import br.gov.rn.natal.cadpgmapi.auth.dto.LoginResponseDTO;
+import br.gov.rn.natal.cadpgmapi.auth.dto.request.ForceChangePasswordRequestDTO;
+import br.gov.rn.natal.cadpgmapi.auth.dto.request.LoginRequestDTO;
+import br.gov.rn.natal.cadpgmapi.auth.dto.response.LoginResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,7 +30,7 @@ public class AuthService {
         }
 
         // Valida a senha (Temporário em texto puro)
-        // TODO: Fase 2 - Substituir por passwordEncoder.matches(dto.password(), usuario.getPassword())
+        // TODO: Fase 2 - Substituir por passwordEncoder.matches(dto.password(), usuário.getPassword())
         if (!usuario.getPassword().equals(dto.password())) {
             throw new BusinessException("Usuário ou senha inválidos.");
         }
@@ -36,7 +38,21 @@ public class AuthService {
         // Autenticação com sucesso! Retorna o token Fake
         return new LoginResponseDTO(
                 usuario.getUserName(),
-                usuario.getPermissions()
+                usuario.getPermissions(),
+                usuario.isForcePasswordChange()
         );
+    }
+
+    // MÉTODOS PARA RESET DE SENHA DO USUÁRIO PELO ADMINISTRADOR
+
+    @Transactional
+    public void finalizeRequiredPasswordChange(ForceChangePasswordRequestDTO dto) {
+        Usuario usuario = usuarioRepository.findByUserName(dto.userName())
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
+
+        // TODO: passwordEncoder.encode(dto.novaSenha())
+        usuario.setPassword(dto.newPassword());
+        usuario.setForcePasswordChange(false); // Libera o acesso normal
+        usuarioRepository.save(usuario);
     }
 }
