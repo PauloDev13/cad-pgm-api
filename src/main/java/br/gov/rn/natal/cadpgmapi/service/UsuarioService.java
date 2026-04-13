@@ -3,6 +3,7 @@ package br.gov.rn.natal.cadpgmapi.service;
 import br.gov.rn.natal.cadpgmapi.auth.dto.response.AdminResetPasswordResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.update.UsuarioUpdateDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.UsuarioMapper;
@@ -28,6 +29,44 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         super(repository, mapper);
         this.usuarioRepository = repository;
 //        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Transactional
+    public UsuarioResponseDTO updateProfile(Integer id, UsuarioUpdateDTO dto) {
+
+        // Busca o usuário atual no banco
+        Usuario existingUsuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
+
+        // Valida duplicidade de E-mail (se ele estiver tentando mudar)
+        if (!existingUsuario.getEmail().equalsIgnoreCase(dto.email().trim())) {
+            if (usuarioRepository.existsByEmail(dto.email().trim())) {
+                throw new BusinessException("Este E-mail já está em uso por outro Usuário.");
+            }
+        }
+
+        // Valida duplicidade de UserName (se ele estiver tentando mudar)
+        if (!existingUsuario.getUserName().equalsIgnoreCase(dto.userName().trim())) {
+            if (usuarioRepository.existsByUserName(dto.userName().trim())) {
+                throw new BusinessException("Este login já está em uso por outro Usuário.");
+            }
+        }
+
+        // Aplica os novos valores
+        existingUsuario.setName(dto.name().trim());
+        existingUsuario.setUserName(dto.userName().trim());
+        existingUsuario.setEmail(dto.email().trim());
+        existingUsuario.setActivated(dto.activated());
+        existingUsuario.setPermissions(dto.permissions());
+
+
+        // Obs: Se você tiver uma lógica específica para converter Set<String> permissoes
+        // em Entidades no seu mapper, você pode chamar aqui também.
+
+        // IMPORTANTE: NÃO tocamos no existingUsuario.getPassword(). A senha original é preservada!
+
+        // Salva e retorna o DTO atualizado
+        return mapper.toDto(usuarioRepository.save(existingUsuario));
     }
 
     @Transactional(readOnly = true)

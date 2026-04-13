@@ -10,7 +10,7 @@ public class CorsConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**") // Aplica o CORS apenas aos endpoints da API
                 .allowedOrigins("http://localhost:4200") // O endereço exato do Angular
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Métodos permitidos
+                .allowedMethods("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS") // Métodos permitidos
                 .allowedHeaders("*") // Permite o envio de qualquer header (como tokens JWT)
                 .allowCredentials(true); // Necessário se for usar cookies ou autenticação baseada em sessão
     }

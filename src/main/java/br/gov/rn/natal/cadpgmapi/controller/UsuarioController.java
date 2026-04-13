@@ -4,10 +4,12 @@ import br.gov.rn.natal.cadpgmapi.auth.dto.response.AdminResetPasswordResponseDTO
 import br.gov.rn.natal.cadpgmapi.controller.generic.BaseController;
 import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.update.UsuarioUpdateDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
 import br.gov.rn.natal.cadpgmapi.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -54,5 +56,16 @@ public class UsuarioController extends BaseController<Usuario, UsuarioRequestDTO
     @Operation(summary = "Admin: Resetar senha de um usuário", description = "Gera uma senha aleatória e força troca no próximo login.")
     public ResponseEntity<AdminResetPasswordResponseDTO> resetSenhaAdmin(@PathVariable Integer id) {
         return ResponseEntity.ok(usuarioService.resetPasswordByAdmin(id));
+    }
+
+    @PatchMapping("/{id}")
+    @Operation(summary = "Atualizar Perfil do Usuário",
+            description = "Atualiza os dados cadastrais do usuário sem modificar a senha.")
+    public ResponseEntity<UsuarioResponseDTO> updateProfile(
+            @PathVariable Integer id,
+            @Valid @RequestBody UsuarioUpdateDTO dto) {
+        System.out.println("backend " + dto);
+
+        return ResponseEntity.ok(usuarioService.updateProfile(id, dto));
     }
 }
