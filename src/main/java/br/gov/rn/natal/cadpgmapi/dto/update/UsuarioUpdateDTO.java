@@ -19,6 +19,7 @@ public record UsuarioUpdateDTO(
         @Size(max = 255, message = "O email deve ter no máximo 100 caracteres")
         String email,
         boolean activated,
-        Set<String> permissions
+        Set<String> permissions,
+        boolean forcePasswordChange
 ) {
 }

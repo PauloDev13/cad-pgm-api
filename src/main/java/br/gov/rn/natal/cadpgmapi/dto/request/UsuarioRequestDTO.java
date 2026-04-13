@@ -23,6 +23,7 @@ public record UsuarioRequestDTO(
         @Size(min = 6, max = 100, message = "A senha deve ter entre 6 e 100 caracteres")
         String password,
         boolean activated,
-        Set<String> permissions
+        Set<String> permissions,
+        boolean forcePasswordChange
 ) {
 }

@@ -8,5 +8,6 @@ public record UsuarioResponseDTO(
         String userName,
         String email,
         boolean activated,
-        Set<String> permissions
+        Set<String> permissions,
+        boolean forcePasswordChange
 ) {}

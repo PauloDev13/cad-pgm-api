@@ -54,7 +54,6 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
                 throw new BusinessException("Este login já está em uso por outro Usuário.");
             }
         }
-
         // Aplica os novos valores
         usuarioUpdateMapper.updateEntityFromDTO(existingUsuario, dto);
 
@@ -108,7 +107,6 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
             // Encerra a montagem das regras
             return predicate;
         };
-
         // BLOCO DE EXECUÇÃO: Vai no banco e converte para DTO
         // O retorno real que vai para o Controller
         return usuarioRepository.findAll(spec, pageable)
