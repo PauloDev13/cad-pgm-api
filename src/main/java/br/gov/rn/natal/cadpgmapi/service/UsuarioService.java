@@ -7,6 +7,7 @@ import br.gov.rn.natal.cadpgmapi.dto.update.UsuarioUpdateDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.UsuarioMapper;
+import br.gov.rn.natal.cadpgmapi.mapper.UsuarioUpdateMapper;
 import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
 import jakarta.persistence.criteria.Predicate;
@@ -22,12 +23,14 @@ import java.util.stream.Collectors;
 @Service
 public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDTO, UsuarioResponseDTO, Integer> {
     private final UsuarioRepository usuarioRepository;
+    private final UsuarioUpdateMapper usuarioUpdateMapper;
 //    private final PasswordEncoder passwordEncoder;
 
     // Construtor
-    public UsuarioService(UsuarioRepository repository, UsuarioMapper mapper) {
+    public UsuarioService(UsuarioRepository repository, UsuarioMapper mapper, UsuarioUpdateMapper usuarioUpdateMapper) {
         super(repository, mapper);
         this.usuarioRepository = repository;
+        this.usuarioUpdateMapper = usuarioUpdateMapper;
 //        this.passwordEncoder = passwordEncoder;
     }
 
@@ -53,12 +56,14 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         }
 
         // Aplica os novos valores
-        existingUsuario.setName(dto.name().trim());
-        existingUsuario.setUserName(dto.userName().trim());
-        existingUsuario.setEmail(dto.email().trim());
-        existingUsuario.setActivated(dto.activated());
-        existingUsuario.setPermissions(dto.permissions());
+        usuarioUpdateMapper.updateEntityFromDTO(existingUsuario, dto);
 
+        // Aplica os novos valores
+//        existingUsuario.setName(dto.name().trim());
+//        existingUsuario.setUserName(dto.userName().trim());
+//        existingUsuario.setEmail(dto.email().trim());
+//        existingUsuario.setActivated(dto.activated());
+//        existingUsuario.setPermissions(dto.permissions());
 
         // Obs: Se você tiver uma lógica específica para converter Set<String> permissoes
         // em Entidades no seu mapper, você pode chamar aqui também.

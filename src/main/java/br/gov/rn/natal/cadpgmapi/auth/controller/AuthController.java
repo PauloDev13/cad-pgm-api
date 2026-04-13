@@ -65,7 +65,10 @@ public class AuthController {
     }
 
     @PostMapping("/force-password-change")
-    @Operation(summary = "Usuário: Troca obrigatória de senha", description = "Finaliza o fluxo de troca de senha no primeiro acesso.")
+    @Operation(
+            summary = "Usuário: Troca obrigatória de senha",
+            description = "Finaliza o fluxo de troca de senha no primeiro acesso."
+    )
     public ResponseEntity<Void> forcarTrocaSenha(@Valid @RequestBody ForceChangePasswordRequestDTO dto) {
         authService.finalizeRequiredPasswordChange(dto);
         return ResponseEntity.noContent().build();
