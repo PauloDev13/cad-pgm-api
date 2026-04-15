@@ -6,11 +6,13 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 
 @Service
 public class TokenService {
@@ -23,9 +25,16 @@ public class TokenService {
     public String gerarToken(Usuario usuario) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
+
+            // 1. Transformamos as autoridades do Spring em uma lista de Strings simples
+            List<String> permissions = usuario.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .toList();
+
             return JWT.create()
                     .withIssuer(ISSUER)
                     .withSubject(usuario.getUsername())
+                    .withClaim("roles", permissions)
                     .withExpiresAt(gerarDataExpiracao())
                     .sign(algorithm);
         } catch (JWTCreationException exception) {

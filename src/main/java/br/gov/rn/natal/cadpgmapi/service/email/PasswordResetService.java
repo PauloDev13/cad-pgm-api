@@ -5,6 +5,8 @@ import br.gov.rn.natal.cadpgmapi.entity.email.PasswordResetToken;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
 import br.gov.rn.natal.cadpgmapi.repository.email.PasswordResetTokenRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,27 +15,19 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class PasswordResetService {
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordResetTokenRepository tokenRepository;
     private final EmailService emailService;
-
-    // TODO: Adicionar PasswordEncoder quando o Spring Security for ativado
-
-    public PasswordResetService(UsuarioRepository usuarioRepository,
-                                PasswordResetTokenRepository tokenRepository,
-                                EmailService emailService) {
-        this.usuarioRepository = usuarioRepository;
-        this.tokenRepository = tokenRepository;
-        this.emailService = emailService;
-    }
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public void solicitarRecuperacao(String email) {
         Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email.trim());
 
-        // Defesa contra Enumeration Attack: Se o e-mail não existir, finalizamos o método em silêncio.
+        // Defesa contra Enumeration Attack: Se o e-mail não existir, finalizamos o méthod em silêncio.
         if (usuarioOpt.isEmpty()) {
             return;
         }
@@ -75,7 +69,7 @@ public class PasswordResetService {
         // 4. Atualiza a senha do usuário
         Usuario usuario = resetToken.getUsuario();
 
-        // TODO: Quando ativar o Spring Security, usar: usuario.setPassword(passwordEncoder.encode(newPassword));
+        usuario.setPassword(passwordEncoder.encode(newPassword));
         usuario.setPassword(newPassword);
         usuarioRepository.save(usuario);
 

@@ -14,6 +14,7 @@ import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,14 +25,19 @@ import java.util.stream.Collectors;
 public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDTO, UsuarioResponseDTO, Integer> {
     private final UsuarioRepository usuarioRepository;
     private final UsuarioUpdateMapper usuarioUpdateMapper;
-//    private final PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
 
     // Construtor
-    public UsuarioService(UsuarioRepository repository, UsuarioMapper mapper, UsuarioUpdateMapper usuarioUpdateMapper) {
+    public UsuarioService(
+            UsuarioRepository repository,
+            UsuarioMapper mapper,
+            UsuarioUpdateMapper usuarioUpdateMapper,
+            PasswordEncoder passwordEncoder
+    ) {
         super(repository, mapper);
         this.usuarioRepository = repository;
         this.usuarioUpdateMapper = usuarioUpdateMapper;
-//        this.passwordEncoder = passwordEncoder;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
@@ -56,18 +62,6 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         }
         // Aplica os novos valores
         usuarioUpdateMapper.updateEntityFromDTO(existingUsuario, dto);
-
-        // Aplica os novos valores
-//        existingUsuario.setName(dto.name().trim());
-//        existingUsuario.setUserName(dto.userName().trim());
-//        existingUsuario.setEmail(dto.email().trim());
-//        existingUsuario.setActivated(dto.activated());
-//        existingUsuario.setPermissions(dto.permissions());
-
-        // Obs: Se você tiver uma lógica específica para converter Set<String> permissoes
-        // em Entidades no seu mapper, você pode chamar aqui também.
-
-        // IMPORTANTE: NÃO tocamos no existingUsuario.getPassword(). A senha original é preservada!
 
         // Salva e retorna o DTO atualizado
         return mapper.toDto(usuarioRepository.save(existingUsuario));
@@ -119,7 +113,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
 
         String temporaryPassword = generateRandomPassword(8);
 
-        // TODO: Usar passwordEncoder.encode(senhaTemporária) no futuro
+        usuario.setPassword(passwordEncoder.encode(temporaryPassword));
         usuario.setPassword(temporaryPassword);
         usuario.setForcePasswordChange(true);
         repository.save(usuario);
@@ -171,9 +165,8 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     // Criptografa a senha
     @Override
     protected void beforeSave(Usuario entity) {
-    // TODO: implementer o código abaixo:
-        //  Pega a senha em texto puro (que o mapper colocou) e transforma no Hash BCrypt
-        // String senhaCriptografada = passwordEncoder.encode(entity.getPassword());
-        // entity.setPassword(senhaCriptografada);
+        // Criptografa a senha do novo usuário na hora do cadastro!
+        String senhaCriptografada = passwordEncoder.encode(entity.getPassword());
+        entity.setPassword(senhaCriptografada);
     }
 }

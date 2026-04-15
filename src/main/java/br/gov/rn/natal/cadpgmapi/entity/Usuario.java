@@ -16,6 +16,7 @@ import java.util.Set;
 @Entity
 @Table(name = "usuario")
 @Getter @Setter
+@EqualsAndHashCode(of = "id") // Compara os usuários apenas pelo ID (Acaba com os loops infinitos!)
 @NoArgsConstructor @AllArgsConstructor
 @Builder
 public class Usuario implements UserDetails {
@@ -60,6 +61,11 @@ public class Usuario implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        // Se a lista de permissões estiver nula (usuário sem permissão no banco),
+        // devolve uma lista vazia para não quebrar o sistema!
+        if (this.permissions == null) {
+            return List.of();
+        }
         return this.permissions.stream()
                 .map(permission -> new SimpleGrantedAuthority(permission))
                 .toList();

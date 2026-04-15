@@ -53,7 +53,9 @@ public class UsuarioController extends BaseController<Usuario, UsuarioRequestDTO
     }
 
     @PostMapping("/{id}/reset-password")
-    @Operation(summary = "Admin: Resetar senha de um usuário", description = "Gera uma senha aleatória e força troca no próximo login.")
+    @Operation(summary = "Admin: Resetar senha de um usuário",
+            description = "Gera uma senha aleatória e força troca no próximo login."
+    )
     public ResponseEntity<AdminResetPasswordResponseDTO> resetSenhaAdmin(@PathVariable Integer id) {
         return ResponseEntity.ok(usuarioService.resetPasswordByAdmin(id));
     }
@@ -64,7 +66,6 @@ public class UsuarioController extends BaseController<Usuario, UsuarioRequestDTO
     public ResponseEntity<UsuarioResponseDTO> updateProfile(
             @PathVariable Integer id,
             @Valid @RequestBody UsuarioUpdateDTO dto) {
-        System.out.println("backend " + dto);
 
         return ResponseEntity.ok(usuarioService.updateProfile(id, dto));
     }

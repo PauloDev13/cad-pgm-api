@@ -33,5 +33,5 @@ spring:
 api:
   security:
     token:
-      secret: ${JWT_SECRET:minha_chave_super_secreta_de_desenvolvimento_123}
+      secret: ${JWT_SECRET}
 
