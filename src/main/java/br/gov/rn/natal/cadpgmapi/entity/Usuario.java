@@ -3,9 +3,14 @@ package br.gov.rn.natal.cadpgmapi.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -13,7 +18,7 @@ import java.util.Set;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
-public class Usuario {
+public class Usuario implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -49,5 +54,39 @@ public class Usuario {
     @Column(name = "force_password_change")
     private boolean forcePasswordChange = false;
 
-    
+    // =========================================================================
+    // MÉTODOS OBRIGATÓRIOS DO SPRING SECURITY (O PASSAPORTE)
+    // =========================================================================
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return this.permissions.stream()
+                .map(permission -> new SimpleGrantedAuthority(permission))
+                .toList();
+    }
+
+    @Override
+    public String getUsername() {
+        return this.userName;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return this.activated;
+    }
 }

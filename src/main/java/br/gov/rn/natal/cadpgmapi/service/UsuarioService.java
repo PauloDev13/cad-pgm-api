@@ -49,7 +49,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         }
 
         // Valida duplicidade de UserName (se ele estiver tentando mudar)
-        if (!existingUsuario.getUserName().equalsIgnoreCase(dto.userName().trim())) {
+        if (!existingUsuario.getUsername().equalsIgnoreCase(dto.userName().trim())) {
             if (usuarioRepository.existsByUserName(dto.userName().trim())) {
                 throw new BusinessException("Este login já está em uso por outro Usuário.");
             }
@@ -161,7 +161,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         }
 
         // Só valida duplicidade se tentar MUDAR o userName
-        if (!existingUsuario.getUserName().equalsIgnoreCase(dto.userName().trim())) {
+        if (!existingUsuario.getUsername().equalsIgnoreCase(dto.userName().trim())) {
             if (usuarioRepository.existsByUserName(dto.userName().trim())) {
                 throw new BusinessException("Este login já está em uso por outro Usuário.");
             }

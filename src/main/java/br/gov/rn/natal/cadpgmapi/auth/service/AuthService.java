@@ -37,7 +37,7 @@ public class AuthService {
 
         // Autenticação com sucesso! Retorna o token Fake
         return new LoginResponseDTO(
-                usuario.getUserName(),
+                usuario.getUsername(),
                 usuario.getPermissions(),
                 usuario.isForcePasswordChange()
         );
