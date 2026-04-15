@@ -35,7 +35,7 @@ public class AuthController {
         // Chama o serviço passando o login e senha digitados
         String tokenJWT = authService.authenticate(dto);
 
-        return ResponseEntity.ok(new LoginResponseDTO(tokenJWT, "Bearer "));
+        return ResponseEntity.ok(new LoginResponseDTO(tokenJWT));
     }
 
     @PostMapping("/forgot-password")
