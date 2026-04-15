@@ -8,12 +8,16 @@ spring:
     driver-class-name: org.mariadb.jdbc.Driver
   jpa:
     hibernate:
-      ddl-auto: validate # 'none' ou 'validate' para produção
+      ddl-auto: validate # Desligamos a criação automática do Hibernate! O chefe agora é o Flyway.
     show-sql: true
     open-in-view: false
     properties:
       hibernate:
         format_sql: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1 # Diz que a linha de base empata com o nosso arquivo V1
   mail:
     host: smtp.gmail.com
     port: 587
