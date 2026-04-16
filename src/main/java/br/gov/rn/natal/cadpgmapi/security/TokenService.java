@@ -17,7 +17,7 @@ import java.util.List;
 @Service
 public class TokenService {
 
-    @Value("${api.security.token.secret}")
+    @Value("{JWT_SECRET}")
     private String secret;
 
     private static final String ISSUER = "API Cad PGM";
@@ -35,6 +35,7 @@ public class TokenService {
                     .withIssuer(ISSUER)
                     .withSubject(usuario.getUsername())
                     .withClaim("roles", permissions)
+                    .withClaim("isForcePasswordChange", usuario.isForcePasswordChange())
                     .withExpiresAt(gerarDataExpiracao())
                     .sign(algorithm);
         } catch (JWTCreationException exception) {

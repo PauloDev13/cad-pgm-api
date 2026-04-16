@@ -31,6 +31,7 @@ public class AuthController {
                     "devolve um token JWT para acesso às rotas protegidas. (Em fase de implementação)"
     )
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO dto) {
+        System.out.println("CREDENCIAIS NO AUTH CONTROLLER" + dto);
 
         // Chama o serviço passando o login e senha digitados
         String tokenJWT = authService.authenticate(dto);
