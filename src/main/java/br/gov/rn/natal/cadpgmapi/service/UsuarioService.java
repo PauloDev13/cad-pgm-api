@@ -1,7 +1,9 @@
 package br.gov.rn.natal.cadpgmapi.service;
 
 import br.gov.rn.natal.cadpgmapi.auth.dto.response.AdminResetPasswordResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRegisterRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRequestDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioRegisterResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.update.UsuarioUpdateDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,6 +41,37 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         this.usuarioRepository = repository;
         this.usuarioUpdateMapper = usuarioUpdateMapper;
         this.passwordEncoder = passwordEncoder;
+    }
+
+    @Transactional
+    public UsuarioRegisterResponseDTO registerNewUserPublic(UsuarioRegisterRequestDTO dto) {
+        // Valida se há duplicidade de E-mail e userName
+        if (usuarioRepository.existsByEmail(dto.email().trim())) {
+            throw new BusinessException("E-mail já cadastrado");
+        }
+        if (usuarioRepository.existsByUserName(dto.userName().trim())) {
+            throw new BusinessException("Login já está em uso");
+        }
+
+        // Instancia o usuário apenas com os dados seguros
+        Usuario newUser = new Usuario();
+        newUser.setName(dto.name().trim());
+        newUser.setUserName(dto.userName().trim());
+        newUser.setEmail(dto.email().trim());
+
+        // Criptografa a senha!
+        newUser.setPassword(passwordEncoder.encode(dto.password().trim()));
+        newUser.setPermissions(Set.of("guest"));
+
+        // Salva no banco
+        Usuario userSave = usuarioRepository.save(newUser);
+
+        return new UsuarioRegisterResponseDTO(
+                userSave.getId(),
+                userSave.getName(),
+                userSave.getUsername(),
+                userSave.getEmail()
+        );
     }
 
     @Transactional

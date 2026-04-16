@@ -4,13 +4,17 @@ import br.gov.rn.natal.cadpgmapi.auth.dto.request.ForceChangePasswordRequestDTO;
 import br.gov.rn.natal.cadpgmapi.auth.dto.request.LoginRequestDTO;
 import br.gov.rn.natal.cadpgmapi.auth.dto.response.LoginResponseDTO;
 import br.gov.rn.natal.cadpgmapi.auth.service.AuthService;
+import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRegisterRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.request.email.ForgotPasswordRequestDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioRegisterResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.email.ResetPasswordRequestDTO;
+import br.gov.rn.natal.cadpgmapi.service.UsuarioService;
 import br.gov.rn.natal.cadpgmapi.service.email.PasswordResetService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Autenticação", description = "Endpoints para login e emissão de tokens de acesso")
 public class AuthController {
     private final AuthService authService;
+    private final UsuarioService usuarioService;
     private final PasswordResetService passwordResetService;
 
     @PostMapping("/login")
@@ -37,6 +42,16 @@ public class AuthController {
         String tokenJWT = authService.authenticate(dto);
 
         return ResponseEntity.ok(new LoginResponseDTO(tokenJWT));
+    }
+
+    @PostMapping("/register")
+    @Operation(summary = "Auto-cadastro de usuário", description = "Endpoint público para novos usuários se cadastrarem.")
+    public ResponseEntity<UsuarioRegisterResponseDTO> registrar(@Valid @RequestBody UsuarioRegisterRequestDTO dto) {
+
+//        usuarioService.registerNewUserPublic(dto);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(usuarioService.registerNewUserPublic(dto));
     }
 
     @PostMapping("/forgot-password")
