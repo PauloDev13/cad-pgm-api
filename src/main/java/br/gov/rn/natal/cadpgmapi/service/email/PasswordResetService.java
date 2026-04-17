@@ -1,10 +1,10 @@
 package br.gov.rn.natal.cadpgmapi.service.email;
 
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
-import br.gov.rn.natal.cadpgmapi.entity.email.PasswordResetToken;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
-import br.gov.rn.natal.cadpgmapi.repository.email.PasswordResetTokenRepository;
+import br.gov.rn.natal.cadpgmapi.security.TokenService;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,8 +19,8 @@ import java.util.UUID;
 public class PasswordResetService {
 
     private final UsuarioRepository usuarioRepository;
-    private final PasswordResetTokenRepository tokenRepository;
     private final EmailService emailService;
+    private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
@@ -34,47 +34,32 @@ public class PasswordResetService {
 
         Usuario usuario = usuarioOpt.get();
 
-        // 1. Gera o Token Único
-        String token = UUID.randomUUID().toString();
+        // Delega a geração para o TokenService (Stateless)
+        String token = tokenService.gerarTokenRecuperacaoSenha(usuario);
 
-        // 2. Salva no banco com validade de 30 minutos
-        PasswordResetToken resetToken = PasswordResetToken.builder()
-                .token(token)
-                .usuario(usuario)
-                .dataExpiracao(LocalDateTime.now().plusMinutes(30))
-                .build();
-        tokenRepository.save(resetToken);
-
-        // 3. Monta o link do Frontend e dispara o e-mail
+        // Monta o link do Frontend e dispara o e-mail
         String frontendUrl = "http://localhost:4200/auth/redefinir-senha?token=" + token;
         emailService.enviarEmailRecuperacao(usuario.getEmail(), frontendUrl);
     }
 
     @Transactional
     public void redefinirSenha(String token, String newPassword) {
-        // 1. Busca o Token
-        PasswordResetToken resetToken = tokenRepository.findByToken(token)
-                .orElseThrow(() -> new BusinessException("Token inválido ou inexistente."));
+        // Valida a assinatura e a expiração do JWT
+        DecodedJWT jwt = tokenService.validarTokenRecuperacao(token);
+        String email = jwt.getSubject();
+        String hashAntigo = jwt.getClaim("hash").asString();
 
-        // 2. Valida se já foi usado
-        if (resetToken.isUsado()) {
+        // Busca o usuário pelo e-mail contido no token
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
+
+        //  VALIDAÇÃO DE REUSO (O Truque de Mestre)
+        if (!usuario.getPassword().equals(hashAntigo)) {
             throw new BusinessException("Este link de recuperação já foi utilizado.");
         }
 
-        // 3. Valida se está expirado
-        if (resetToken.getDataExpiracao().isBefore(LocalDateTime.now())) {
-            throw new BusinessException("Este link de recuperação expirou. Solicite um novo.");
-        }
-
-        // 4. Atualiza a senha do usuário
-        Usuario usuario = resetToken.getUsuario();
-
-        usuario.setPassword(passwordEncoder.encode(newPassword));
-        usuario.setPassword(newPassword);
+        // Atualiza a senha corretamente (bug corrigido!)
+        usuario.setPassword(passwordEncoder.encode(newPassword.trim()));
         usuarioRepository.save(usuario);
-
-        // 5. Invalida o token para não ser usado novamente
-        resetToken.setUsado(true);
-        tokenRepository.save(resetToken);
     }
 }
