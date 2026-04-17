@@ -1,6 +1,7 @@
 package br.gov.rn.natal.cadpgmapi.service;
 
 import br.gov.rn.natal.cadpgmapi.auth.dto.response.AdminResetPasswordResponseDTO;
+import br.gov.rn.natal.cadpgmapi.auth.mappers.RegisterUserMapper;
 import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRegisterRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioRegisterResponseDTO;
@@ -29,11 +30,13 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     private final UsuarioRepository usuarioRepository;
     private final UsuarioUpdateMapper usuarioUpdateMapper;
     private final PasswordEncoder passwordEncoder;
+    private final RegisterUserMapper registerUserMapper;
 
     // Construtor
     public UsuarioService(
             UsuarioRepository repository,
             UsuarioMapper mapper,
+            RegisterUserMapper registerUserMapper,
             UsuarioUpdateMapper usuarioUpdateMapper,
             PasswordEncoder passwordEncoder
     ) {
@@ -41,37 +44,35 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         this.usuarioRepository = repository;
         this.usuarioUpdateMapper = usuarioUpdateMapper;
         this.passwordEncoder = passwordEncoder;
+        this.registerUserMapper = registerUserMapper;
     }
 
     @Transactional
     public UsuarioRegisterResponseDTO registerNewUserPublic(UsuarioRegisterRequestDTO dto) {
-        // Valida se há duplicidade de E-mail e userName
+        // Valida se há duplicidade de E-mail
         if (usuarioRepository.existsByEmail(dto.email().trim())) {
-            throw new BusinessException("E-mail já cadastrado");
+            throw new BusinessException("Já existe cadastro com este e-mail " +
+                    "(<strong>" + dto.email() + "</strong>).");
         }
+        // UserName (Login) único
         if (usuarioRepository.existsByUserName(dto.userName().trim())) {
-            throw new BusinessException("Login já está em uso");
+            throw new BusinessException("Já existe cadastro com este Login " +
+                    "(<strong>" + dto.userName() + "</strong>) já está em uso.");
         }
 
         // Instancia o usuário apenas com os dados seguros
-        Usuario newUser = new Usuario();
-        newUser.setName(dto.name().trim());
-        newUser.setUserName(dto.userName().trim());
-        newUser.setEmail(dto.email().trim());
+        Usuario newUser = registerUserMapper.toEntity(dto);
+//        Usuario newUser = new Usuario();
+//        newUser.setName(dto.name().trim());
+//        newUser.setUserName(dto.userName().trim());
+//        newUser.setEmail(dto.email().trim());
 
-        // Criptografa a senha!
+        // Criptografa a senha e insere a permissão padrão Guest ao usuário
         newUser.setPassword(passwordEncoder.encode(dto.password().trim()));
         newUser.setPermissions(Set.of("guest"));
 
         // Salva no banco
-        Usuario userSave = usuarioRepository.save(newUser);
-
-        return new UsuarioRegisterResponseDTO(
-                userSave.getId(),
-                userSave.getName(),
-                userSave.getUsername(),
-                userSave.getEmail()
-        );
+        return registerUserMapper.toDto(usuarioRepository.save(newUser));
     }
 
     @Transactional
@@ -84,14 +85,14 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         // Valida duplicidade de E-mail (se ele estiver tentando mudar)
         if (!existingUsuario.getEmail().equalsIgnoreCase(dto.email().trim())) {
             if (usuarioRepository.existsByEmail(dto.email().trim())) {
-                throw new BusinessException("Este E-mail já está em uso por outro Usuário.");
+                throw new BusinessException("Este E-mail (<strong>" + dto.email() + "</strong>) já está em uso.");
             }
         }
 
         // Valida duplicidade de UserName (se ele estiver tentando mudar)
         if (!existingUsuario.getUsername().equalsIgnoreCase(dto.userName().trim())) {
             if (usuarioRepository.existsByUserName(dto.userName().trim())) {
-                throw new BusinessException("Este login já está em uso por outro Usuário.");
+                throw new BusinessException("Este login (<strong>" + dto.userName() + "<strong>) já está em uso.");
             }
         }
         // Aplica os novos valores
@@ -170,11 +171,13 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     protected void beforeCreate(UsuarioRequestDTO dto) {
         // E-mail único
         if (usuarioRepository.existsByEmail(dto.email().trim())) {
-            throw new BusinessException("Já existe um Usuário cadastrado como este e-mail " + dto.email());
+            throw new BusinessException("Já existe cadastro com este e-mail " +
+                    "(<strong>" + dto.email() + "</strong>).");
         }
         // UserName (Login) único
         if (usuarioRepository.existsByUserName(dto.userName().trim())) {
-            throw new BusinessException("O login '" + dto.userName() + "' já está em uso por outro usuário.");
+            throw new BusinessException("Já existe cadastro com este Login " +
+                    "(<strong>" + dto.userName() + "</strong>) já está em uso.");
         }
 
     }
@@ -184,14 +187,14 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
         if (!existingUsuario.getEmail().equalsIgnoreCase(dto.email().trim())) {
             if (usuarioRepository.existsByEmail(dto.email())) {
-                throw new BusinessException("Este E-mail já está em uso por outro Usuário.");
+                throw new BusinessException("Este E-mail (<strong>" + dto.email() + "</strong>) já está em uso.");
             }
         }
 
         // Só valida duplicidade se tentar MUDAR o userName
         if (!existingUsuario.getUsername().equalsIgnoreCase(dto.userName().trim())) {
             if (usuarioRepository.existsByUserName(dto.userName().trim())) {
-                throw new BusinessException("Este login já está em uso por outro Usuário.");
+                throw new BusinessException("Este login (<strong>" + dto.userName() + "<strong>) já está em uso.");
             }
         }
     }
@@ -202,5 +205,8 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         // Criptografa a senha do novo usuário na hora do cadastro!
         String senhaCriptografada = passwordEncoder.encode(entity.getPassword());
         entity.setPassword(senhaCriptografada);
+
+        // Permissão guest adicionada
+        entity.setPermissions(Set.of("guest"));
     }
 }

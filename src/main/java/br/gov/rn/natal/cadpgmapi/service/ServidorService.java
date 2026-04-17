@@ -55,11 +55,11 @@ public class ServidorService extends BaseGenericService<
         // Converte o DTO para Entidade
         Servidor entity = mapper.toEntity(dto);
 
-        // 2. SALVA PRIMEIRO! (Isso gera o ID do Servidor no banco de dados)
+        // SALVA PRIMEIRO! (Isso gera o ID do Servidor no banco de dados)
         // Agora a entidade está "Managed" e tem um ID válido.
         entity = servidorRepository.save(entity);
 
-        // 3. Associa as relações NN (Sistemas, Aliases, Procuradores)
+        // Associa as relações NN (Sistemas, Aliases, Procuradores)
         associarRelacoesMuitosParaMuitos(entity, dto);
 
         // O Hibernate, ao final do méthod @Transactional, vai perceber que
@@ -185,11 +185,13 @@ public class ServidorService extends BaseGenericService<
     @Override
     protected void beforeCreate(ServidorRequestDTO dto) {
         if (servidorRepository.existsByCpf(dto.cpf().trim())) {
-            throw new BusinessException("CPF (" + dto.cpf() + ") já cadastrado");
+            throw new BusinessException("\"Já existe cadastro como este CPF " +
+                    "(<strong>" + dto.cpf() + "</strong>).");
         }
 
         if (servidorRepository.existsByMatricula(dto.matricula().trim())) {
-            throw new BusinessException("Matrícula (" + dto.matricula() + ") já cadastrada.");
+            throw new BusinessException("\"Já existe cadastro como est Matrícula " +
+                    "(<strong>" + dto.matricula() + "</strong>).");
         }
     }
 
@@ -198,14 +200,14 @@ public class ServidorService extends BaseGenericService<
         // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o CPF
         if (!existingServidor.getCpf().equalsIgnoreCase(dto.cpf())) {
             if (servidorRepository.existsByCpf(dto.cpf())) {
-                throw new BusinessException("Este CPF (" + dto.cpf() + ") já está sendo usado por outro servidor.");
+                throw new BusinessException("Este CPF (<strong>" + dto.cpf() + "</strong>) já está em uso.");
             }
         }
 
         // Só valida duplicidade se o usuário estiver de fato tentando MUDAR a matrícula
         if (!existingServidor.getMatricula().equalsIgnoreCase(dto.matricula())) {
             if (servidorRepository.existsByMatricula(dto.matricula())) {
-                throw new BusinessException("Esta matrícula (" + dto.matricula() + ") já está sendo usada por outro servidor.");
+                throw new BusinessException("Esta matrícula (<strong>" + dto.matricula() + "</strong>) já está em uso.");
             }
         }
     }
@@ -218,9 +220,10 @@ public class ServidorService extends BaseGenericService<
         }
         // Compara a descrição ignorando maiúsculas e minúsculas
         if (!entity.getStatus().getDescricao().equalsIgnoreCase("Inativo")) {
-            throw new BusinessException(
-                    "O servidor só pode ser removido se o status for 'INATIVO'. " +
-                            "Status atual: " + entity.getStatus().getDescricao().toUpperCase()
+            throw new BusinessException("O servidor só pode ser removido se o Status for " +
+                    "(<strong>'INATIVO'</strong>).</br> " +
+                    "<strong>Status atual: " + entity.getStatus()
+                    .getDescricao().toUpperCase()+ "</strong>."
             );
         }
 

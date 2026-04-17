@@ -100,7 +100,7 @@ public class SecurityConfig {
 //            usuarioRepository.findByUserName("paulo.morais").ifPresent(usuario -> {
 //
 //                // O próprio Spring criptografa a senha "123456" do jeito 100% correto
-//                usuario.setPassword(passwordEncoder.encode("123456"));
+//                usuario.setPassword(passwordEncoder.encode("pgm@1234"));
 //
 //                // Salva no banco de dados
 //                usuarioRepository.save(usuario);

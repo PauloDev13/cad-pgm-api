@@ -23,7 +23,8 @@ public class SetorService extends BaseNameGenericService<Setor, SetorRequestDTO,
     @Override
     protected void beforeCreate(SetorRequestDTO dto) {
         if (setorRepository.existsByNome(dto.nome().trim())) {
-            throw new BusinessException("Já existe um Setor cadastrado como " + dto.nome());
+            throw new BusinessException("Já existe um <strong>Setor</strong> cadastrado como " +
+                    "(<strong>" + dto.nome() +"</strong>).");
         }
     }
 
@@ -32,7 +33,8 @@ public class SetorService extends BaseNameGenericService<Setor, SetorRequestDTO,
         // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
         if (!existingSetor.getNome().equalsIgnoreCase(dto.nome())) {
             if (setorRepository.existsByNome(dto.nome())) {
-                throw new BusinessException("Este Setor (" + dto.nome() + ") já foi cadastrado");
+                throw new BusinessException("Este <strong>Setor</strong> (<strong>" + dto.nome() +
+                        "</strong>) já foi cadastrado");
             }
         }
     }

@@ -37,6 +37,7 @@ public class Usuario implements UserDetails {
     private String password;
 
     @Column()
+    @Builder.Default
     private boolean activated = true;
 
     @CreationTimestamp
@@ -53,6 +54,7 @@ public class Usuario implements UserDetails {
     private Set<String> permissions = new HashSet<>();
 
     @Column(name = "force_password_change")
+    @Builder.Default
     private boolean forcePasswordChange = false;
 
     // =========================================================================

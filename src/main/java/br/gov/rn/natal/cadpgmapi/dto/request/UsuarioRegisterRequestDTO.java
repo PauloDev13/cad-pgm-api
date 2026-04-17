@@ -12,6 +12,7 @@ public record UsuarioRegisterRequestDTO(
         @NotBlank(message = "O Login é obrigatório")
         @Size(max = 30, message = "O Login deve ter no máximo 30 caracteres")
         String userName,
+
         @NotBlank(message = "O E-mail é obrigatório")
         @Email(message = "Formato de e-mail inválido")
         @Size(max = 255, message = "O email deve ter no máximo 100 caracteres")

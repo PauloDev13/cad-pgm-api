@@ -25,7 +25,8 @@ public class StatusService extends BaseGenericService<Status, StatusRequestDTO, 
     @Override
     protected void beforeCreate(StatusRequestDTO dto) {
         if (statusRepository.existsByDescricao(dto.descricao().trim())) {
-            throw new BusinessException("Já existe um Status cadastrado como este nome " + dto.descricao());
+            throw new BusinessException("Já existe um <strong>Status</strong> cadastrado como " +
+                    "(<strong>" + dto.descricao() + "</strong>).");
         }
     }
 
@@ -34,7 +35,8 @@ public class StatusService extends BaseGenericService<Status, StatusRequestDTO, 
         // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
         if (!existingStatus.getDescricao().equalsIgnoreCase(dto.descricao())) {
             if (statusRepository.existsByDescricao(dto.descricao())) {
-                throw new BusinessException("Este nome já está sendo usado por outro status.");
+                throw new BusinessException("Este <strong>Status<strong> (<strong>"+ dto.descricao() +
+                        "</strong>) já está em uso.");
             }
         }
     }

@@ -23,7 +23,8 @@ public class CargoService extends BaseNameGenericService<Cargo, CargoRequestDTO,
     @Override
     protected void beforeCreate(CargoRequestDTO dto) {
         if (cargoRepository.existsByNome(dto.nome().trim())) {
-            throw new BusinessException("Já existe um Cargo cadastrado como " + dto.nome());
+            throw new BusinessException("Já existe um <strong>Cargo</strong> cadastrado como " +
+                    "(<strong>" + dto.nome() + "</strong>).");
         }
     }
 
@@ -32,7 +33,8 @@ public class CargoService extends BaseNameGenericService<Cargo, CargoRequestDTO,
         // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
         if (!existingCargo.getNome().equalsIgnoreCase(dto.nome())) {
             if (cargoRepository.existsByNome(dto.nome())) {
-                throw new BusinessException("Este Cargo (" + dto.nome() + ") já foi cadastrado");
+                throw new BusinessException("Este <strong>Cargo</strong> (<strong>" + dto.nome() +
+                        "<strong>) já foi cadastrado.");
             }
         }
     }

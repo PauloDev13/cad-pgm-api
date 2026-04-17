@@ -27,7 +27,8 @@ public class ProcuradorService extends
     @Override
     protected void beforeCreate(ProcuradorRequestDTO dto) {
         if (procuradorRepository.existsByNome(dto.nome().trim())) {
-            throw new BusinessException("Já existe um Procurador cadastrado como " + dto.nome());
+            throw new BusinessException("Já existe um <strong>Procurador<strong> cadastrado como " +
+                    "(<strong>" + dto.nome() + "</strong>).");
         }
     }
 
@@ -36,7 +37,8 @@ public class ProcuradorService extends
         // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
         if (!existingProcurador.getNome().equalsIgnoreCase(dto.nome())) {
             if (procuradorRepository.existsByNome(dto.nome())) {
-                throw new BusinessException("Este Procurador (" + dto.nome() + ") já foi cadastrado");
+                throw new BusinessException("Este <strong>Procurador</strong> (<strong>" + dto.nome() +
+                        "</strong>) já foi cadastrado");
             }
         }
     }

@@ -25,7 +25,8 @@ public class SistemaService extends BaseNameGenericService<
     @Override
     protected void beforeCreate(SistemaRequestDTO dto) {
         if (sistemaRepository.existsByNome(dto.nome().trim())) {
-            throw new BusinessException("Já existe um Sistema cadastrado como " + dto.nome());
+            throw new BusinessException("Já existe um <strong>Sistema</strong> cadastrado como " +
+                    "(<strong>" + dto.nome() +"</strong>).");
         }
     }
 
@@ -34,7 +35,8 @@ public class SistemaService extends BaseNameGenericService<
         // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
         if (!existingSistema.getNome().equalsIgnoreCase(dto.nome())) {
             if (sistemaRepository.existsByNome(dto.nome())) {
-                throw new BusinessException("Este Sistema (" + dto.nome() + ") já foi cadastrado");
+                throw new BusinessException("Este <strong>Sistema</strong> (<strong>" + dto.nome() +
+                        "</strong>) já foi cadastrado");
             }
         }
     }

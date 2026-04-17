@@ -26,7 +26,8 @@ public class AliasService extends BaseGenericService<Alias, AliasRequestDTO, Ali
     @Override
     protected void beforeCreate(AliasRequestDTO dto) {
         if (aliasRepository.existsByEmail(dto.email().trim())) {
-            throw new BusinessException("Já existe um Alias cadastrado como este e-mail " + dto.email());
+            throw new BusinessException("Já existe <strong>Alias</strong> com este e-mail " +
+                    "(<strong>" + dto.email() + "</strong>).");
         }
     }
 
@@ -35,7 +36,8 @@ public class AliasService extends BaseGenericService<Alias, AliasRequestDTO, Ali
         // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
         if (!existingAlias.getEmail().equalsIgnoreCase(dto.email())) {
             if (aliasRepository.existsByEmail(dto.email())) {
-                throw new BusinessException("Este e-mail já está sendo usado por outro alias.");
+                throw new BusinessException("Este e-mail (<strong>" + dto.email() +
+                        "</strong>) já está em usoo por outro <strong>Alias</strong>.");
             }
         }
     }

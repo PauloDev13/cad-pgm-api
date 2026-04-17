@@ -18,6 +18,7 @@ public class AuthenticationService implements UserDetailsService {
 
          //Vai no MariaDB, busca o usuário pelo login. Se não achar, joga o erro padrão do Spring.
         return usuarioRepository.findByUserName(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + username));
+                .orElseThrow(() -> new UsernameNotFoundException("Usuário (<strong>" + username +
+                        "</strong>) não encontrado."));
     }
 }

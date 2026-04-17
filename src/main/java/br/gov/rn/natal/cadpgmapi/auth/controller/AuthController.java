@@ -36,7 +36,6 @@ public class AuthController {
                     "devolve um token JWT para acesso às rotas protegidas. (Em fase de implementação)"
     )
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO dto) {
-        System.out.println("CREDENCIAIS NO AUTH CONTROLLER" + dto);
 
         // Chama o serviço passando o login e senha digitados
         String tokenJWT = authService.authenticate(dto);
@@ -47,8 +46,6 @@ public class AuthController {
     @PostMapping("/register")
     @Operation(summary = "Auto-cadastro de usuário", description = "Endpoint público para novos usuários se cadastrarem.")
     public ResponseEntity<UsuarioRegisterResponseDTO> registrar(@Valid @RequestBody UsuarioRegisterRequestDTO dto) {
-
-//        usuarioService.registerNewUserPublic(dto);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(usuarioService.registerNewUserPublic(dto));

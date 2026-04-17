@@ -22,7 +22,8 @@ public class VinculoService extends BaseNameGenericService<Vinculo, VinculoReque
     @Override
     protected void beforeCreate(VinculoRequestDTO dto) {
         if (vinculoRepository.existsByNome(dto.nome().trim())) {
-            throw new BusinessException("Já existe um Vinculo cadastrado como " + dto.nome());
+            throw new BusinessException("Já existe um <strong>Vinculo</strong> cadastrado como " +
+                    "(<strong>" + dto.nome() + "<strong>).");
         }
     }
 
@@ -31,7 +32,8 @@ public class VinculoService extends BaseNameGenericService<Vinculo, VinculoReque
         // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
         if (!existingVinculo.getNome().equalsIgnoreCase(dto.nome())) {
             if (vinculoRepository.existsByNome(dto.nome())) {
-                throw new BusinessException("Este Vinculo (" + dto.nome() + ") já foi cadastrado");
+                throw new BusinessException("Este <strong>Vínculo</strong> (<strong>" + dto.nome() +
+                        "</strong>) já está em uso.");
             }
         }
     }

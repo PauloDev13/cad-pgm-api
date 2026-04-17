@@ -33,6 +33,7 @@ public class AuthService {
             var authentication = authenticationManager.authenticate(credenciais);
             // Extraímos o nosso usuário de dentro do objeto de autenticação
             var usuarioAutenticado = (Usuario) authentication.getPrincipal();
+
             // 4. Pedimos para a nossa fábrica gerar a Pulseira VIP (JWT) para este usuário e a retornamos
             return tokenService.gerarToken(usuarioAutenticado);
 
