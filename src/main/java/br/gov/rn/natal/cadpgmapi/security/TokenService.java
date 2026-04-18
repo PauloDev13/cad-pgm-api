@@ -74,6 +74,7 @@ public class TokenService {
                     .withSubject(usuario.getEmail()) // Aqui o Subject é o e-mail
                     .withClaim("type", "reset_password") // Identifica que é um token de reset
                     .withClaim("hash", usuario.getPassword()) // O Truque: guardamos a senha atual
+                    .withClaim("username", usuario.getUsername())
                     .withExpiresAt(LocalDateTime.now().plusMinutes(30).toInstant(ZoneOffset.of("-03:00")))
                     .sign(algorithm);
         } catch (JWTCreationException exception) {

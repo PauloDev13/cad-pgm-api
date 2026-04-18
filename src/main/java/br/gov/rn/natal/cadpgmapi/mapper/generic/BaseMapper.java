@@ -3,6 +3,7 @@ package br.gov.rn.natal.cadpgmapi.mapper.generic;
 import org.mapstruct.MappingTarget;
 
 import java.util.List;
+import java.util.Set;
 
 public interface BaseMapper<E, Req, Res> {
     E toEntity(Req dto);
@@ -13,4 +14,5 @@ public interface BaseMapper<E, Req, Res> {
     // sem precisar criar uma nova instância (o que perderia o ID e o tracking do Hibernate).
     void updateEntityFromDTO(@MappingTarget E entity, Req dto);
     List<Res> toDtoList(List<E> entities);
+    Set<Res> toDtoSet(Set<E> entities);
 }

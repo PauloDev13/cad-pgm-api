@@ -7,6 +7,7 @@ import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioRegisterResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.update.UsuarioUpdateDTO;
+import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.UsuarioMapper;
@@ -17,11 +18,14 @@ import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -62,14 +66,10 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
 
         // Instancia o usuário apenas com os dados seguros
         Usuario newUser = registerUserMapper.toEntity(dto);
-//        Usuario newUser = new Usuario();
-//        newUser.setName(dto.name().trim());
-//        newUser.setUserName(dto.userName().trim());
-//        newUser.setEmail(dto.email().trim());
 
-        // Criptografa a senha e insere a permissão padrão Guest ao usuário
-        newUser.setPassword(passwordEncoder.encode(dto.password().trim()));
-        newUser.setPermissions(Set.of("guest"));
+        // Chama o método beforeSave para criptografar a senha e
+        // inserr a permissão padrão Guest ao usuário
+        beforeSave(newUser);
 
         // Salva no banco
         return registerUserMapper.toDto(usuarioRepository.save(newUser));
@@ -95,12 +95,18 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
                 throw new BusinessException("Este login (<strong>" + dto.userName() + "<strong>) já está em uso.");
             }
         }
+
+        // Chama o método utilitário para checar se é o Adminsitrador Geral
+        // que está logado. Se sim, deixa altetar os dados. Se não, bloqueia.
+        onlyAdminMakeChange(existingUsuario);
+
         // Aplica os novos valores
         usuarioUpdateMapper.updateEntityFromDTO(existingUsuario, dto);
 
         // Salva e retorna o DTO atualizado
         return mapper.toDto(usuarioRepository.save(existingUsuario));
     }
+
 
     @Transactional(readOnly = true)
     public Page<UsuarioResponseDTO> findByFilters(
@@ -149,7 +155,6 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         String temporaryPassword = generateRandomPassword(8);
 
         usuario.setPassword(passwordEncoder.encode(temporaryPassword));
-        usuario.setPassword(temporaryPassword);
         usuario.setForcePasswordChange(true);
         repository.save(usuario);
 
@@ -182,8 +187,10 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
 
     }
 
+    // Método com assinatura original declarada na classe pai (BasicGenericService)
     @Override
     protected void beforeUpdate(UsuarioRequestDTO dto, Usuario existingUsuario) {
+
         // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
         if (!existingUsuario.getEmail().equalsIgnoreCase(dto.email().trim())) {
             if (usuarioRepository.existsByEmail(dto.email())) {
@@ -202,11 +209,75 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     // Criptografa a senha
     @Override
     protected void beforeSave(Usuario entity) {
-        // Criptografa a senha do novo usuário na hora do cadastro!
-        String senhaCriptografada = passwordEncoder.encode(entity.getPassword());
-        entity.setPassword(senhaCriptografada);
+        // Pega a senha enviada
+        String pwd = entity.getPassword();
 
-        // Permissão guest adicionada
-        entity.setPermissions(Set.of("guest"));
+        // Verifica se a senha existe
+        if (pwd != null) {
+            // Um hash BCrypt válido SEMPRE tem 60 caracteres e começa com $2a$, $2b$ ou $2y$
+            boolean isAlreadyHashed = pwd.length() == 60
+                    && (pwd.startsWith("$2a$") || pwd.startsWith("$2b$") || pwd.startsWith("$3y$"));
+
+            // 3. Se NÃO for um hash, a senha é criptografada
+            if (!isAlreadyHashed) {
+                entity.setPassword(passwordEncoder.encode(pwd));
+            }
+        }
+        // Só injeta a permissão "guest" se a lista estiver vazia (novo usuário sem permissões)
+        if (entity.getPermissions() == null || entity.getPermissions().isEmpty()) {
+            // Permissão guest adicionada
+            entity.setPermissions(new HashSet<>(Set.of("guest")));
+        }
+    }
+
+    protected void beforeDelete(Usuario entity) {
+        String loggedUser = getLoggedUser();
+        String targetUser = entity.getUsername().trim();
+
+        // Buscamos o usuário no banco usando a identidade do Token
+        if (entity == null || entity.getPassword() == null || entity.getPassword().isEmpty()) {
+            return;
+        }
+
+        // Ninguém apaga o Procurador Geral
+        if ("procurador.geral".trim().equalsIgnoreCase(targetUser)) {
+            throw new BusinessException("O (<strong> Adminsitrador Geral </strong>) " +
+                    "não pode ser removido."
+            );
+        }
+
+        if (targetUser.equalsIgnoreCase(loggedUser)) {
+            throw new BusinessException("Você não pode excluir o seu <strong>próprio perfil</strong>.");
+        }
+    }
+
+    // MÉTODOS UTILITÁRIOS PRIVADOS
+    // Método utilitário para pegar o login de quem fez a requisição
+    private String getLoggedUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null
+                && authentication.isAuthenticated()
+                && !authentication.getPrincipal().equals("anonymousUser")
+        ) {
+
+            // O getName() retorna o "subject" do token, que no nosso caso é o username (login)
+            return authentication.getName();
+        }
+        return null;
+    }
+
+    // Método utilitário que impede outro usuário
+    // Adminsitrador alterar os dados do Administrador Geral
+    private void onlyAdminMakeChange(Usuario existingUsuario) {
+        String loggedUser = getLoggedUser();
+        String targetUser = existingUsuario.getUsername().trim();
+
+        if ("procurador.geral".equalsIgnoreCase(targetUser)) {
+            if (!"procurador.geral".equalsIgnoreCase(loggedUser)) {
+                throw new BusinessException("<strong>ACESSO NEGADO</strong>: Apenas o próprio " +
+                        "Administrador Geral pode alterar os seus dados.");
+            }
+        }
     }
 }

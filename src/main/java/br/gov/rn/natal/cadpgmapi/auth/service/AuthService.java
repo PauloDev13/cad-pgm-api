@@ -25,16 +25,16 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
 
     public String authenticate(LoginRequestDTO dto) {
-        // 1. Criamos um "envelope" padronizado do Spring com as credenciais cruas que o usuário digitou
+        // Criamos um "envelope" padronizado do Spring com as credenciais cruas que o usuário digitou
         var credenciais = new UsernamePasswordAuthenticationToken(dto.userName(), dto.password());
 
         try{
-            // 3. Se o código chegou nesta linha, significa que o login e senha estão corretos!
+            // Se o código chegou nesta linha, significa que o login e senha estão corretos!
             var authentication = authenticationManager.authenticate(credenciais);
             // Extraímos o nosso usuário de dentro do objeto de autenticação
             var usuarioAutenticado = (Usuario) authentication.getPrincipal();
 
-            // 4. Pedimos para a nossa fábrica gerar a Pulseira VIP (JWT) para este usuário e a retornamos
+            // Pedimos para a nossa fábrica gerar a Pulseira VIP (JWT) para este usuário e a retornamos
             return tokenService.gerarToken(usuarioAutenticado);
 
 
@@ -48,14 +48,14 @@ public class AuthService {
     // MÉTODOS PARA RESET DE SENHA DO USUÁRIO PELO ADMINISTRADOR
     @Transactional
     public void finalizeRequiredPasswordChange(ForceChangePasswordRequestDTO dto) {
-        // 1. Extraímos o login (userName) diretamente do Token JWT que está logado no momento!
+        // Extraímos o login (userName) diretamente do Token JWT que está logado no momento!
         String userNameLogado = SecurityContextHolder.getContext().getAuthentication().getName();
 
-        // 2. Buscamos o usuário no banco usando a identidade do Token
+        // Buscamos o usuário no banco usando a identidade do Token
         Usuario usuario = usuarioRepository.findByUserName(userNameLogado)
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
 
-        // 2. Buscamos o usuário no banco usando a identidade do Token
+        // Buscamos o usuário no banco usando a identidade do Token
         usuario.setPassword(passwordEncoder.encode(dto.newPassword()));
         usuario.setForcePasswordChange(false); // Libera o acesso normal
         usuarioRepository.save(usuario);

@@ -47,12 +47,16 @@ public class SecurityConfig {
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/forgot-password",
                                 "/api/v1/auth/reset-password").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/auth/validate-reset-token").permitAll()
                         // Liberar as rotas do Swagger para podermos testar a API
-                        .requestMatchers(
+                        .requestMatchers(HttpMethod.GET,
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html").permitAll()
-                        .requestMatchers("/error").permitAll()
+                                "/swagger-ui.html"
+                        ).permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/error").permitAll()
                         // O resto da boate inteira: Só entra quem tem pulseira (autenticado)
                         .anyRequest().authenticated()
                 )

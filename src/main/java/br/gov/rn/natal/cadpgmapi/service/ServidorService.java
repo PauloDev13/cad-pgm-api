@@ -215,7 +215,7 @@ public class ServidorService extends BaseGenericService<
     @Override
     protected void beforeDelete(Servidor entity) {
         // Programação Defensiva: Verifica se o servidor tem um status associado para evitar NullPointerException
-        if (entity.getStatus() == null) {
+        if (entity.getStatus().equals(null)) {
             throw new BusinessException("Não é possível excluir um servidor sem status definido");
         }
         // Compara a descrição ignorando maiúsculas e minúsculas

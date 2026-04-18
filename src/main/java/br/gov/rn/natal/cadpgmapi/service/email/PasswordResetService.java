@@ -44,22 +44,48 @@ public class PasswordResetService {
 
     @Transactional
     public void redefinirSenha(String token, String newPassword) {
+        // 1. Reutiliza a lógica de validação que acabamos de criar
+        Usuario usuario = validarToken(token);
+
+        // 2. Atualiza a senha corretamente
+        usuario.setPassword(passwordEncoder.encode(newPassword.trim()));
+        usuarioRepository.save(usuario);
         // Valida a assinatura e a expiração do JWT
+//        DecodedJWT jwt = tokenService.validarTokenRecuperacao(token);
+//        String email = jwt.getSubject();
+//        String hashAntigo = jwt.getClaim("hash").asString();
+
+        // Busca o usuário pelo e-mail contido no token
+//        Usuario usuario = usuarioRepository.findByEmail(email)
+//                .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
+
+        //  VALIDAÇÃO DE REUSO (O Truque de Mestre)
+//        if (!usuario.getPassword().equals(hashAntigo)) {
+//            throw new BusinessException("Este link de recuperação já foi utilizado.");
+//        }
+
+        // Atualiza a senha corretamente (bug corrigido!)
+//        usuario.setPassword(passwordEncoder.encode(newPassword.trim()));
+//        usuarioRepository.save(usuario);
+    }
+
+    // Verifica se o token é válido - se não está expirado ou já foi usado para redefinir a senha
+    public Usuario validarToken(String token) {
+        // 1. Valida a assinatura e a expiração do JWT
         DecodedJWT jwt = tokenService.validarTokenRecuperacao(token);
+
         String email = jwt.getSubject();
         String hashAntigo = jwt.getClaim("hash").asString();
 
-        // Busca o usuário pelo e-mail contido no token
+        // 2. Busca o usuário pelo e-mail contido no token
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
 
-        //  VALIDAÇÃO DE REUSO (O Truque de Mestre)
+        // 3. VALIDAÇÃO DE REUSO
         if (!usuario.getPassword().equals(hashAntigo)) {
-            throw new BusinessException("Este link de recuperação já foi utilizado.");
+            throw new BusinessException("Este link de recuperação já foi utilizado ou é inválido.");
         }
 
-        // Atualiza a senha corretamente (bug corrigido!)
-        usuario.setPassword(passwordEncoder.encode(newPassword.trim()));
-        usuarioRepository.save(usuario);
+        return usuario; // Retorna o usuário validado
     }
 }

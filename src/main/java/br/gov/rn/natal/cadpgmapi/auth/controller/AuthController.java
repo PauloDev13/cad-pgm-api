@@ -16,10 +16,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -80,5 +77,19 @@ public class AuthController {
     public ResponseEntity<Void> forcarTrocaSenha(@Valid @RequestBody ForceChangePasswordRequestDTO dto) {
         authService.finalizeRequiredPasswordChange(dto);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/validate-reset-token")
+    @Operation(summary = "Validar token de redefinição de senha",
+            description = "Verifica se o token enviado pelo link do e-mail é válido, não expirou e não foi reutilizado.")
+    public ResponseEntity<Void> validateResetToken(@RequestParam String token) {
+
+        // Chama o serviço de validação.
+        // Se houver erro (expirado, reuso, etc), o próprio Service lança a BusinessException
+        // e o seu manipulador de erros global devolve o status 400 pro frontend.
+        passwordResetService.validarToken(token);
+
+        // Se passar direto, retorna 200 OK sem corpo (Void)
+        return ResponseEntity.ok().build();
     }
 }
