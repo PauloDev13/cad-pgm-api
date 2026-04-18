@@ -86,7 +86,7 @@ public class AuthController {
 
         // Chama o serviço de validação.
         // Se houver erro (expirado, reuso, etc), o próprio Service lança a BusinessException
-        // e o seu manipulador de erros global devolve o status 400 pro frontend.
+        // e o seu manipulador de erros global devolve o estado 400 pro frontend.
         passwordResetService.validateToken(token);
 
         // Se passar direto, retorna 200 OK sem corpo (Void)
