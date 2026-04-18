@@ -4,12 +4,13 @@ import br.gov.rn.natal.cadpgmapi.auth.dto.request.ForceChangePasswordRequestDTO;
 import br.gov.rn.natal.cadpgmapi.auth.dto.request.LoginRequestDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
+import br.gov.rn.natal.cadpgmapi.exception.ForbiddenException;
+import br.gov.rn.natal.cadpgmapi.exception.UnauthorizedException;
 import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
 import br.gov.rn.natal.cadpgmapi.security.TokenService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.*;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,12 +38,19 @@ public class AuthService {
             // Pedimos para a nossa fábrica gerar a Pulseira VIP (JWT) para este usuário e a retornamos
             return tokenService.gerarToken(usuarioAutenticado);
 
-
-        }catch (AuthenticationException e) {
-            // Se a senha estiver errada ou o usuário não existir, o Java cai direto aqui!
-            throw new BusinessException("Usuário ou senha inválidos.");
+            // Exceção para senha ou login errados
+        } catch (BadCredentialsException e) {
+            throw new UnauthorizedException("<strong>Usuário</strong> ou <strong>Senha</strong> inválidos");
+            // Exceção para usuário inativo
+        } catch (DisabledException e) {
+            throw new ForbiddenException("Conta <strong>INATIVA</strong>. Procure o Administrador");
+        // Exceção para usuário bloqueado
+        }catch (LockedException e) {
+            throw new ForbiddenException("Conta <strong>BLOQUEADA</strong>. Procure o Administrador");
+            // Qualquer outra exceção
+        } catch (AuthenticationException e) {
+            throw new UnauthorizedException("Não foi possível autenticar: " + e.getMessage());
         }
-
     }
 
     // MÉTODOS PARA RESET DE SENHA DO USUÁRIO PELO ADMINISTRADOR

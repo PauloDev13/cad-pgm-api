@@ -2,6 +2,7 @@ package br.gov.rn.natal.cadpgmapi.service.email;
 
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
+import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
 import br.gov.rn.natal.cadpgmapi.security.TokenService;
 import com.auth0.jwt.interfaces.DecodedJWT;
@@ -24,64 +25,50 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public void solicitarRecuperacao(String email) {
-        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email.trim());
+    public void requestEmailReconvery(String email) {
+        Usuario user = usuarioRepository.findByEmail(email.trim())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "E-mail não cadastrado. Verifique se digitou corretamente"));
+
+//        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email.trim());
 
         // Defesa contra Enumeration Attack: Se o e-mail não existir, finalizamos o méthod em silêncio.
-        if (usuarioOpt.isEmpty()) {
-            return;
-        }
-
-        Usuario usuario = usuarioOpt.get();
+//        if (usuarioOpt.isEmpty()) {
+//            return;
+//        }
+//        Usuario usuario = usuarioOpt.get();
 
         // Delega a geração para o TokenService (Stateless)
-        String token = tokenService.gerarTokenRecuperacaoSenha(usuario);
+        String token = tokenService.gerarTokenRecuperacaoSenha(user);
 
         // Monta o link do Frontend e dispara o e-mail
         String frontendUrl = "http://localhost:4200/auth/redefinir-senha?token=" + token;
-        emailService.enviarEmailRecuperacao(usuario.getEmail(), frontendUrl);
+        emailService.enviarEmailRecuperacao(user.getEmail(), frontendUrl);
     }
 
     @Transactional
-    public void redefinirSenha(String token, String newPassword) {
+    public void resetPassword(String token, String newPassword) {
         // 1. Reutiliza a lógica de validação que acabamos de criar
-        Usuario usuario = validarToken(token);
+        Usuario usuario = validateToken(token);
 
         // 2. Atualiza a senha corretamente
         usuario.setPassword(passwordEncoder.encode(newPassword.trim()));
         usuarioRepository.save(usuario);
-        // Valida a assinatura e a expiração do JWT
-//        DecodedJWT jwt = tokenService.validarTokenRecuperacao(token);
-//        String email = jwt.getSubject();
-//        String hashAntigo = jwt.getClaim("hash").asString();
-
-        // Busca o usuário pelo e-mail contido no token
-//        Usuario usuario = usuarioRepository.findByEmail(email)
-//                .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
-
-        //  VALIDAÇÃO DE REUSO (O Truque de Mestre)
-//        if (!usuario.getPassword().equals(hashAntigo)) {
-//            throw new BusinessException("Este link de recuperação já foi utilizado.");
-//        }
-
-        // Atualiza a senha corretamente (bug corrigido!)
-//        usuario.setPassword(passwordEncoder.encode(newPassword.trim()));
-//        usuarioRepository.save(usuario);
     }
 
     // Verifica se o token é válido - se não está expirado ou já foi usado para redefinir a senha
-    public Usuario validarToken(String token) {
-        // 1. Valida a assinatura e a expiração do JWT
+    public Usuario validateToken(String token) {
+        // Valida a assinatura e a expiração do JWT
         DecodedJWT jwt = tokenService.validarTokenRecuperacao(token);
 
         String email = jwt.getSubject();
         String hashAntigo = jwt.getClaim("hash").asString();
 
-        // 2. Busca o usuário pelo e-mail contido no token
+        // Busca o usuário pelo e-mail contido no token
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
 
-        // 3. VALIDAÇÃO DE REUSO
+        // VALIDAÇÃO DE REUSO
         if (!usuario.getPassword().equals(hashAntigo)) {
             throw new BusinessException("Este link de recuperação já foi utilizado ou é inválido.");
         }

@@ -53,7 +53,7 @@ public class AuthController {
             description = "Envia um link de redefinição para o e-mail informado (se existir). Retorna sempre 200 OK.")
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDTO dto) {
 
-        passwordResetService.solicitarRecuperacao(dto.email());
+        passwordResetService.requestEmailReconvery(dto.email());
 
         // Retorno genérico de sucesso (independente de ter achado no banco ou não)
         return ResponseEntity.ok("Se o e-mail existir em nossa base, um link de recuperação foi enviado.");
@@ -64,7 +64,7 @@ public class AuthController {
             description = "Valida o token enviado pelo e-mail e atualiza a senha do usuário.")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequestDTO dto) {
 
-        passwordResetService.redefinirSenha(dto.token(), dto.newPassword());
+        passwordResetService.resetPassword(dto.token(), dto.newPassword());
 
         return ResponseEntity.ok("Senha redefinida com sucesso. Você já pode fazer login.");
     }
@@ -74,7 +74,7 @@ public class AuthController {
             summary = "Usuário: Troca obrigatória de senha",
             description = "Finaliza o fluxo de troca de senha no primeiro acesso."
     )
-    public ResponseEntity<Void> forcarTrocaSenha(@Valid @RequestBody ForceChangePasswordRequestDTO dto) {
+    public ResponseEntity<Void> forcePasswordChange(@Valid @RequestBody ForceChangePasswordRequestDTO dto) {
         authService.finalizeRequiredPasswordChange(dto);
         return ResponseEntity.noContent().build();
     }
@@ -87,7 +87,7 @@ public class AuthController {
         // Chama o serviço de validação.
         // Se houver erro (expirado, reuso, etc), o próprio Service lança a BusinessException
         // e o seu manipulador de erros global devolve o status 400 pro frontend.
-        passwordResetService.validarToken(token);
+        passwordResetService.validateToken(token);
 
         // Se passar direto, retorna 200 OK sem corpo (Void)
         return ResponseEntity.ok().build();

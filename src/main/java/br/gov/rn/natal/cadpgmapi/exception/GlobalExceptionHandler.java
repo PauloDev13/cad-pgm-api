@@ -57,4 +57,32 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<StandardError> handleUnauthorized(
+            UnauthorizedException ex, HttpServletRequest request
+    ) {
+        StandardError error = new StandardError(
+                Instant.now(),
+                HttpStatus.UNAUTHORIZED.value(),
+                "Falha de Autenticação", // Título padronizado para o erro 401
+                ex.getMessage(), // Aqui entra a sua mensagem
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<StandardError> handleForbidden(
+            ForbiddenException ex, HttpServletRequest request
+    ) {
+        StandardError error = new StandardError(
+                Instant.now(),
+                HttpStatus.FORBIDDEN.value(),
+                "Acesso Negado", // Título padronizado para o erro 403
+                ex.getMessage(), // Aqui entra a mensagem: "Usuário inativo..."
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
 }
