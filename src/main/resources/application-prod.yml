@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    # 'db-pgm' é o nome que você vai dar para o serviço do MariaDB no docker-compose
+    url: jdbc:mariadb://db-pgm:3306/cad_serv_pgm_db
+    username: root
+    password: root # Em produção, o ideal é usar variável aqui também: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false # Em produção, melhor não poluir o log com SQL
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+api:
+  security:
+    token:
+      secret: ${JWT_SECRET}
+

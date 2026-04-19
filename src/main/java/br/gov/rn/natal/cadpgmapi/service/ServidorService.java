@@ -1,9 +1,7 @@
 package br.gov.rn.natal.cadpgmapi.service;
 
-import br.gov.rn.natal.cadpgmapi.dto.request.CargoRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
-import br.gov.rn.natal.cadpgmapi.entity.Cargo;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
@@ -14,7 +12,6 @@ import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
 import br.gov.rn.natal.cadpgmapi.repository.SistemaRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
 import jakarta.persistence.criteria.Predicate;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
