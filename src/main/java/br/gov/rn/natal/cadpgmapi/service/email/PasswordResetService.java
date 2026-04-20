@@ -6,11 +6,14 @@ import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
 import br.gov.rn.natal.cadpgmapi.security.TokenService;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Service
 @RequiredArgsConstructor
@@ -21,9 +24,6 @@ public class PasswordResetService {
     private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
 
-    @Value("${app.frontend.url}")
-    private String frontendBaseUrl;
-
     @Transactional
     public void requestEmailReconvery(String email) {
         Usuario user = usuarioRepository.findByEmail(email.trim())
@@ -33,8 +33,20 @@ public class PasswordResetService {
         // Delega a geração para o TokenService (Stateless)
         String token = tokenService.gerarTokenRecuperacaoSenha(user);
 
+        // Descobre de onde o usuário está acessando agora
+        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder
+                .getRequestAttributes()).getRequest();
+
+        // Pega a origem exata de onde vem a requisição
+        String originRequestUser = request.getHeader("Origin");
+
+        // 2. Fallback de segurança (caso o cabeçalho venha nulo por algum motivo)
+        if (originRequestUser == null || originRequestUser.isEmpty()) {
+            originRequestUser = "http://localhost:4200";
+        }
+
         // Monta o link do Frontend e dispara o e-mail
-        String frontendUrl = frontendBaseUrl + "/auth/redefinir-senha?token=" + token;
+        String frontendUrl = originRequestUser + "/auth/redefinir-senha?token=" + token;
         emailService.enviarEmailRecuperacao(user.getEmail(), frontendUrl);
     }
 

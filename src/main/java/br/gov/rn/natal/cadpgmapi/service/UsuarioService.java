@@ -203,6 +203,8 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
                 throw new BusinessException("Este login (<strong>" + dto.userName() + "<strong>) já está em uso.");
             }
         }
+
+        onlyAdminMakeChange(existingUsuario);
     }
 
     // Criptografa a senha

@@ -25,4 +25,4 @@ api:
       secret: ${JWT_SECRET}
 app:
   frontend:
-    url: http://localhost:4200
+    urls: ${FRONTEND_URLS:http://localhost:4200}
