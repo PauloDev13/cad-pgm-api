@@ -100,23 +100,4 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
-//    @Bean
-//    public CommandLineRunner resetSenhaAdmin(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
-//        return args -> {
-//            // Busca o usuário paulo.morais
-//            usuarioRepository.findByUserName("paulo.morais").ifPresent(usuario -> {
-//
-//                // O próprio Spring criptografa a senha "123456" do jeito 100% correto
-//                usuario.setPassword(passwordEncoder.encode("pgm@1234"));
-//
-//                // Salva no banco de dados
-//                usuarioRepository.save(usuario);
-//
-//                System.out.println("==========================================================");
-//                System.out.println("🚀 SENHA DO PAULO.MORAIS RESETADA PELO SPRING COM SUCESSO!");
-//                System.out.println("==========================================================");
-//            });
-//        };
-//    }
 }

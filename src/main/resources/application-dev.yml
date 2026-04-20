@@ -19,8 +19,10 @@ spring:
           auth: true
           starttls:
             enable: true
-
 api:
   security:
     token:
       secret: ${JWT_SECRET}
+app:
+  frontend:
+    url: http://localhost:4200

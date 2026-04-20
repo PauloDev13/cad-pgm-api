@@ -7,6 +7,7 @@ import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
 import br.gov.rn.natal.cadpgmapi.security.TokenService;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,25 +21,20 @@ public class PasswordResetService {
     private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
 
+    @Value("${app.frontend.url}")
+    private String frontendBaseUrl;
+
     @Transactional
     public void requestEmailReconvery(String email) {
         Usuario user = usuarioRepository.findByEmail(email.trim())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "E-mail não cadastrado. Verifique se digitou corretamente"));
 
-//        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email.trim());
-
-        // Defesa contra Enumeration Attack: Se o e-mail não existir, finalizamos o méthod em silêncio.
-//        if (usuarioOpt.isEmpty()) {
-//            return;
-//        }
-//        Usuario usuario = usuarioOpt.get();
-
         // Delega a geração para o TokenService (Stateless)
         String token = tokenService.gerarTokenRecuperacaoSenha(user);
 
         // Monta o link do Frontend e dispara o e-mail
-        String frontendUrl = "http://localhost:4200/auth/redefinir-senha?token=" + token;
+        String frontendUrl = frontendBaseUrl + "/auth/redefinir-senha?token=" + token;
         emailService.enviarEmailRecuperacao(user.getEmail(), frontendUrl);
     }
 
