@@ -66,7 +66,10 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         // Instancia o usuário apenas com os dados seguros
         Usuario newUser = registerUserMapper.toEntity(dto);
 
-        // Chama o método beforeSave para criptografar a senha e
+        // Se é o próprio usuário que fez o cadastro, desativa o perfil
+        newUser.setActivated(false);
+
+        // Chama o méthod beforeSave para criptografar a senha e
         // inserr a permissão padrão Guest ao usuário
         beforeSave(newUser);
 
@@ -186,7 +189,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
 
     }
 
-    // Método com assinatura original declarada na classe pai (BasicGenericService)
+    // Methodo com assinatura original declarada na classe pai (BasicGenericService)
     @Override
     protected void beforeUpdate(UsuarioRequestDTO dto, Usuario existingUsuario) {
 
@@ -241,7 +244,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         }
 
         // Ninguém apaga o Procurador Geral
-        if ("procurador.geral".trim().equalsIgnoreCase(targetUser)) {
+        if ("root".trim().equalsIgnoreCase(targetUser)) {
             throw new BusinessException("O (<strong> Adminsitrador Geral </strong>) " +
                     "não pode ser removido."
             );
@@ -253,7 +256,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     }
 
     // MÉTODOS UTILITÁRIOS PRIVADOS
-    // Método utilitário para pegar o login de quem fez a requisição
+    // Méthod utilitário para pegar o login de quem fez a requisição
     private String getLoggedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -268,14 +271,14 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         return null;
     }
 
-    // Método utilitário que impede outro usuário
+    // Methodo utilitário que impede outro usuário
     // Adminsitrador alterar os dados do Administrador Geral
     private void onlyAdminMakeChange(Usuario existingUsuario) {
         String loggedUser = getLoggedUser();
         String targetUser = existingUsuario.getUsername().trim();
 
-        if ("procurador.geral".equalsIgnoreCase(targetUser)) {
-            if (!"procurador.geral".equalsIgnoreCase(loggedUser)) {
+        if ("root".equalsIgnoreCase(targetUser)) {
+            if (!"root".equalsIgnoreCase(loggedUser)) {
                 throw new BusinessException("<strong>ACESSO NEGADO</strong>: Apenas o próprio " +
                         "Administrador Geral pode alterar os seus dados.");
             }

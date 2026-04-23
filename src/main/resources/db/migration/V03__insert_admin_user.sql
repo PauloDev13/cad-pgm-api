@@ -1,9 +1,9 @@
 INSERT INTO usuario (name, user_name, email, password, activated, force_password_change)
 VALUES (
-           'Procurador Geral',
-           'procurador.geral',
+           'Root',
+           'root',
            'pgm.ti@natal.rn.gov.br',
-           '$2a$12$4yLCzYlyzktiRNvctGDv4eyH182kZBqVPRHYKyOGthb.b/2oztshu',
+           '$2a$12$UDIIRwDkSfzmDt481TaFBeXK5gmCOXJWvbPcdo6bWG/BzKR5USbbW',
            TRUE,
            FALSE
        );
