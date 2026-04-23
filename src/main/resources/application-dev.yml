@@ -26,3 +26,6 @@ api:
 app:
   frontend:
     urls: ${FRONTEND_URLS:http://localhost:4200}
+server:
+  port: 8081
+  address: 127.0.0.1

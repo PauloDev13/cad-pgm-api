@@ -26,4 +26,7 @@ api:
       secret: ${JWT_SECRET}
 app:
   frontend:
-    urls: ${FRONTEND_URLS:http://localhost:8080,http://localhost:4200}
+    urls: ${FRONTEND_URLS:http://localhost:8080,http://192.168.1.9:8080}
+server:
+  port: 8080
+  address: 0.0.0.0
