@@ -244,7 +244,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         }
 
         // Ninguém apaga o Procurador Geral
-        if ("root".trim().equalsIgnoreCase(targetUser)) {
+        if ("pgmnet".trim().equalsIgnoreCase(targetUser)) {
             throw new BusinessException("O (<strong> Adminsitrador Geral </strong>) " +
                     "não pode ser removido."
             );
@@ -277,8 +277,8 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         String loggedUser = getLoggedUser();
         String targetUser = existingUsuario.getUsername().trim();
 
-        if ("root".equalsIgnoreCase(targetUser)) {
-            if (!"root".equalsIgnoreCase(loggedUser)) {
+        if ("pgmnet".equalsIgnoreCase(targetUser)) {
+            if (!"pgmnet".equalsIgnoreCase(loggedUser)) {
                 throw new BusinessException("<strong>ACESSO NEGADO</strong>: Apenas o próprio " +
                         "Administrador Geral pode alterar os seus dados.");
             }
