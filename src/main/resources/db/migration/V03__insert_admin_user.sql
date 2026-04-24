@@ -1,7 +1,7 @@
 INSERT INTO usuario (name, user_name, email, password, activated, force_password_change)
 VALUES (
-           'Root',
-           'root',
+           'Procuradoria Geral do Município',
+           'pgmnet',
            'pgm.ti@natal.rn.gov.br',
            '$2a$12$UDIIRwDkSfzmDt481TaFBeXK5gmCOXJWvbPcdo6bWG/BzKR5USbbW',
            TRUE,
