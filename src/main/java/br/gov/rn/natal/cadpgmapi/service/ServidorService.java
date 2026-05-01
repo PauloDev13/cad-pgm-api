@@ -1,5 +1,7 @@
 package br.gov.rn.natal.cadpgmapi.service;
 
+import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
+import br.gov.rn.natal.cadpgmapi.audit.enums.AuditAction;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
@@ -45,6 +47,7 @@ public class ServidorService extends BaseGenericService<
 
     @Override
     @Transactional
+    @Auditable(action = AuditAction.INSERT, entity = "Servidor")
     public ServidorResponseDTO create(ServidorRequestDTO dto) {
         // Chama a validação antes de criar um servidor
         beforeCreate(dto);
@@ -112,6 +115,7 @@ public class ServidorService extends BaseGenericService<
 
     @Override
     @Transactional
+    @Auditable(action = AuditAction.UPDATE, entity = "Servidor")
     public ServidorResponseDTO update(Integer id, ServidorRequestDTO dto) {
         // 1. Busca a entidade existente no banco (Entity em estado 'Managed' pelo Hibernate)
         Servidor entity = servidorRepository.findById(id)

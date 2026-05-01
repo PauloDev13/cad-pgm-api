@@ -1,4 +1,4 @@
-INSERT INTO servidor (nome,matricula,cpf,data_nascimento,genero,telefone,email_pessoal,email_institucional,endereco,filiacao,data_desligamento,status_id,vinculo_id,cargo_id,setor_id,lotacao_id)
+INSERT INTO `servidor` (nome,matricula,cpf,data_nascimento,genero,telefone,email_pessoal,email_institucional,endereco,filiacao,data_desligamento,status_id,vinculo_id,cargo_id,setor_id,lotacao_id)
 VALUES
     ('Adriana De Morais Medeiros','T157','01102698458','1982-04-05','Feminino','84998962595','adrianamm.adv@gmail.com','adriana.morais@natal.rn.gov.br ','Rua Clara Camarão, 2000, Candelária, Natal/RN.','Maria das Graças de Morais Medeiros - João Batista Medeiros ',NULL,1,7,2,10,1),
     ('Aedra Lidianni Morais Lima','724118','03523842476','1980-04-06','Feminino','84991687073','aedramorais@hotmail.com','aedra.morais@natal.rn.gov.br','Av. Deodoro da Fonseca, 454 - Cidade Alta, Natal/RN, CEP: 59025-600','José de Arimateia Morais Lima - Maria José Morais Lima',NULL,1,1,11,13,1),

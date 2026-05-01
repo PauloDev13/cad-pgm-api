@@ -113,7 +113,7 @@ VALUES
     ('Setor de Ofícios'),
     ('Procuradoria Adjunta');
 
-INSERT INTO sistema(nome)
+INSERT INTO sistema(`nome`)
 VALUES
     ('Directa'),
     ('eCidade'),
@@ -133,7 +133,7 @@ VALUES
     ('TRT21 2º GRAU'),
     ('VPN');
 
-INSERT INTO status_servidor(descricao)
+INSERT INTO status_servidor(`descricao`)
 VALUES
     ('Ativo'),
     ('Inativo'),

@@ -2,6 +2,7 @@ package br.gov.rn.natal.cadpgmapi.security;
 
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
 import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,18 +33,31 @@ public class SecurityFilter extends OncePerRequestFilter {
         var token = this.recoverToken(request);
 
         if (token != null) {
-            // 2. Valida o token e extrai o userName (se o token for falso ou expirado, retorna vazio)
-            var userName = tokenService.validarToken(token);
+            // 2. Valida o token
 
-            if (!userName.isEmpty()) {
-                // 3. Busca o usuário no banco de dados
-                Usuario usuario = usuarioRepository.findByUserName(userName)
+            DecodedJWT decodedJWT = tokenService.validarToken(token);
+
+            if (decodedJWT != null) {
+                // 3. Se o objeto decodedJWT não for nulo, extrai o username
+                // (se o token for falso ou expirado, retorna nulo)
+                String username = decodedJWT.getSubject();
+
+                // 4. Busca o usuário no banco de dados
+                Usuario usuario = usuarioRepository.findByUserName(username)
                         .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
-                // 4. Cria o objeto de autenticação que o Spring Security entende
-                var authentication = new UsernamePasswordAuthenticationToken(usuario, null, usuario.getAuthorities());
+                // 5. Cria o objeto de autenticação que o Spring Security entende
+                var authentication = new UsernamePasswordAuthenticationToken(
+                        usuario,
+                        null,
+                        usuario.getAuthorities()
+                );
 
-                // 5. Salva a autenticação no contexto do Spring (Libera a catraca!)
+                // 6. Colocamos o objeto completo do JWT nos detalhes da autenticação.
+                // É aqui que o AuditAspect vai buscar o 'iat'
+                authentication.setDetails(decodedJWT);
+
+                // 7. Salva a autenticação no contexto do Spring (Libera a catraca!)
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         }

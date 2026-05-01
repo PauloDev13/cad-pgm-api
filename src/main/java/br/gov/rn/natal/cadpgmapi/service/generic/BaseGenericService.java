@@ -1,5 +1,7 @@
 package br.gov.rn.natal.cadpgmapi.service.generic;
 
+import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
+import br.gov.rn.natal.cadpgmapi.audit.enums.AuditAction;
 import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.mapper.generic.BaseMapper;
 import org.springframework.data.domain.Page;
@@ -31,6 +33,7 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
     protected void beforeSave(E entity) {}
 
     @Transactional
+    @Auditable(action = AuditAction.INSERT)
     public Res create(Req dto) {
         // O pai chama o gancho. Se o filho sobrescreveu e lançar erro, a execução para aqui!
         beforeCreate(dto);
@@ -60,6 +63,7 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.INSERT)
     public Res update(ID id, Req dto) {
         // Busca o registro do banco ou lança erro se não existir
         E existingEntity = repository.findById(id)
@@ -83,6 +87,7 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.DELETE)
     public void delete(ID id) {
         // Centralizamos a busca e a exceção de 404 (uma única ida ao banco)
         E existingEntity = repository.findById(id)

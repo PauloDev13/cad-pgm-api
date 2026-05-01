@@ -1,4 +1,4 @@
-INSERT INTO usuario (name, user_name, email, password, activated, force_password_change)
+INSERT INTO `usuario` (name, user_name, email, password, activated, force_password_change)
 VALUES (
            'Procuradoria Geral do Município',
            'pgmnet',
