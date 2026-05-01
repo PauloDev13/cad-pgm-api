@@ -8,6 +8,7 @@ import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.mapper.ServidorMapper;
+import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
 import br.gov.rn.natal.cadpgmapi.repository.AliasRepository;
 import br.gov.rn.natal.cadpgmapi.repository.ProcuradorRepository;
 import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.Optional;
 
 @Service
 public class ServidorService extends BaseGenericService<
@@ -49,9 +51,9 @@ public class ServidorService extends BaseGenericService<
     @Transactional
     @Auditable(action = AuditAction.INSERT, entity = "Servidor")
     public ServidorResponseDTO create(ServidorRequestDTO dto) {
-        // Chama a validação antes de criar um servidor
+        // 1. As validações blindadas
         beforeCreate(dto);
-
+        // 4. NOVO CADASTRO
         // Converte o DTO para Entidade
         Servidor entity = mapper.toEntity(dto);
 
@@ -185,31 +187,83 @@ public class ServidorService extends BaseGenericService<
     // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
     @Override
     protected void beforeCreate(ServidorRequestDTO dto) {
-        if (servidorRepository.existsByCpf(dto.cpf().trim())) {
-            throw new BusinessException("\"Já existe cadastro como este CPF " +
-                    "(<strong>" + dto.cpf() + "</strong>).");
+        // 1. Validação de CPF (Bloqueia se existir ativo ou excluído)
+        Optional<ServidorShadowProjection> shadowCpf = servidorRepository.checkCpfStatus(dto.cpf().trim());
+        if (shadowCpf.isPresent()) {
+            throw new BusinessException(
+                    "Este CPF (<strong>" + cpfFormat(dto.cpf()) + "</strong>)</br>já está em uso em outro cadastro."
+            );
         }
 
-        if (servidorRepository.existsByMatricula(dto.matricula().trim())) {
-            throw new BusinessException("\"Já existe cadastro como est Matrícula " +
-                    "(<strong>" + dto.matricula() + "</strong>).");
+        // 2. Validação da Matrícula (Bloqueia se existir ativa ou excluída)
+        Optional<ServidorShadowProjection> shadowMatricula = servidorRepository.checkMatriculaStatus(dto.matricula().trim());
+        if (shadowMatricula.isPresent()) {
+            throw new BusinessException(
+                    "Esta Matrícula (<strong>" + dto.matricula() + "</strong>)</br>" +
+                            "já está em uso em outro cadastro."
+            );
+        }
+
+        // 3. Validação de E-mail Pessoal
+        servidorRepository.checkEmailPessoalStatus(dto.emailPessoal().trim())
+                .ifPresent(s -> {
+                    throw new BusinessException("Este E-mail (<strong>" + dto.emailPessoal() + "</strong>)</br>" +
+                            "já está em uso em outro cadastro.");
+                });
+
+        // 4. Validação de E-mail Institucional (Só valida se for informado)
+        if (dto.emailInstitucional() != null && !dto.emailInstitucional().isBlank()) {
+            servidorRepository.checkEmailInstitucionalStatus(dto.emailInstitucional().trim())
+                    .ifPresent(s -> {
+                        throw new BusinessException("Este E-mail (<strong>" + dto.emailInstitucional() + "</strong>)</br>" +
+                                "já está em uso em outro cadastro.");
+                    });
         }
     }
 
     @Override
     protected void beforeUpdate(ServidorRequestDTO dto, Servidor existingServidor) {
-        // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o CPF
-        if (!existingServidor.getCpf().equalsIgnoreCase(dto.cpf())) {
-            if (servidorRepository.existsByCpf(dto.cpf())) {
-                throw new BusinessException("Este CPF (<strong>" + dto.cpf() + "</strong>) já está em uso.");
+        // 1. Só valida se MUDOU o CPF na tela
+        if (!existingServidor.getCpf().equalsIgnoreCase(dto.cpf().trim())) {
+            Optional<ServidorShadowProjection> shadowCpf = servidorRepository.checkCpfStatus(dto.cpf().trim());
+            if (shadowCpf.isPresent()) {
+                throw new BusinessException(
+                        "Este CPF (<strong>" + cpfFormat(dto.cpf()) + "</strong>)</br>já está em uso em outro cadastro."
+                );
             }
         }
 
-        // Só valida duplicidade se o usuário estiver de fato tentando MUDAR a matrícula
-        if (!existingServidor.getMatricula().equalsIgnoreCase(dto.matricula())) {
-            if (servidorRepository.existsByMatricula(dto.matricula())) {
-                throw new BusinessException("Esta matrícula (<strong>" + dto.matricula() + "</strong>) já está em uso.");
+        // 2. Só valida se MUDOU a Matrícula na tela
+        if (!existingServidor.getMatricula().equalsIgnoreCase(dto.matricula().trim())) {
+            Optional<ServidorShadowProjection> shadowMatricula = servidorRepository.checkMatriculaStatus(dto.matricula().trim());
+            if (shadowMatricula.isPresent()) {
+                throw new BusinessException(
+                        "Esta Matrícula (<strong>" + dto.matricula() + "</strong>)</br>já está em uso em outro cadastro."
+                );
             }
+        }
+
+        // Validação de E-mail Pessoal
+        if (!existingServidor.getEmailPessoal().equalsIgnoreCase(dto.emailPessoal().trim())) {
+            servidorRepository.checkEmailPessoalStatus(dto.emailPessoal().trim())
+                    .ifPresent(s -> {
+                        throw new BusinessException("Este E-mail (<strong>" + dto.emailPessoal() + "</strong>)</br>" +
+                                "já está em uso em outro cadastro."
+                        );
+                    });
+        }
+
+        // Validação de E-mail Institucional
+        String newEmailInst = dto.emailInstitucional() != null ? dto.emailInstitucional().trim() : "";
+        String oldEmailInst = existingServidor.getEmailInstitucional() != null
+                ? existingServidor.getEmailInstitucional() : "";
+
+        if (!newEmailInst.isBlank() && !newEmailInst.equalsIgnoreCase(oldEmailInst)) {
+            servidorRepository.checkEmailInstitucionalStatus(newEmailInst)
+                    .ifPresent(s -> {
+                        throw new BusinessException("Este E-mail (<strong>" + newEmailInst + "</strong>)</br>" +
+                                "já está em uso em outro cadastro.");
+                    });
         }
     }
 
@@ -221,12 +275,32 @@ public class ServidorService extends BaseGenericService<
         }
         // Compara a descrição ignorando maiúsculas e minúsculas
         if (!entity.getStatus().getDescricao().equalsIgnoreCase("Inativo")) {
-            throw new BusinessException("O servidor só pode ser removido se o Status for " +
-                    "(<strong>'INATIVO'</strong>).</br> " +
-                    "<strong>Status atual: " + entity.getStatus()
-                    .getDescricao().toUpperCase()+ "</strong>."
+            throw new BusinessException("Somente Servidor com Status (<strong>'INATIVO'</strong>) pode ser removido." +
+                    "Status atual: (<strong>'" + entity.getStatus().getDescricao().toUpperCase() + "'</strong>)."
             );
         }
 
+    }
+
+    // MÉTODOS PRIVADOS
+    private ServidorResponseDTO reativateServidor(Servidor entity, ServidorRequestDTO dto) {
+        // 1. Removemos as marcas de exclusão
+        entity.setExcluded(false);
+        entity.setExcludedDate(null);
+
+        // 2. Atualizamos os dados com o que veio no DTO (pode ter mudado telefone, etc)
+        mapper.updateEntityFromDTO(entity, dto);
+
+        // 3. Salva para persistir a volta ao mundo dos ativos
+        entity = servidorRepository.save(entity);
+
+        // 4. Atualiza as relações N:N
+        associarRelacoesMuitosParaMuitos(entity, dto);
+
+        return mapper.toDto(entity);
+    }
+
+    private String cpfFormat(String cpf) {
+        return cpf.replaceAll("(\\d{3})(\\d{3})(\\d{3})(\\d{2})", "$1.$2.$3-$4");
     }
 }

@@ -2,8 +2,11 @@ package br.gov.rn.natal.cadpgmapi.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -12,6 +15,10 @@ import java.util.Set;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
+// 1. Substitui o DELETE físico por um UPDATE no banco
+@SQLDelete(sql = "UPDATE servidor SET excluded = true, excluded_date = CURRENT_TIMESTAMP WHERE id = ?")
+// 2. Filtra automaticamente todos os SELECTs para ignorar os excluídos
+@SQLRestriction("excluded = false")
 public class Servidor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,11 +27,13 @@ public class Servidor {
     @Column(nullable = false, length = 150)
     private String nome;
 
-    @Column(length = 50, unique = true)
+    @Column(nullable = false, length = 50, unique = true)
     private String matricula;
 
-    @Column(length = 14, unique = true)
+    @Column(nullable = false, length = 14, unique = true)
     private String cpf;
+
+    @Column(nullable = false)
     private LocalDate dataNascimento;
 
     @Column(length = 20)
@@ -33,13 +42,21 @@ public class Servidor {
     @Column(length = 20)
     private String telefone;
 
-    @Column(name = "email_pessoal", length = 100)
+    @Column(nullable = false, name = "email_pessoal", length = 100, unique = true)
     private String emailPessoal ;
 
-    @Column(name = "email_institucional", length = 100)
+    @Column(name = "email_institucional", length = 100, unique = true)
     private String emailInstitucional;
     private String endereco;
     private String filiacao;
+
+    @Column(name = "excluded")
+    private boolean excluded = false;
+
+    @Column(name = "excluded_date")
+    private LocalDateTime excludedDate;
+
+    @Column(name = "data_desligamento")
     private LocalDate dataDesligamento ;
 
     // Relacionamentos N:1
