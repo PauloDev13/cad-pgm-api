@@ -1,5 +1,6 @@
 package br.gov.rn.natal.cadpgmapi.audit.aspects;
 
+import br.gov.rn.natal.cadpgmapi.audit.AuditContextHolder;
 import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
 import br.gov.rn.natal.cadpgmapi.audit.entities.AuditLog;
 import br.gov.rn.natal.cadpgmapi.audit.events.AuditLogEvent;
@@ -85,7 +86,14 @@ public class AuditAspect {
             log.setTypeAction(auditable.action());
             log.setAffectedEntity(entityName);
             log.setIdAffectedRecord(AffectedId);
-            log.setDetails("Método executado: " + method.getName());
+
+            String extraDetails = AuditContextHolder.getLogDetalhes();
+
+            if (extraDetails != null && !extraDetails.isBlank()) {
+                log.setDetails(extraDetails);
+            } else {
+                log.setDetails("Método executado: " + method.getName());
+            }
 
             // 5. Publica o evento (Síncrono aqui, mas processado Assíncrono pelo Listener)
             eventPublisher.publishEvent(new AuditLogEvent(this, log));
@@ -93,6 +101,8 @@ public class AuditAspect {
         } catch (Exception e) {
             // O Catch garante que um erro na auditoria NUNCA quebre a transação principal
             System.err.println("Falha ao gerar log de auditoria: " + e.getMessage());
+        } finally {
+            AuditContextHolder.clear();
         }
     }
 }

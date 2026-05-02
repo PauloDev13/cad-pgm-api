@@ -1,5 +1,6 @@
 package br.gov.rn.natal.cadpgmapi.service;
 
+import br.gov.rn.natal.cadpgmapi.audit.AuditContextHolder;
 import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
 import br.gov.rn.natal.cadpgmapi.audit.enums.AuditAction;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
@@ -14,7 +15,12 @@ import br.gov.rn.natal.cadpgmapi.repository.ProcuradorRepository;
 import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
 import br.gov.rn.natal.cadpgmapi.repository.SistemaRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.Predicate;
+import org.javers.core.Javers;
+import org.javers.core.JaversBuilder;
+import org.javers.core.diff.Diff;
+import org.javers.core.diff.changetype.ValueChange;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -31,6 +37,7 @@ public class ServidorService extends BaseGenericService<
     private final SistemaRepository sistemaRepository;
     private final AliasRepository aliasRepository;
     private final ProcuradorRepository procuradorRepository;
+    private final EntityManager entityManager;
 
     // Construtor
     public ServidorService(
@@ -38,13 +45,14 @@ public class ServidorService extends BaseGenericService<
             ServidorMapper mapper,
             SistemaRepository sistemaRepository,
             AliasRepository aliasRepository,
-            ProcuradorRepository procuradorRepository
+            ProcuradorRepository procuradorRepository, EntityManager entityManager
     ){
         super(repository, mapper);
         this.servidorRepository = repository;
         this.sistemaRepository = sistemaRepository;
         this.aliasRepository = aliasRepository;
         this.procuradorRepository = procuradorRepository;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -123,65 +131,37 @@ public class ServidorService extends BaseGenericService<
         Servidor entity = servidorRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
 
-        // Chama a validação antes de atualizar
+        // 2. Tira uma "foto" dos dados ANTIGOS convertendo para DTO Request
+        // (Converter para DTO limpa as sujeiras do Hibernate e facilita a comparação)
+//        ServidorRequestDTO oldSnapshot = mapper.toReqDto(entity);
+        ServidorResponseDTO oldSnapshot = mapper.toDto(entity);
+
+        // 3. Validações e Regras de Negócio
         beforeUpdate(dto, entity);
 
-        // Atualiza os dados básicos e relacionamentos N:1 mapeados usando MapStruct
+        // 4. Aplica as alterações na entidade
         mapper.updateEntityFromDTO(entity, dto);
-
-        // Reassocia as coleções N para N (Sistemas, Aliases, Procuradores) tratadas via Service
+        // Reassocia as coleções N para N (Sistemas, Aliases, Procuradores)
         associarRelacoesMuitosParaMuitos(entity, dto);
 
+        // 3. A MÁGICA DA HIDRATAÇÃO ACONTECE AQUI
+        // Primeiro empurramos a alteração pro banco para salvar as chaves estrangeiras novas
+        servidorRepository.saveAndFlush(entity);
+
+        // Agora mandamos o chefe do Hibernate buscar o registro inteiro de novo,
+        // trazendo todos os nomes (Cargo, Setor, Status) preenchidos e reais!
+        entityManager.refresh(entity);
+
+        // 5. Tira uma "foto" dos dados NOVOS
+        ServidorResponseDTO newSnapshot = mapper.toDto(entity);
+
+        // 5. GERA O TEXTO DE AUDITORIA ("A Mágica")
+        String detailsLog = generateAuditText(oldSnapshot, newSnapshot);
+
+        AuditContextHolder.setLogDetalhes(detailsLog);
+
+        // 7. Salva no banco e retorna
         return mapper.toDto(servidorRepository.save(entity));
-    }
-
-    /**
-     * Recebe a entidade (já mapeada com os dados básicos pelo MapStruct)
-     * e os IDs vindos do DTO para fazer a associação otimizada.
-     */
-    private void associarRelacoesMuitosParaMuitos(Servidor entity, ServidorRequestDTO dto) {
-
-        // Associa Sistemas
-        if (dto.sistemaIds() != null && !dto.sistemaIds().isEmpty()) {
-
-            // Cria uma lista caso ela seja nula ou limpa a lista se ela existir
-            if (entity.getSistemas() == null) {
-                entity.setSistemas(new HashSet<>());
-            } else {
-                entity.getSistemas().clear();
-            }
-
-            // Adiciona os IDs à tabela de junção
-            dto.sistemaIds().forEach(id -> {
-                entity.getSistemas().add(sistemaRepository.getReferenceById(id));
-            });
-        }
-
-        // Associa Aliases de E-mail
-        if (dto.aliasIds() != null && !dto.aliasIds().isEmpty()) {
-            if (entity.getAliases() == null) {
-                entity.setAliases(new HashSet<>());
-            } else {
-                entity.getAliases().clear();
-            }
-
-            dto.aliasIds().forEach(id -> {
-                entity.getAliases().add(aliasRepository.getReferenceById(id));
-            });
-        }
-
-        // Associa Procuradores
-        if (dto.procuradorIds() != null && !dto.procuradorIds().isEmpty()) {
-            if (entity.getProcuradores() == null) {
-                entity.setProcuradores(new HashSet<>());
-            } else {
-                entity.getProcuradores().clear();
-            }
-
-            dto.procuradorIds().forEach(id -> {
-                entity.getProcuradores().add(procuradorRepository.getReferenceById(id));
-            });
-        }
     }
 
     // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
@@ -282,6 +262,87 @@ public class ServidorService extends BaseGenericService<
 
     }
 
+    // Método que devolve um texto com as alterações realizadas no método Update
+    private String generateAuditText(Object oldObject, Object newObject) {
+        // Inicializa o motor do JaVers
+        Javers javers = JaversBuilder.javers().build();
+
+        // Faz a comparação mágica
+        Diff diff = javers.compare(oldObject, newObject);
+        // Se não mudou nada, retorna vazio
+        if (!diff.hasChanges()) {
+            return "Nenhuma alteração detectada.";
+        }
+
+        StringBuilder builder = new StringBuilder();
+        builder.append("Alterações realizadas: ");
+
+        // Percorre cada campo que mudou e monta a frase
+        for (ValueChange change : diff.getChangesByType(ValueChange.class)) {
+            String field = change.getPropertyName();
+
+            // Se no nome do campo vier "i", não adicione ao array
+            if ("id".equalsIgnoreCase(field)) continue;
+
+            Object oldValue = change.getLeft();
+            Object newValue = change.getRight();
+
+            builder.append(String.format("[%s: de '%s' para '%s'] ", field, oldValue, newValue));
+        }
+
+        return builder.toString().trim();
+
+    }
+
+    /**
+     * Recebe a entidade (já mapeada com os dados básicos pelo MapStruct)
+     * e os IDs vindos do DTO para fazer a associação otimizada.
+     */
+    private void associarRelacoesMuitosParaMuitos(Servidor entity, ServidorRequestDTO dto) {
+
+        // Associa Sistemas
+        if (dto.sistemaIds() != null && !dto.sistemaIds().isEmpty()) {
+
+            // Cria uma lista caso ela seja nula ou limpa a lista se ela existir
+            if (entity.getSistemas() == null) {
+                entity.setSistemas(new HashSet<>());
+            } else {
+                entity.getSistemas().clear();
+            }
+
+            // Adiciona os IDs à tabela de junção
+            dto.sistemaIds().forEach(id -> {
+                entity.getSistemas().add(sistemaRepository.getReferenceById(id));
+            });
+        }
+
+        // Associa Aliases de E-mail
+        if (dto.aliasIds() != null && !dto.aliasIds().isEmpty()) {
+            if (entity.getAliases() == null) {
+                entity.setAliases(new HashSet<>());
+            } else {
+                entity.getAliases().clear();
+            }
+
+            dto.aliasIds().forEach(id -> {
+                entity.getAliases().add(aliasRepository.getReferenceById(id));
+            });
+        }
+
+        // Associa Procuradores
+        if (dto.procuradorIds() != null && !dto.procuradorIds().isEmpty()) {
+            if (entity.getProcuradores() == null) {
+                entity.setProcuradores(new HashSet<>());
+            } else {
+                entity.getProcuradores().clear();
+            }
+
+            dto.procuradorIds().forEach(id -> {
+                entity.getProcuradores().add(procuradorRepository.getReferenceById(id));
+            });
+        }
+    }
+
     // MÉTODOS PRIVADOS
     private ServidorResponseDTO reativateServidor(Servidor entity, ServidorRequestDTO dto) {
         // 1. Removemos as marcas de exclusão
@@ -301,6 +362,11 @@ public class ServidorService extends BaseGenericService<
     }
 
     private String cpfFormat(String cpf) {
-        return cpf.replaceAll("(\\d{3})(\\d{3})(\\d{3})(\\d{2})", "$1.$2.$3-$4");
+        // return cpf.replaceAll("(\\d{3})(\\d{3})(\\d{3})(\\d{2})", "$1.$2.$3-$4");
+        // Formatação direta, simples e extremamente rápida
+        return cpf.substring(0, 3) + "." +
+                cpf.substring(3, 6) + "." +
+                cpf.substring(6, 9) + "-" +
+                cpf.substring(9, 11);
     }
 }

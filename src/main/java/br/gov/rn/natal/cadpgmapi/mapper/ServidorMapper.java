@@ -27,7 +27,6 @@ public interface ServidorMapper extends BaseMapper<Servidor, ServidorRequestDTO,
     @Mapping(target = "sistemas", ignore = true)
     @Mapping(target = "aliases", ignore = true)
     @Mapping(target = "procuradores", ignore = true)
-
     // Ignorando campos de controle de ciclo de vida (tratados em endpoints específicos)
     @Mapping(target = "dataDesligamento", ignore = true)
     Servidor toEntity(ServidorRequestDTO dto);
