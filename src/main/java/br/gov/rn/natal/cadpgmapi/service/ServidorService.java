@@ -123,6 +123,62 @@ public class ServidorService extends BaseGenericService<
                 .map(mapper::toDto);
     }
 
+    // 1. Listagem para a aba de excluídos. Lista todos os registros
+    @Transactional(readOnly = true)
+    public Page<ServidorResponseDTO> listExcluded(Pageable pageable) {
+        return servidorRepository.findAllExcluded(pageable).map(mapper::toDto);
+    }
+
+    // Busca registros pelo nome ou CPF
+    @Transactional(readOnly = true)
+    public Page<ServidorResponseDTO> searchExcluded(
+            String term, Pageable pageable
+    ) {
+        if (term == null || term.trim().isEmpty()) {
+            return listExcluded(pageable);
+        }
+        return servidorRepository.searchExcluded(term.trim(), pageable).map(mapper::toDto);
+    }
+
+    // 2. A Reativação com atualização de dados (Abordagem 2)
+    @Transactional
+    @Auditable(action = AuditAction.UPDATE, entity = "Servidor")
+    public ServidorResponseDTO reativated(Integer id, ServidorRequestDTO dto) {
+        // A. Primeiro, usamos o "Raio-X" para garantir que o registro existe
+        Optional<ServidorShadowProjection> shadow = servidorRepository.checkCpfStatus(dto.cpf().trim());
+        if (shadow.isEmpty() || !shadow.get().getExcluded()) {
+            throw  new ResourceNotFoundException("Servidor não encontrado na base de dados de excluídos");
+        }
+
+        // B. Ressuscita no banco via SQL Nativo (Limpa a flag e a data)
+        // A partir deste milissegundo, o excluded virou false e o Hibernate volta a enxergá-lo!
+        servidorRepository.reviveNativeServidor(id);
+
+        // C. Carrega os dados do Servidor
+        Servidor servidor = servidorRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Falha ao recuperar servidor na reativação"));
+
+        // D. Hidratação para garantir que os nomes dos cargos/setores venham preenchidos
+        entityManager.refresh(servidor);
+
+        // E. Tira a "foto" antiga (Ele já não está 'excluído', mas Cargo/Setor/Email ainda são os antigos)
+        ServidorResponseDTO oldSnapshot = mapper.toDto(servidor);
+
+        // F. Aplica os novos dados vindos do Modal (Novo cargo, novo setor, etc.)
+        mapper.updateEntityFromDTO(servidor, dto);
+        associarRelacoesMuitosParaMuitos(servidor, dto);
+
+        servidorRepository.saveAndFlush(servidor);
+        entityManager.refresh(servidor);
+
+        ServidorResponseDTO newSnapshot = mapper.toDto(servidor);
+        String diff = generateAuditText(oldSnapshot, newSnapshot);
+        AuditContextHolder.setLogDetalhes("READMISSÃO: " + diff);
+
+        return newSnapshot;
+
+    }
+
     @Override
     @Transactional
     @Auditable(action = AuditAction.UPDATE, entity = "Servidor")
@@ -133,7 +189,6 @@ public class ServidorService extends BaseGenericService<
 
         // 2. Tira uma "foto" dos dados ANTIGOS convertendo para DTO Request
         // (Converter para DTO limpa as sujeiras do Hibernate e facilita a comparação)
-//        ServidorRequestDTO oldSnapshot = mapper.toReqDto(entity);
         ServidorResponseDTO oldSnapshot = mapper.toDto(entity);
 
         // 3. Validações e Regras de Negócio

@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -43,7 +44,7 @@ public class ServidorController extends BaseController<
     @GetMapping("/searchFilter")
     @Operation(summary = "Buscar servidor por CPF, Matrícula, Nome e Status",
             description = "Informe o CPF ou a Matrícula ou o Status via query parameter. " +
-                    "Exemplo: /searchFilter?cpf=00011122233&matricula=T0001")
+                    "Exemplo: /searchFilter?cpf=00011122233")
     public Page<ServidorResponseDTO> findByFilters(
             @RequestParam(required = false) String cpf,
             @RequestParam(required = false) String matricula,
@@ -54,5 +55,40 @@ public class ServidorController extends BaseController<
     ) {
 
         return service.findByFilters(cpf, matricula, nome, statusId, pageable);
+    }
+
+    // Endpoint para a aba de excluídos. Lista todos os registros
+    @GetMapping("/excluded")
+    @Operation(summary = "Buscar todos os servidores com status de excluído",
+            description = "Retorna os registros excluídos com 'Soft Delete'")
+    public Page<ServidorResponseDTO> getExcluded(
+            @ParameterObject @PageableDefault(
+                    sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        return service.listExcluded(pageable);
+    }
+
+    @GetMapping("/searchExcluded")
+    @Operation(summary = "Buscar por Nome ou CPF servidores com status excluído",
+            description = "Informe o Nome ou o CPF via query parameter. " +
+                    "Exemplo: /searchExcluded?cpf=00011122233")
+    public Page<ServidorResponseDTO> searchExcluded(
+            @RequestParam(required = false) String term,
+            @ParameterObject @PageableDefault(
+                    sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+
+        return service.searchExcluded(term, pageable);
+    }
+
+    // Endpoint que o botão do Modal vai chamar para alterar o status de excluído
+    // Usamos PATCH pois é uma alteração parcial/específica
+    @PatchMapping("/{id}/reactivate")
+    @Operation(summary = "Reativa o cadastro que está com status excluído",
+            description = "Inverte o fluxo do 'Soft Delete'")
+    public ResponseEntity<ServidorResponseDTO> reactivate(
+            @PathVariable Integer id,
+            @RequestBody ServidorRequestDTO dto) {
+        return ResponseEntity.ok(service.reativated(id, dto));
     }
 }
