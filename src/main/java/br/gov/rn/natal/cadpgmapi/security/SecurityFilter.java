@@ -35,7 +35,7 @@ public class SecurityFilter extends OncePerRequestFilter {
         if (token != null) {
             // 2. Valida o token
 
-            DecodedJWT decodedJWT = tokenService.validarToken(token);
+            DecodedJWT decodedJWT = tokenService.validateToken(token);
 
             if (decodedJWT != null) {
                 // 3. Se o objeto decodedJWT não for nulo, extrai o username

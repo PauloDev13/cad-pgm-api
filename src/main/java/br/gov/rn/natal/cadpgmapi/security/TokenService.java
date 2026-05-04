@@ -25,7 +25,7 @@ public class TokenService {
 
     private static final String ISSUER = "API Cad PGM";
 
-    public String gerarToken(Usuario usuario) {
+    public String generateToken(Usuario usuario) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
 
@@ -40,14 +40,14 @@ public class TokenService {
                     .withClaim("roles", permissions)
                     .withClaim("isForcePasswordChange", usuario.isForcePasswordChange())
                     .withIssuedAt(new Date())
-                    .withExpiresAt(gerarDataExpiracao())
+                    .withExpiresAt(generateExpirationDate())
                     .sign(algorithm);
         } catch (JWTCreationException exception) {
             throw new RuntimeException("Erro ao gerar token JWT", exception);
         }
     }
 
-    public DecodedJWT validarToken(String token) {
+    public DecodedJWT validateToken(String token) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.require(algorithm)
@@ -59,7 +59,7 @@ public class TokenService {
         }
     }
 
-    private Instant gerarDataExpiracao() {
+    private Instant generateExpirationDate() {
 
         return LocalDateTime.now().plusHours(2)
                 .toInstant(ZoneOffset.of("-03:00")
@@ -67,7 +67,7 @@ public class TokenService {
     }
 
     // GERA O TOKEN DE RECUPERAÇÃO
-    public String gerarTokenRecuperacaoSenha(Usuario usuario) {
+    public String generatePasswordRecoveryToken(Usuario usuario) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.create()
@@ -84,7 +84,7 @@ public class TokenService {
     }
 
     // VALIDA E DECODIFICA O TOKEN DE RECUPERAÇÃO
-    public DecodedJWT validarTokenRecuperacao(String token) {
+    public DecodedJWT validateRecoveryToken(String token) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.require(algorithm)

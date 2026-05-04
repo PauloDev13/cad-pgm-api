@@ -31,7 +31,7 @@ public class PasswordResetService {
                         "E-mail não cadastrado. Verifique se digitou corretamente"));
 
         // Delega a geração para o TokenService (Stateless)
-        String token = tokenService.gerarTokenRecuperacaoSenha(user);
+        String token = tokenService.generatePasswordRecoveryToken(user);
 
         // Descobre de onde o usuário está acessando agora
         HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder
@@ -47,36 +47,36 @@ public class PasswordResetService {
 
         // Monta o link do Frontend e dispara o e-mail
         String frontendUrl = originRequestUser + "/auth/redefinir-senha?token=" + token;
-        emailService.enviarEmailRecuperacao(user.getEmail(), frontendUrl);
+        emailService.sendEmailRecovery(user.getEmail(), frontendUrl);
     }
 
     @Transactional
     public void resetPassword(String token, String newPassword) {
         // 1. Reutiliza a lógica de validação que acabamos de criar
-        Usuario usuario = validateToken(token);
+        Usuario user = validateToken(token);
 
         // 2. Atualiza a senha corretamente
-        usuario.setPassword(passwordEncoder.encode(newPassword.trim()));
-        usuarioRepository.save(usuario);
+        user.setPassword(passwordEncoder.encode(newPassword.trim()));
+        usuarioRepository.save(user);
     }
 
     // Verifica se o token é válido - se não está expirado ou já foi usado para redefinir a senha
     public Usuario validateToken(String token) {
         // Valida a assinatura e a expiração do JWT
-        DecodedJWT jwt = tokenService.validarTokenRecuperacao(token);
+        DecodedJWT jwt = tokenService.validateRecoveryToken(token);
 
         String email = jwt.getSubject();
-        String hashAntigo = jwt.getClaim("hash").asString();
+        String oldHash = jwt.getClaim("hash").asString();
 
         // Busca o usuário pelo e-mail contido no token
-        Usuario usuario = usuarioRepository.findByEmail(email)
+        Usuario user = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
 
         // VALIDAÇÃO DE REUSO
-        if (!usuario.getPassword().equals(hashAntigo)) {
+        if (!user.getPassword().equals(oldHash)) {
             throw new BusinessException("Este link de recuperação já foi utilizado ou é inválido.");
         }
 
-        return usuario; // Retorna o usuário validado
+        return user; // Retorna o usuário validado
     }
 }

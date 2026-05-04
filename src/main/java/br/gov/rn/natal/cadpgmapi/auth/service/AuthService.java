@@ -33,10 +33,10 @@ public class AuthService {
             // Se o código chegou nesta linha, significa que o login e senha estão corretos!
             var authentication = authenticationManager.authenticate(credenciais);
             // Extraímos o nosso usuário de dentro do objeto de autenticação
-            var usuarioAutenticado = (Usuario) authentication.getPrincipal();
+            var AuthenticatedUser = (Usuario) authentication.getPrincipal();
 
             // Pedimos para a nossa fábrica gerar a Pulseira VIP (JWT) para este usuário e a retornamos
-            return tokenService.gerarToken(usuarioAutenticado);
+            return tokenService.generateToken(AuthenticatedUser);
 
             // Exceção para senha ou login errados
         } catch (BadCredentialsException e) {
@@ -60,12 +60,12 @@ public class AuthService {
         String userNameLogado = SecurityContextHolder.getContext().getAuthentication().getName();
 
         // Buscamos o usuário no banco usando a identidade do Token
-        Usuario usuario = usuarioRepository.findByUserName(userNameLogado)
+        Usuario user = usuarioRepository.findByUserName(userNameLogado)
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
 
         // Buscamos o usuário no banco usando a identidade do Token
-        usuario.setPassword(passwordEncoder.encode(dto.newPassword()));
-        usuario.setForcePasswordChange(false); // Libera o acesso normal
-        usuarioRepository.save(usuario);
+        user.setPassword(passwordEncoder.encode(dto.newPassword()));
+        user.setForcePasswordChange(false); // Libera o acesso normal
+        usuarioRepository.save(user);
     }
 }

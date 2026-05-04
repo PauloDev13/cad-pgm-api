@@ -11,7 +11,7 @@ public interface AuditLogMapper{
     /**
      * Converte a Entidade AuditLog para o DTO de Resposta.
      * O MapStruct mapeia os campos com nomes iguais automaticamente.
-     * Ele também converte o Enum AcaoAuditoria para String sozinho.
+     * Ele também converte o Enum ActionAuditoria para String sozinho.
      */
     AuditLogResponseDTO toResponseDTO(AuditLog entity);
 }
