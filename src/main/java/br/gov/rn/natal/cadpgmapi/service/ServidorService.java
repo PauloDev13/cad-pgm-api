@@ -330,7 +330,7 @@ public class ServidorService extends BaseGenericService<
         }
 
         StringBuilder builder = new StringBuilder();
-        builder.append("Alterações realizadas: ");
+//        builder.append("Alterações realizadas: ");
 
         // Percorre cada campo que mudou e monta a frase
         for (ValueChange change : diff.getChangesByType(ValueChange.class)) {
@@ -342,6 +342,7 @@ public class ServidorService extends BaseGenericService<
             Object oldValue = change.getLeft();
             Object newValue = change.getRight();
 
+//            builder.append(String.format("[de '%s' para '%s'] ", field, oldValue, newValue));
             builder.append(String.format("[%s: de '%s' para '%s'] ", field, oldValue, newValue));
         }
 

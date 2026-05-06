@@ -4,9 +4,7 @@ import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.*;
 import br.gov.rn.natal.cadpgmapi.mapper.generic.BaseMapper;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
+import org.mapstruct.*;
 
 @Mapper(componentModel = "spring", uses = {
         CargoMapper.class,

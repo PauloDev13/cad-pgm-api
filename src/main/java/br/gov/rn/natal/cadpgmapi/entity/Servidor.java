@@ -105,4 +105,15 @@ public class Servidor {
     )
     @Builder.Default
     private Set<Procurador> procuradores = new HashSet<>();
+
+    // O JPA executa isso automaticamente antes de qualquer INSERT ou UPDATE
+    // Evita o erro de email institucional duplicado, caso o email não seja informado
+    // se o email não for informado, seta nulo para o atributo emailInstitucional
+    @PrePersist
+    @PreUpdate
+    private void preProcess() {
+        if (this.emailInstitucional != null && this.emailInstitucional.isBlank()) {
+            this.emailInstitucional = null;
+        }
+    }
 }
