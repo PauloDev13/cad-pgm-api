@@ -3,6 +3,7 @@ package br.gov.rn.natal.cadpgmapi.service;
 import br.gov.rn.natal.cadpgmapi.audit.AuditContextHolder;
 import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
 import br.gov.rn.natal.cadpgmapi.audit.enums.AuditAction;
+import br.gov.rn.natal.cadpgmapi.audit.utils.AuditDiffUtil;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
@@ -33,6 +34,7 @@ import java.util.Optional;
 @Service
 public class ServidorService extends BaseGenericService<
         Servidor, ServidorRequestDTO, ServidorResponseDTO, Integer> {
+    // Variáveis
     private final ServidorRepository servidorRepository;
     private final SistemaRepository sistemaRepository;
     private final AliasRepository aliasRepository;
@@ -55,28 +57,7 @@ public class ServidorService extends BaseGenericService<
         this.entityManager = entityManager;
     }
 
-    @Override
-    @Transactional
-    @Auditable(action = AuditAction.INSERT, entity = "Servidor")
-    public ServidorResponseDTO create(ServidorRequestDTO dto) {
-        // 1. As validações blindadas
-        beforeCreate(dto);
-        // 4. NOVO CADASTRO
-        // Converte o DTO para Entidade
-        Servidor entity = mapper.toEntity(dto);
-
-        // SALVA PRIMEIRO! (Isso gera o ID do Servidor no banco de dados)
-        // Agora a entidade está "Managed" e tem um ID válido.
-        entity = servidorRepository.save(entity);
-
-        // Associa as relações NN (Sistemas, Aliases, Procuradores)
-        associarRelacoesMuitosParaMuitos(entity, dto);
-
-        // O Hibernate, ao final do méthod @Transactional, vai perceber que
-        // as listas mudaram e vai fazer os INSERTs nas tabelas de junção sozinho!
-        return mapper.toDto(entity);
-    }
-
+    // Método de busca paginada com filtros dinâmicos para registros ATIVOS
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> findByFilters(
             String cpf, String matricula, String nome, Integer statusId, Pageable pageable
@@ -123,13 +104,13 @@ public class ServidorService extends BaseGenericService<
                 .map(mapper::toDto);
     }
 
-    // 1. Listagem para a aba de excluídos. Lista todos os registros
+    // Método de busca de todos os registros EXLCUÍDOS
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> listExcluded(Pageable pageable) {
         return servidorRepository.findAllExcluded(pageable).map(mapper::toDto);
     }
 
-    // Busca registros pelo nome ou CPF
+    // Método de busca paginada com filtros dinâmicos para registros EXCLUÍDOS
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> searchExcluded(
             String term, Pageable pageable
@@ -140,7 +121,7 @@ public class ServidorService extends BaseGenericService<
         return servidorRepository.searchExcluded(term.trim(), pageable).map(mapper::toDto);
     }
 
-    // 2. A Reativação com atualização de dados (Abordagem 2)
+    // Método que "reativa" registros EXCLUÍDOS para ATIVOS
     @Transactional
     @Auditable(action = AuditAction.UPDATE, entity = "Servidor")
     public ServidorResponseDTO reativated(Integer id, ServidorRequestDTO dto) {
@@ -151,7 +132,6 @@ public class ServidorService extends BaseGenericService<
         }
 
         // B. Ressuscita no banco via SQL Nativo (Limpa a flag e a data)
-        // A partir deste milissegundo, o excluded virou false e o Hibernate volta a enxergá-lo!
         servidorRepository.reviveNativeServidor(id);
 
         // C. Carrega os dados do Servidor
@@ -171,58 +151,26 @@ public class ServidorService extends BaseGenericService<
         servidorRepository.saveAndFlush(servidor);
         entityManager.refresh(servidor);
 
+        // G. Tira a "foto" nova com os dados atualizados
         ServidorResponseDTO newSnapshot = mapper.toDto(servidor);
-        String diff = generateAuditText(oldSnapshot, newSnapshot);
-        AuditContextHolder.setLogDetalhes("READMISSÃO: " + diff);
+
+        // H. Usa a nossa classe utilitária universal!
+        String diff = AuditDiffUtil.generateDiff(oldSnapshot, newSnapshot);
+
+        if (diff != null && !diff.trim().isEmpty()) {
+            AuditContextHolder.setLogDetalhes("READMISSÃO: Alterações:" + diff);
+        } else {
+            AuditContextHolder.setLogDetalhes("READMISSÃO: Nenhuma alteração de dados detectada.");
+        }
 
         return newSnapshot;
 
     }
 
-    @Override
-    @Transactional
-    @Auditable(action = AuditAction.UPDATE, entity = "Servidor")
-    public ServidorResponseDTO update(Integer id, ServidorRequestDTO dto) {
-        // 1. Busca a entidade existente no banco (Entity em estado 'Managed' pelo Hibernate)
-        Servidor entity = servidorRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
-
-        // 2. Tira uma "foto" dos dados ANTIGOS convertendo para DTO Request
-        // (Converter para DTO limpa as sujeiras do Hibernate e facilita a comparação)
-        ServidorResponseDTO oldSnapshot = mapper.toDto(entity);
-
-        // 3. Validações e Regras de Negócio
-        beforeUpdate(dto, entity);
-
-        // 4. Aplica as alterações na entidade
-        mapper.updateEntityFromDTO(entity, dto);
-        // Reassocia as coleções N para N (Sistemas, Aliases, Procuradores)
-        associarRelacoesMuitosParaMuitos(entity, dto);
-
-        // 3. A MÁGICA DA HIDRATAÇÃO ACONTECE AQUI
-        // Primeiro empurramos a alteração pro banco para salvar as chaves estrangeiras novas
-        servidorRepository.saveAndFlush(entity);
-
-        // Agora mandamos o chefe do Hibernate buscar o registro inteiro de novo,
-        // trazendo todos os nomes (Cargo, Setor, Status) preenchidos e reais!
-        entityManager.refresh(entity);
-
-        // 5. Tira uma "foto" dos dados NOVOS
-        ServidorResponseDTO newSnapshot = mapper.toDto(entity);
-
-        // 5. GERA O TEXTO DE AUDITORIA ("A Mágica")
-        String detailsLog = generateAuditText(oldSnapshot, newSnapshot);
-
-        AuditContextHolder.setLogDetalhes(detailsLog);
-
-        // 7. Salva no banco e retorna
-        return mapper.toDto(servidorRepository.save(entity));
-    }
-
-    // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
+    // MÉTODOS EXCLUSIVOS DE REGRA DE NEGÓCIO
     @Override
     protected void beforeCreate(ServidorRequestDTO dto) {
-        // 1. Validação de CPF (Bloqueia se existir ativo ou excluído)
+        // 1. Validação de CPF (Bloqueia se existir o mesmo CPF em ATIVO OU EXCLUÍDO)
         Optional<ServidorShadowProjection> shadowCpf = servidorRepository.checkCpfStatus(dto.cpf().trim());
         if (shadowCpf.isPresent()) {
             throw new BusinessException(
@@ -230,7 +178,7 @@ public class ServidorService extends BaseGenericService<
             );
         }
 
-        // 2. Validação da Matrícula (Bloqueia se existir ativa ou excluída)
+        // 2. Validação da Matrícula (Bloqueia se existir a mesma Matrícula em ATIVO OU EXCLUÍDO)
         Optional<ServidorShadowProjection> shadowMatricula = servidorRepository.checkMatriculaStatus(dto.matricula().trim());
         if (shadowMatricula.isPresent()) {
             throw new BusinessException(
@@ -261,6 +209,7 @@ public class ServidorService extends BaseGenericService<
         // 1. Só valida se MUDOU o CPF na tela
         if (!existingServidor.getCpf().equalsIgnoreCase(dto.cpf().trim())) {
             Optional<ServidorShadowProjection> shadowCpf = servidorRepository.checkCpfStatus(dto.cpf().trim());
+
             if (shadowCpf.isPresent()) {
                 throw new BusinessException(
                         "Este CPF (<strong>" + cpfFormat(dto.cpf()) + "</strong>)</br>já está em uso em outro cadastro."
@@ -300,6 +249,32 @@ public class ServidorService extends BaseGenericService<
                                 "já está em uso em outro cadastro.");
                     });
         }
+
+        // 1. Tira a foto do dado antigo antes de ser alterado
+        ServidorResponseDTO oldSnapshot = mapper.toDto(existingServidor);
+
+        // 2. Guarda temporariamente para usar no afterSave (usando o contexto da thread)
+        AuditContextHolder.setOldSnapshot(oldSnapshot);
+    }
+
+    @Override
+    protected void afterSave(Servidor entity, ServidorRequestDTO dto) {
+
+        // 3. Reassocia as coleções N:N
+        associarRelacoesMuitosParaMuitos(entity,dto);
+
+        // 4. Hidrata a entidade (traz nomes de Cargo, Setor, etc)
+        entityManager.flush();
+        entityManager.refresh(entity);
+
+        // 5. Gera o Log de Comparação (Audit Diff)
+        ServidorResponseDTO oldSnapshot = (ServidorResponseDTO) AuditContextHolder.getOldSnapshot();
+        ServidorResponseDTO newSnapshot = mapper.toDto(entity);
+
+        if (oldSnapshot != null) {
+            String detailsLog = AuditDiffUtil.generateDiff(oldSnapshot, newSnapshot);
+            AuditContextHolder.setLogDetalhes(detailsLog);
+        }
     }
 
     @Override
@@ -317,39 +292,7 @@ public class ServidorService extends BaseGenericService<
 
     }
 
-    // Método que devolve um texto com as alterações realizadas no método Update
-    private String generateAuditText(Object oldObject, Object newObject) {
-        // Inicializa o motor do JaVers
-        Javers javers = JaversBuilder.javers().build();
-
-        // Faz a comparação mágica
-        Diff diff = javers.compare(oldObject, newObject);
-        // Se não mudou nada, retorna vazio
-        if (!diff.hasChanges()) {
-            return "Nenhuma alteração detectada.";
-        }
-
-        StringBuilder builder = new StringBuilder();
-//        builder.append("Alterações realizadas: ");
-
-        // Percorre cada campo que mudou e monta a frase
-        for (ValueChange change : diff.getChangesByType(ValueChange.class)) {
-            String field = change.getPropertyName();
-
-            // Se no nome do campo vier "i", não adicione ao array
-            if ("id".equalsIgnoreCase(field)) continue;
-
-            Object oldValue = change.getLeft();
-            Object newValue = change.getRight();
-
-//            builder.append(String.format("[de '%s' para '%s'] ", field, oldValue, newValue));
-            builder.append(String.format("[%s: de '%s' para '%s'] ", field, oldValue, newValue));
-        }
-
-        return builder.toString().trim();
-
-    }
-
+    // MÉTODOS PRIVADOS
     /**
      * Recebe a entidade (já mapeada com os dados básicos pelo MapStruct)
      * e os IDs vindos do DTO para fazer a associação otimizada.
@@ -399,24 +342,8 @@ public class ServidorService extends BaseGenericService<
         }
     }
 
-    // MÉTODOS PRIVADOS
-    private ServidorResponseDTO reativateServidor(Servidor entity, ServidorRequestDTO dto) {
-        // 1. Removemos as marcas de exclusão
-        entity.setExcluded(false);
-        entity.setExcludedDate(null);
 
-        // 2. Atualizamos os dados com o que veio no DTO (pode ter mudado telefone, etc)
-        mapper.updateEntityFromDTO(entity, dto);
-
-        // 3. Salva para persistir a volta ao mundo dos ativos
-        entity = servidorRepository.save(entity);
-
-        // 4. Atualiza as relações N:N
-        associarRelacoesMuitosParaMuitos(entity, dto);
-
-        return mapper.toDto(entity);
-    }
-
+    // Método para formatar o CPF como 000.000.000-00
     private String cpfFormat(String cpf) {
         // return cpf.replaceAll("(\\d{3})(\\d{3})(\\d{3})(\\d{2})", "$1.$2.$3-$4");
         // Formatação direta, simples e extremamente rápida

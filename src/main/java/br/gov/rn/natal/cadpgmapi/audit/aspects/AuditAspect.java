@@ -4,6 +4,7 @@ import br.gov.rn.natal.cadpgmapi.audit.AuditContextHolder;
 import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
 import br.gov.rn.natal.cadpgmapi.audit.entities.AuditLog;
 import br.gov.rn.natal.cadpgmapi.audit.events.AuditLogEvent;
+import br.gov.rn.natal.cadpgmapi.audit.annotations.AuditFriendlyId;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
@@ -19,6 +20,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 
+import org.springframework.aop.support.AopUtils;
+import org.springframework.core.ResolvableType;
+
 @Aspect
 @Component
 public class AuditAspect {
@@ -29,8 +33,6 @@ public class AuditAspect {
         this.eventPublisher = eventPublisher;
     }
 
-    // Intercepta métodos anotados com @Auditable APÓS retornarem com sucesso.
-    // O parâmetro 'result' captura o objeto que o método salvou/retornou.
     @AfterReturning(value = "@annotation(br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable)", returning = "result")
     public void logAuditActivity(JoinPoint joinPoint, Object result) {
         try {
@@ -47,35 +49,63 @@ public class AuditAspect {
             if (authentication != null && authentication.isAuthenticated()) {
                 username = authentication.getName();
 
-                // Se você estiver guardando o DecodedJWT nas credentials:
                 if (authentication.getDetails() instanceof DecodedJWT jwt) {
                     Date iat = jwt.getIssuedAt();
-                    System.out.println("IAT JWT " + iat);
                     if (iat != null) {
                         dateHourLogin = iat.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
                     }
                 }
             }
 
-            // 3. Descobre o ID do registro afetado (Assume que a entidade retornada tem um método getId())
-            String AffectedId = "N/A";
+            // 3. Descobre o ID do registro afetado (Assume que a entidade/DTO retornado tem um método id())
+            String affectedId = "N/A";
 
             if (result != null) {
-                try {
-                    Method getIdMethod = result.getClass().getMethod("id");
-                    Object idValue = getIdMethod.invoke(result);
-                    if (idValue != null) AffectedId = idValue.toString();
-                } catch (Exception e) {
-                    // Ignora se o objeto retornado não tiver getId()
+                affectedId = extractFriendlyId(result);
+
+                // Fallback para métodos VOID (como o Delete, que só recebe o ID por parâmetro)
+                if (affectedId.equals("N/A") && joinPoint.getArgs().length > 0) {
+                    Object firstArgument = joinPoint.getArgs()[0];
+                    if (firstArgument != null) {
+                        affectedId = firstArgument.toString();
+                    }
+                }
+            }
+
+            // Fallback para métodos VOID (como o Delete)
+            // Lê o primeiro argumento passado para o método (que será o ID)
+            if (affectedId.equals("N/A") && joinPoint.getArgs().length > 0) {
+                Object firstArgument = joinPoint.getArgs()[0];
+
+                if (firstArgument != null) {
+                    affectedId = firstArgument.toString();
                 }
             }
 
             String entityName = auditable.entity();
 
-            if (entityName.isEmpty() && result != null) {
-                entityName = result.getClass().getSimpleName();
-            } else if (entityName.isEmpty()) {
-                entityName = "Unknown";
+            // Se a anotação não informou a entidade (@Auditable(action = INSERT))
+            if (entityName == null || entityName.isBlank()) {
+
+                // Pega a classe real em tempo de execução (ex: ServidorService)
+                Class<?> targetClass = AopUtils.getTargetClass(joinPoint.getTarget());
+
+                // Sobe para a superclasse genérica (BaseService) e extrai o tipo <T>
+                Class<?> entityClass = ResolvableType.forClass(targetClass)
+                        .getSuperType()
+                        .resolveGeneric(0); // 0 = Pega o primeiro genérico. Ex: <Servidor, Long> pega Servidor.
+
+                entityName = entityClass.getSimpleName(); // Retorna "Servidor"
+
+                if (result != null) {
+                    // Fallback de segurança: limpa o sufixo DTO caso ResolvableType falhe
+                    entityName = result.getClass().getSimpleName()
+                            .replace("ResponseDTO", "")
+                            .replace("RequestDTO", "")
+                            .replace("DTO", "");
+                } else {
+                    entityName = "Unknown";
+                }
             }
 
             // 4. Monta o log
@@ -85,24 +115,69 @@ public class AuditAspect {
             log.setDateHourAction(LocalDateTime.now());
             log.setTypeAction(auditable.action());
             log.setAffectedEntity(entityName);
-            log.setIdAffectedRecord(AffectedId);
+            log.setIdAffectedRecord(affectedId);
 
             String extraDetails = AuditContextHolder.getLogDetalhes();
 
             if (extraDetails != null && !extraDetails.isBlank()) {
                 log.setDetails(extraDetails);
             } else {
-                log.setDetails("Método executado: " + method.getName());
+                // Mensagens automáticas inteligentes baseadas na ação
+                switch (auditable.action()) {
+                    case INSERT:
+                        log.setDetails(entityName + " ID " + affectedId + " criado(a) com sucesso.");
+                        break;
+                    case DELETE:
+                        log.setDetails(entityName + " ID " + affectedId + " excluído(a) com sucesso.");
+                        break;
+                    default:
+                        log.setDetails("Método executado: " + method.getName());
+                }
             }
 
-            // 5. Publica o evento (Síncrono aqui, mas processado Assíncrono pelo Listener)
+            // 5. Publica o evento
             eventPublisher.publishEvent(new AuditLogEvent(this, log));
 
         } catch (Exception e) {
-            // O Catch garante que um erro na auditoria NUNCA quebre a transação principal
             System.err.println("Falha ao gerar log de auditoria: " + e.getMessage());
         } finally {
             AuditContextHolder.clear();
         }
+    }
+
+    // MÉTODOS PRIVADOS
+    /**
+     * Tenta extrair o atributo anotado com @AuditFriendlyId.
+     * Se não encontrar, faz o fallback para o método id() padrão.
+     */
+    private String extractFriendlyId(Object result) {
+        try {
+            // 1. Procura a anotação nos campos (Fields)
+            for (java.lang.reflect.Field field : result.getClass().getDeclaredFields()) {
+                if (field.isAnnotationPresent(AuditFriendlyId.class)) {
+                    field.setAccessible(true);
+                    Object value = field.get(result);
+                    if (value != null && !value.toString().isBlank()) return value.toString();
+                }
+            }
+
+            // 2. Procura a anotação nos métodos (útil para Records no Java)
+            for (Method method : result.getClass().getDeclaredMethods()) {
+                if (method.isAnnotationPresent(AuditFriendlyId.class)) {
+                    Object value = method.invoke(result);
+                    if (value != null && !value.toString().isBlank()) return value.toString();
+                }
+            }
+
+            // 3. Fallback: Se não tem a etiqueta, usa o "id()" como antigamente
+            Method getIdMethod = result.getClass().getMethod("id");
+            Object idValue = getIdMethod.invoke(result);
+            if (idValue != null) return idValue.toString();
+
+        } catch (Exception e) {
+            // Ignora silenciosamente e retorna N/A
+        }
+
+        return "N/A";
     }
 }

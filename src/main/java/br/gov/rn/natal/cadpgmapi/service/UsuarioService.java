@@ -1,5 +1,9 @@
 package br.gov.rn.natal.cadpgmapi.service;
 
+import br.gov.rn.natal.cadpgmapi.audit.AuditContextHolder;
+import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
+import br.gov.rn.natal.cadpgmapi.audit.enums.AuditAction;
+import br.gov.rn.natal.cadpgmapi.audit.utils.AuditDiffUtil;
 import br.gov.rn.natal.cadpgmapi.auth.dto.response.AdminResetPasswordResponseDTO;
 import br.gov.rn.natal.cadpgmapi.auth.mappers.RegisterUserMapper;
 import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRegisterRequestDTO;
@@ -51,17 +55,10 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     }
 
     @Transactional
+    @Auditable(action = AuditAction.INSERT, entity = "Usuário")
     public UsuarioRegisterResponseDTO registerNewUserPublic(UsuarioRegisterRequestDTO dto) {
-        // Valida se há duplicidade de E-mail
-        if (usuarioRepository.existsByEmail(dto.email().trim())) {
-            throw new BusinessException("Já existe cadastro com este e-mail " +
-                    "(<strong>" + dto.email() + "</strong>).");
-        }
-        // UserName (Login) único
-        if (usuarioRepository.existsByUserName(dto.userName().trim())) {
-            throw new BusinessException("Já existe cadastro com este Login " +
-                    "(<strong>" + dto.userName() + "</strong>) já está em uso.");
-        }
+        // Chama método utilitário privado para validar email e username
+       validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), null);
 
         // Instancia o usuário apenas com os dados seguros
         Usuario newUser = registerUserMapper.toEntity(dto);
@@ -78,37 +75,69 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE, entity = "Usuário")
     public UsuarioResponseDTO updateProfile(Integer id, UsuarioUpdateDTO dto) {
-
         // Busca o usuário atual no banco
         Usuario existingUsuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
 
         // Valida duplicidade de E-mail (se ele estiver tentando mudar)
-        if (!existingUsuario.getEmail().equalsIgnoreCase(dto.email().trim())) {
-            if (usuarioRepository.existsByEmail(dto.email().trim())) {
-                throw new BusinessException("Este E-mail (<strong>" + dto.email() + "</strong>) já está em uso.");
-            }
-        }
-
-        // Valida duplicidade de UserName (se ele estiver tentando mudar)
-        if (!existingUsuario.getUsername().equalsIgnoreCase(dto.userName().trim())) {
-            if (usuarioRepository.existsByUserName(dto.userName().trim())) {
-                throw new BusinessException("Este login (<strong>" + dto.userName() + "<strong>) já está em uso.");
-            }
-        }
+        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), id);
 
         // Chama o método utilitário para checar se é o Adminsitrador Geral
         // que está logado. Se sim, deixa altetar os dados. Se não, bloqueia.
         onlyAdminMakeChange(existingUsuario);
 
-        // Aplica os novos valores
-        usuarioUpdateMapper.updateEntityFromDTO(existingUsuario, dto);
+        // 1. Tira a FOTO ANTIGA usando o mapper genérico do pai
+        UsuarioResponseDTO oldSnapshot = mapper.toDto(existingUsuario);
 
-        // Salva e retorna o DTO atualizado
-        return mapper.toDto(usuarioRepository.save(existingUsuario));
+        // 2. Aplica as alterações e salva
+        usuarioUpdateMapper.updateEntityFromDTO(existingUsuario, dto);
+        // Garante criptografia se houver troca de senha
+        beforeSave(existingUsuario);
+        usuarioRepository.saveAndFlush(existingUsuario);
+        entityManager.refresh(existingUsuario);
+
+        // 3. Tira a FOTO NOVA
+        UsuarioResponseDTO newSnapshot = mapper.toDto(existingUsuario);
+
+        // 4. Gera o Diff e injeta no contexto
+        String diffLog = AuditDiffUtil.generateDiff(oldSnapshot, newSnapshot);
+        if (diffLog != null && !diffLog.isBlank()) {
+            AuditContextHolder.setLogDetalhes("Dados atualizados: " + diffLog);
+        } else {
+            AuditContextHolder.setLogDetalhes("Atualização de Perfil: Nenhuma alteração detectada.");
+        }
+
+        return newSnapshot;
     }
 
+    @Transactional
+    @Auditable(action = AuditAction.UPDATE, entity = "Usuário")
+    public AdminResetPasswordResponseDTO resetPasswordByAdmin(Integer id) {
+        Usuario existingUsario = repository.findById(id)
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+
+        // 1. Foto Antiga
+        UsuarioResponseDTO oldSnapshot = mapper.toDto(existingUsario);
+
+        String temporaryPassword = generateRandomPassword(8);
+
+        existingUsario.setPassword(passwordEncoder.encode(temporaryPassword));
+        existingUsario.setForcePasswordChange(true);
+
+        repository.saveAndFlush(existingUsario);
+        entityManager.refresh(existingUsario);
+
+        // 2. Foto Nova
+        UsuarioResponseDTO newSnapshot = mapper.toDto(existingUsario);
+
+        // 3. Auditoria
+        String diffLog = AuditDiffUtil.generateDiff(oldSnapshot, newSnapshot);
+        AuditContextHolder.setLogDetalhes("Reset de Senha pelo Admin: " + diffLog);
+
+        return new AdminResetPasswordResponseDTO(temporaryPassword);
+    }
 
     @Transactional(readOnly = true)
     public Page<UsuarioResponseDTO> findByFilters(
@@ -150,64 +179,20 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
                 .map(mapper::toDto);
     }
 
-    public AdminResetPasswordResponseDTO resetPasswordByAdmin(Integer id) {
-        Usuario usuario = repository.findById(id)
-                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
-
-        String temporaryPassword = generateRandomPassword(8);
-
-        usuario.setPassword(passwordEncoder.encode(temporaryPassword));
-        usuario.setForcePasswordChange(true);
-        repository.save(usuario);
-
-        return new AdminResetPasswordResponseDTO(temporaryPassword);
-    }
-
-    private String generateRandomPassword(int length) {
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-        SecureRandom random = new SecureRandom();
-        return random.ints(length, 0, chars.length())
-                .mapToObj(chars::charAt)
-                .map(Object::toString)
-                .collect(Collectors.joining());
-    }
-
-
-    // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
+    // MÉTODOS EXCLUSIVOS DE REGRA DE NEGÓCIO
     @Override
     protected void beforeCreate(UsuarioRequestDTO dto) {
-        // E-mail único
-        if (usuarioRepository.existsByEmail(dto.email().trim())) {
-            throw new BusinessException("Já existe cadastro com este e-mail " +
-                    "(<strong>" + dto.email() + "</strong>).");
-        }
-        // UserName (Login) único
-        if (usuarioRepository.existsByUserName(dto.userName().trim())) {
-            throw new BusinessException("Já existe cadastro com este Login " +
-                    "(<strong>" + dto.userName() + "</strong>) já está em uso.");
-        }
+        // Chama método utilitário privado para validar email e username
+       validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), null);
 
     }
 
     // Methodo com assinatura original declarada na classe pai (BasicGenericService)
     @Override
-    protected void beforeUpdate(UsuarioRequestDTO dto, Usuario existingUsuario) {
-
-        // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
-        if (!existingUsuario.getEmail().equalsIgnoreCase(dto.email().trim())) {
-            if (usuarioRepository.existsByEmail(dto.email())) {
-                throw new BusinessException("Este E-mail (<strong>" + dto.email() + "</strong>) já está em uso.");
-            }
-        }
-
-        // Só valida duplicidade se tentar MUDAR o userName
-        if (!existingUsuario.getUsername().equalsIgnoreCase(dto.userName().trim())) {
-            if (usuarioRepository.existsByUserName(dto.userName().trim())) {
-                throw new BusinessException("Este login (<strong>" + dto.userName() + "<strong>) já está em uso.");
-            }
-        }
-
-        onlyAdminMakeChange(existingUsuario);
+    protected void beforeUpdate(UsuarioRequestDTO dto, Usuario entity) {
+        // Chama método utilitário privado para validar email e username
+        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), entity.getId());
+        onlyAdminMakeChange(entity);
     }
 
     // Criptografa a senha
@@ -256,6 +241,31 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     }
 
     // MÉTODOS UTILITÁRIOS PRIVADOS
+    private void validateEmailAndUsername(String email, String userName, Integer currentUserId) {
+        // Busca se existe outro usuário com este email
+        usuarioRepository.findByEmail(email.trim()).ifPresent(user -> {
+            if (!user.getId().equals(currentUserId)) {
+                throw new BusinessException("Este E-mail (<strong>" + email + "</strong>) já está em uso.");
+            }
+        });
+
+        // Busca se existe outro usuário com este login
+        usuarioRepository.findByUserName(userName.trim()).ifPresent(user -> {
+            if (!user.getId().equals(currentUserId)) {
+                throw new BusinessException("Este login (<strong>" + userName + "</strong>) já está em uso.");
+            }
+        });
+    }
+
+    private String generateRandomPassword(int length) {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+        SecureRandom random = new SecureRandom();
+        return random.ints(length, 0, chars.length())
+                .mapToObj(chars::charAt)
+                .map(Object::toString)
+                .collect(Collectors.joining());
+    }
+
     // Méthod utilitário para pegar o login de quem fez a requisição
     private String getLoggedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

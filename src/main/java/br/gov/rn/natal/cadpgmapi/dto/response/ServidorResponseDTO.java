@@ -1,5 +1,7 @@
 package br.gov.rn.natal.cadpgmapi.dto.response;
 
+import br.gov.rn.natal.cadpgmapi.audit.annotations.AuditFriendlyId;
+
 import java.time.LocalDate;
 import java.util.Set;
 
@@ -7,6 +9,7 @@ public record ServidorResponseDTO(
         Integer id,
         String nome,
         String matricula,
+        @AuditFriendlyId
         String cpf,
         LocalDate dataNascimento,
         String genero,
