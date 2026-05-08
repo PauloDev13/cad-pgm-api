@@ -1,6 +1,9 @@
 package br.gov.rn.natal.cadpgmapi.audit.utils;
 
+import br.gov.rn.natal.cadpgmapi.audit.annotations.AuditFriendlyId;
+
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -54,6 +57,41 @@ public class AuditDiffUtil {
         }
 
         return diffBuilder.toString().trim();
+    }
+
+    /**
+     * Tenta extrair o atributo anotado com @AuditFriendlyId.
+     * Se não encontrar, faz o fallback para o método id() padrão.
+     */
+    public static String extractFriendlyId(Object result) {
+        try {
+            // 1. Procura a anotação nos campos (Fields)
+            for (java.lang.reflect.Field field : result.getClass().getDeclaredFields()) {
+                if (field.isAnnotationPresent(AuditFriendlyId.class)) {
+                    field.setAccessible(true);
+                    Object value = field.get(result);
+                    if (value != null && !value.toString().isBlank()) return value.toString();
+                }
+            }
+
+            // 2. Procura a anotação nos métodos (útil para Records no Java)
+            for (Method method : result.getClass().getDeclaredMethods()) {
+                if (method.isAnnotationPresent(AuditFriendlyId.class)) {
+                    Object value = method.invoke(result);
+                    if (value != null && !value.toString().isBlank()) return value.toString();
+                }
+            }
+
+            // 3. Fallback: Se não tem a etiqueta, usa o "id()" como antigamente
+            Method getIdMethod = result.getClass().getMethod("id");
+            Object idValue = getIdMethod.invoke(result);
+            if (idValue != null) return idValue.toString();
+
+        } catch (Exception e) {
+            // Ignora silenciosamente e retorna N/A
+        }
+
+        return "N/A";
     }
 
     // MÉTODOS AUXILIARES PRIVADOS

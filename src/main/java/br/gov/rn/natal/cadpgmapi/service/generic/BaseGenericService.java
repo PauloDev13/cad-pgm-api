@@ -130,13 +130,20 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
         E existingEntity = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Registro não encontrado para exclusão."));
 
-        // 2. Chamamos o gancho. Se o filho lançar uma BusinessException, a exclusão é abortada!
+        // 1. Nome da Entidade (ex: Servidor)
+        AuditContextHolder.setEntityName(existingEntity.getClass().getSimpleName());
+
+        // 2. Converte para DTO, extrai o ID Amigável (CPF/E-mail) e guarda no Contexto
+        String friendlyId = AuditDiffUtil.extractFriendlyId(mapper.toDto(existingEntity));
+        AuditContextHolder.setFriendlyId(friendlyId);
+
+        // 3. Chamamos o gancho. Se o filho lançar uma BusinessException, a exclusão é abortada!
         beforeDelete(existingEntity);
 
-        // 3. Se o gancho passar em silêncio, deletamos a entidade
+        // 4. Se o gancho passar em silêncio, deletamos a entidade
         repository.delete(existingEntity);
 
-        // 4. Gancho DEPOIS de excluir (Limpar caches, disparar emails, etc.)
+        // 5. Gancho DEPOIS de excluir (Limpar caches, disparar emails, etc.)
         afterDelete(existingEntity);
     }
 }
