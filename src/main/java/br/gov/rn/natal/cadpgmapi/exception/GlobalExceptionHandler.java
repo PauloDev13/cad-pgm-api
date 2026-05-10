@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -84,5 +85,21 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Object> handleMaxSizeException(
+            MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        StandardError error = new StandardError(
+                Instant.now(),
+                HttpStatus.FORBIDDEN.value(),
+                "Acesso Negado", // Título padronizado para o erro 403
+                ex.getMessage(), // Aqui entra a mensagem: "Usuário inativo..."
+                request.getRequestURI()
+        );
+        // Aqui você retorna o JSON no padrão de erro da sua API
+        return ResponseEntity
+                .status(HttpStatus.PAYLOAD_TOO_LARGE) // Código HTTP 413
+                .body(error);
     }
 }
