@@ -26,6 +26,14 @@ api:
 app:
   frontend:
     urls: ${FRONTEND_URLS:http://localhost:4200}
+minio:
+  # O Spring Boot vai "puxar" os valores que o Docker Compose injetou nele!
+  url: ${MINIO_URL}
+  access-key: ${MINIO_ACCESS_KEY}
+  secret-key: ${MINIO_SECRET_KEY}
+  # O nome do bucket pode ser fixo, ou você pode criar um documentos-rh-prod se quiser separar
+  bucket-name: documentos-rh
+
 server:
   port: 8081
   address: 127.0.0.1

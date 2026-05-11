@@ -92,9 +92,9 @@ public class GlobalExceptionHandler {
             MaxUploadSizeExceededException ex, HttpServletRequest request) {
         StandardError error = new StandardError(
                 Instant.now(),
-                HttpStatus.FORBIDDEN.value(),
-                "Acesso Negado", // Título padronizado para o erro 403
-                ex.getMessage(), // Aqui entra a mensagem: "Usuário inativo..."
+                HttpStatus.PAYLOAD_TOO_LARGE.value(), // 413
+                "Tamanho de Arquivo Excedido", // Título coerente com o erro
+                "O arquivo enviado excede o limite máximo permitido de 1.5 MB.", // Mensagem amigável para o usuário
                 request.getRequestURI()
         );
         // Aqui você retorna o JSON no padrão de erro da sua API

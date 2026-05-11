@@ -2,7 +2,7 @@
 CREATE TABLE `servidor_documentos` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `servidor_id` INT NOT NULL,
-    `origin_name` VARCHAR(255) NOT NULL,    -- Ex: "meu_diploma.pdf"
+    `original_name` VARCHAR(255) NOT NULL,    -- Ex: "meu_diploma.pdf"
     `object_name` VARCHAR(255) NOT NULL,    -- Ex: "275/uuid-gerado.pdf" (nome no MinIO)
     `content_type` VARCHAR(50) NOT NULL,    -- Ex: "application/pdf"
     `bytes_size` BIGINT NOT NULL,           -- Para controle do RH
