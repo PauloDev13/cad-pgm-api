@@ -37,7 +37,7 @@ public class AuditController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @ParameterObject @PageableDefault(
-                    sort = "dateHourAction", direction = Sort.Direction.ASC) Pageable pageable) {
+                    sort = "dateHourAction", direction = Sort.Direction.DESC) Pageable pageable) {
 
         return auditService.findByFilters(username, typeAction, startDate, endDate, pageable);
 

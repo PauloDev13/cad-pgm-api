@@ -60,7 +60,7 @@ public class ServidorDocumentoService {
     }
 
     @Transactional(readOnly = true)
-    public List<DocumentoResponseDTO> listarDocumentos(Integer servidorId) {
+    public List<DocumentoResponseDTO> listDocuments(Integer servidorId) {
         return documentoRepository.findByServidorId(servidorId).stream()
                 .map(doc -> new DocumentoResponseDTO(
                         doc.getId(),
@@ -73,15 +73,15 @@ public class ServidorDocumentoService {
 
     @Transactional
     @Auditable(action = AuditAction.DELETE, entity = "Documento Servidor")
-    public void excluirDocumento(Integer documentoId) throws Exception {
-        ServidorDocumento documento = documentoRepository.findById(documentoId)
+    public void deleteDocument(Integer documentId) throws Exception {
+        ServidorDocumento documento = documentoRepository.findById(documentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Documento não encontrado"));
 
         // 2. Prepara o log antes de excluir
         AuditContextHolder.setEntityName("Documento");
         AuditContextHolder.setFriendlyId(documento.getOriginalName());
-        AuditContextHolder.setLogDetalhes("Documento removido do prontuário do servidor ID: "
-                + documento.getServidor().getId());
+        AuditContextHolder.setLogDetalhes("Documento removido do cadastro do servidor: "
+                + documento.getServidor().getNome());
 
         storageService.remove(documento.getObjectName());
         documentoRepository.delete(documento);
@@ -89,8 +89,8 @@ public class ServidorDocumentoService {
 
     // Link
     @Transactional(readOnly = true)
-    public String gerarLinkAcesso(Integer documentoId) throws Exception {
-        ServidorDocumento documento = documentoRepository.findById(documentoId)
+    public String generateAccessLink(Integer documentId) throws Exception {
+        ServidorDocumento documento = documentoRepository.findById(documentId)
                 .orElseThrow(() -> new RuntimeException("Documento não encontrado"));
 
         // Retorna o link pré-assinado do MinIO (com duração de 15 min)
