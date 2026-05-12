@@ -2,6 +2,7 @@ package br.gov.rn.natal.cadpgmapi.load_pdf.services;
 
 import br.gov.rn.natal.cadpgmapi.config.MinioConfig;
 import io.minio.*;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -11,12 +12,19 @@ import java.util.concurrent.TimeUnit;
 public class DocumentoStorageService {
 
     private final MinioClient minioClient;
+    private final MinioClient minioPublicClient;
     private final MinioConfig minioConfig;
 
     public DocumentoStorageService(
-            MinioClient minioClient, MinioConfig minioConfig
+            @Qualifier("minioClient")
+            MinioClient minioClient,
+
+            @Qualifier("minioPublicClient")
+            MinioClient minioPublicClient,
+            MinioConfig minioConfig
     ) {
         this.minioClient = minioClient;
+        this.minioPublicClient = minioPublicClient;
         this.minioConfig = minioConfig;
     }
 
@@ -32,8 +40,7 @@ public class DocumentoStorageService {
     }
 
     public String getDownloadUrl(String objectName) throws Exception {
-
-        String internalURL =  minioClient.getPresignedObjectUrl(
+        return  minioPublicClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
                         .method(Http.Method.GET)
                         .bucket(minioConfig.getBucketName())
@@ -42,14 +49,6 @@ public class DocumentoStorageService {
                         .build()
         );
 
-        String configuredURL = minioConfig.getUrl();
-        String publicURL = minioConfig.getPublicUrl();
-
-        if (publicURL != null && !publicURL.isBlank() && !configuredURL.equals(publicURL)) {
-            return internalURL.replace(configuredURL, publicURL);
-        }
-
-        return internalURL;
     }
 
     public void remove(String objectName) throws Exception {

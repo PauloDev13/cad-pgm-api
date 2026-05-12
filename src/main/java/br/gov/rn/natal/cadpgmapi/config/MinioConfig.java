@@ -11,13 +11,13 @@ import org.springframework.context.annotation.Configuration;
 @Getter
 @Configuration
 public class MinioConfig {
-
     @Value("${minio.url}") private String url;
     @Value("${minio.public-url}") private String publicUrl;
     @Value("${minio.access-key}") private String accessKey;
     @Value("${minio.secret-key}") private String secretKey;
     @Value("${minio.bucket-name}") private String bucketName;
 
+    // 1. CLIENTE INTERNO (Para Upload/Delete - Faz requisição de rede)
     @Bean
     public MinioClient minioClient() {
         MinioClient client = MinioClient.builder()
@@ -36,5 +36,15 @@ public class MinioConfig {
         }
 
         return client;
+    }
+
+    // 2. CLIENTE PÚBLICO (Exclusivo para gerar a URL com a assinatura matemática correta)
+    @Bean("minioPublicClient")
+    public MinioClient minioPublicClient() {
+        return MinioClient.builder()
+                .endpoint(publicUrl) // 🌟 Usa a URL do navegador!
+                .credentials(accessKey, secretKey)
+                .region("us-east-1")
+                .build();
     }
 }
