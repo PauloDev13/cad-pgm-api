@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.text.Normalizer;
 import java.util.List;
 
 @RestController
@@ -48,7 +49,26 @@ public class ServidorDocumentoController {
             throw new BusinessException("Apenas arquivos no formato PDF são permitidos.");
         }
 
-        documentoService.anexarDocumento(servidorId, file);
+        // 3. Validação de Magic Numbers (A Prova de Balas)
+        byte[] header = new byte[4];
+        try {
+            // Lê apenas os 4 primeiros bytes para não consumir muita memória
+            file.getInputStream().read(header);
+            String magicNumber = new String(header);
+
+            if (!magicNumber.equals("%PDF")) {
+                throw new BusinessException(
+                        "O arquivo enviado não possui a assinatura de um PDF válido ou está corrompido."
+                );
+            }
+        } catch (Exception e) {
+            throw new BusinessException("Erro ao validar a integridade do arquivo.");
+        }
+
+        // 4. Higienização do Nome
+        String clearName = clearFileName(file.getOriginalFilename());
+
+        documentoService.attachDocument(servidorId, file, clearName);
 
         return ResponseEntity.status(HttpStatus.CREATED).body("Documento anexado com sucesso.");
     }
@@ -63,8 +83,8 @@ public class ServidorDocumentoController {
     public ResponseEntity<List<DocumentoResponseDTO>> listDocuments(
             @PathVariable Integer servidorId) {
 
-        List<DocumentoResponseDTO> documentos = documentoService.listDocuments(servidorId);
-        return ResponseEntity.ok(documentos);
+        List<DocumentoResponseDTO> documents = documentoService.listDocuments(servidorId);
+        return ResponseEntity.ok(documents);
     }
 
     /**
@@ -92,5 +112,29 @@ public class ServidorDocumentoController {
 
         documentoService.deleteDocument(documentId);
         return ResponseEntity.noContent().build();
+    }
+
+    // MÉTODOS PRIVADOS
+    // Limpa o nome do arquivo PDF enviado (retira caracteres especiais, etc)
+    private String clearFileName(String nomeOriginal) {
+        if (nomeOriginal == null || nomeOriginal.isBlank()) {
+            return "documento.pdf";
+        }
+
+        // 1. Remove acentos (ex: "Relatório" vira "Relatorio")
+        String nomeSemAcentos = Normalizer.normalize(nomeOriginal, Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}", "");
+
+        // 2. Substitui espaços e caracteres estranhos por underscore
+        String nomeLimpo = nomeSemAcentos.replaceAll("[^a-zA-Z0-9\\.\\-]", "_");
+
+        // 3. Truncar para proteger a coluna de auditoria (ex: máximo de 45 caracteres)
+        if (nomeLimpo.length() > 45) {
+            String extension = ".pdf";
+            // Pega os primeiros 41 caracteres e adiciona os 4 do ".pdf" = 45 totais
+            nomeLimpo = nomeLimpo.substring(0, 41) + extension;
+        }
+
+        return nomeLimpo.toLowerCase();
     }
 }

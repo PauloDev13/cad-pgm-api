@@ -36,27 +36,27 @@ public class ServidorDocumentoService {
 
     @Transactional
     @Auditable(action = AuditAction.INSERT, entity = "Documento Servidor")
-    public void anexarDocumento(Integer servidorId, MultipartFile file) throws Exception {
+    public void attachDocument(Integer servidorId, MultipartFile file, String clearName) throws Exception {
         Servidor servidor = servidorRepository.findById(servidorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
 
         // 1. "Fofoca" para o Auditoria o que está acontecendo
         AuditContextHolder.setEntityName("Documento");
-        AuditContextHolder.setFriendlyId(file.getOriginalFilename());
+        AuditContextHolder.setFriendlyId(clearName);
         AuditContextHolder.setLogDetalhes("Upload de documento para o servidor: " + servidor.getNome());
 
-        String objectName = servidorId + "/" + UUID.randomUUID() + "-" + file.getOriginalFilename();
+        String objectName = servidorId + "/" + UUID.randomUUID() + "-" + clearName;
         storageService.upload(file, objectName);
 
-        ServidorDocumento documento = ServidorDocumento.builder()
+        ServidorDocumento document = ServidorDocumento.builder()
                 .servidor(servidor)
-                .originalName(file.getOriginalFilename())
+                .originalName(clearName)
                 .objectName(objectName)
                 .contentType(file.getContentType())
                 .bytesSize(file.getSize())
                 .build();
 
-        documentoRepository.save(documento);
+        documentoRepository.save(document);
     }
 
     @Transactional(readOnly = true)

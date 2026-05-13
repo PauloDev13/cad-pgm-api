@@ -56,8 +56,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.GET,
-                                "/error").permitAll()
+                        .requestMatchers("/error").permitAll()
                         // O resto da boate inteira: Só entra quem tem pulseira (autenticado)
                         .anyRequest().authenticated()
                 )
