@@ -36,41 +36,16 @@ public class ServidorDocumentoController {
             description = "Envia os arquivos para o server MinIO")
     public ResponseEntity<String> uploadDocument(
             @PathVariable Integer servidorId,
-            @RequestParam("file") MultipartFile file) throws Exception {
+            @RequestParam("files") List<MultipartFile> files) throws Exception {
 
-        // 1. Nova Validação: Impede requisições sem arquivo ou com arquivo vazio (0 KB)
-        if (file == null ||file.isEmpty()) {
-            throw new BusinessException("Nenhum arquivo foi selecionado ou o arquivo está vazio.");
+        // Impede requisições sem arquivo ou com arquivo vazio (0 KB)
+        if (files == null ||files.isEmpty()) {
+            throw new BusinessException("Nenhum arquivo foi selecionado.");
         }
+            // Envia para o Service (O mesmo método que você já tem pronto!)
+        documentoService.attachDocumentsInBatch(servidorId, files);
 
-        // 2. Validação de Segurança: Garante que apenas PDFs reais sejam processados
-        if (!"application/pdf".equalsIgnoreCase(file.getContentType())) {
-            // Usando a BusinessException que já temos no projeto!
-            throw new BusinessException("Apenas arquivos no formato PDF são permitidos.");
-        }
-
-        // 3. Validação de Magic Numbers (A Prova de Balas)
-        byte[] header = new byte[4];
-        try {
-            // Lê apenas os 4 primeiros bytes para não consumir muita memória
-            file.getInputStream().read(header);
-            String magicNumber = new String(header);
-
-            if (!magicNumber.equals("%PDF")) {
-                throw new BusinessException(
-                        "O arquivo enviado não possui a assinatura de um PDF válido ou está corrompido."
-                );
-            }
-        } catch (Exception e) {
-            throw new BusinessException("Erro ao validar a integridade do arquivo.");
-        }
-
-        // 4. Higienização do Nome
-        String clearName = clearFileName(file.getOriginalFilename());
-
-        documentoService.attachDocument(servidorId, file, clearName);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body("Documento anexado com sucesso.");
+        return ResponseEntity.status(HttpStatus.CREATED).body("Documentos anexado com sucesso.");
     }
 
     /**
