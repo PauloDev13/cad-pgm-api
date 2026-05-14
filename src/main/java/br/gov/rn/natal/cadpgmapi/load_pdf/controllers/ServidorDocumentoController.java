@@ -2,6 +2,7 @@ package br.gov.rn.natal.cadpgmapi.load_pdf.controllers;
 
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.load_pdf.dtos.DocumentoResponseDTO;
+import br.gov.rn.natal.cadpgmapi.load_pdf.services.DocumentoOrquestradorService;
 import br.gov.rn.natal.cadpgmapi.load_pdf.services.ServidorDocumentoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,10 +21,12 @@ import java.util.List;
 public class ServidorDocumentoController {
 
     private final ServidorDocumentoService documentoService;
+    private final DocumentoOrquestradorService orquestradorService;
 
     // Construtor
-    public ServidorDocumentoController(ServidorDocumentoService documentoService) {
+    public ServidorDocumentoController(ServidorDocumentoService documentoService, DocumentoOrquestradorService orquestradorService) {
         this.documentoService = documentoService;
+        this.orquestradorService = orquestradorService;
     }
 
     /**
@@ -43,7 +46,7 @@ public class ServidorDocumentoController {
             throw new BusinessException("Nenhum arquivo foi selecionado.");
         }
             // Envia para o Service (O mesmo método que você já tem pronto!)
-        documentoService.attachDocumentsInBatch(servidorId, files);
+        orquestradorService.processBatchUpload(servidorId, files);
 
         return ResponseEntity.status(HttpStatus.CREATED).body("Documentos anexado com sucesso.");
     }
@@ -87,29 +90,5 @@ public class ServidorDocumentoController {
 
         documentoService.deleteDocument(documentId);
         return ResponseEntity.noContent().build();
-    }
-
-    // MÉTODOS PRIVADOS
-    // Limpa o nome do arquivo PDF enviado (retira caracteres especiais, etc)
-    private String clearFileName(String nomeOriginal) {
-        if (nomeOriginal == null || nomeOriginal.isBlank()) {
-            return "documento.pdf";
-        }
-
-        // 1. Remove acentos (ex: "Relatório" vira "Relatorio")
-        String nomeSemAcentos = Normalizer.normalize(nomeOriginal, Normalizer.Form.NFD)
-                .replaceAll("\\p{InCombiningDiacriticalMarks}", "");
-
-        // 2. Substitui espaços e caracteres estranhos por underscore
-        String nomeLimpo = nomeSemAcentos.replaceAll("[^a-zA-Z0-9\\.\\-]", "_");
-
-        // 3. Truncar para proteger a coluna de auditoria (ex: máximo de 45 caracteres)
-        if (nomeLimpo.length() > 45) {
-            String extension = ".pdf";
-            // Pega os primeiros 41 caracteres e adiciona os 4 do ".pdf" = 45 totais
-            nomeLimpo = nomeLimpo.substring(0, 41) + extension;
-        }
-
-        return nomeLimpo.toLowerCase();
     }
 }
