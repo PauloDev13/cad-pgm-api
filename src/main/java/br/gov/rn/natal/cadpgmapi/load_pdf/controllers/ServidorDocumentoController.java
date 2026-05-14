@@ -78,17 +78,30 @@ public class ServidorDocumentoController {
         return ResponseEntity.ok(urlAcesso);
     }
 
-    /**
-     * 4. EXCLUSÃO: Apaga o registro do MariaDB e o arquivo do MinIO
-     * DELETE /api/servidores/documentos/{documentoId}
-     */
+
+     // 4. EXCLUSÃO DE UM ARQUIVO POR VEZ: Apaga o registro do MariaDB e o arquivo do MinIO
     @DeleteMapping("/documents/{documentId}")
-    @Operation(summary = "Remover arquivos PDF vinculados a um Servidor",
-            description = "Remove os arquivos PDF")
+    @Operation(summary = "Remove um arquivo PDF por vez vinculado ao Servidor",
+            description = "Remove um arquivo PDF por vez")
     public ResponseEntity<Void> deleteDocument(
             @PathVariable Integer documentId) throws Exception {
 
         documentoService.deleteDocument(documentId);
         return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping( "/documents/batch")
+    @Operation(summary = "Remove lote com um ou mais arquivos PDF vinculados ao Servidor",
+            description = "Remove lote com um o mais arquivos PDF")
+    public ResponseEntity<Void>deleteDocumentsInBatch(@RequestBody List<Integer> documentsIds) {
+
+        if (documentsIds == null ||documentsIds.isEmpty()) {
+            throw new BusinessException("Nenhum documento foi selecionado para exclusão.");
+        }
+
+        orquestradorService.deleteDocumentsInBatch(documentsIds);
+
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+
     }
 }

@@ -37,8 +37,22 @@ public class DocumentoOrquestradorService {
         }
     }
 
-    // MÉTODOS AUXILIARES
+    // Método para remoção de arquivos PDF em lote
+    public void deleteDocumentsInBatch(List<Integer> documentsIds) {
+        for (Integer id : documentsIds) {
+            try{
+                documentoService.deleteDocument(id);
+            }catch (Exception e) {
+                throw new BusinessException(
+                        "Erro ao excluir o documento de ID: " + id +
+                                ". Motivo: " + e.getMessage()
+                );
+            }
+        }
+    }
 
+
+    // ******** MÉTODOS AUXILIARES ********
     // Limpa o nome do arquivo PDF enviado (retira caracteres especiais, etc)
     private String clearFileName(String nomeOriginal) {
 
