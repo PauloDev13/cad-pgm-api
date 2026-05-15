@@ -68,6 +68,14 @@ public class ServidorController extends BaseController<
         return service.listExcluded(pageable);
     }
 
+    // Busca um servidor excluído pelo ID
+    @GetMapping("/excluded/{id}")
+    @Operation(summary = "Busca um servidor com status de excluído",
+            description = "Retorna um registro excluído com 'Soft Delete'")
+    public ServidorResponseDTO getExcludedById( @PathVariable Integer id) {
+        return service.getExcludedById(id);
+    }
+
     @GetMapping("/searchExcluded")
     @Operation(summary = "Buscar por Nome ou CPF servidores com status excluído",
             description = "Informe o Nome ou o CPF via query parameter. " +

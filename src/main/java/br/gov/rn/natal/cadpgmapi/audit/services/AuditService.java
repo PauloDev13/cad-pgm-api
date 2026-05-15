@@ -27,6 +27,7 @@ public class AuditService {
         this.mapper = mapper;
     }
 
+    // Busca registros na tabela Auditoria usando filtros
     @Transactional(readOnly = true)
     public Page<AuditLogResponseDTO> findByFilters(
             String username,

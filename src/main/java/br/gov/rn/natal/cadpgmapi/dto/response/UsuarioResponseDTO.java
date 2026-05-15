@@ -7,11 +7,10 @@ import java.util.Set;
 public record UsuarioResponseDTO(
         Integer id,
         String name,
-        String userName,
         // Etiqueta para auditoria
         @AuditFriendlyId
+        String userName,
         String email,
-
         boolean activated,
         Set<String> permissions,
         boolean forcePasswordChange

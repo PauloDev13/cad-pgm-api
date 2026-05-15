@@ -103,10 +103,11 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
 
         // 4. Gera o Diff e injeta no contexto
         String diffLog = AuditDiffUtil.generateDiff(oldSnapshot, newSnapshot);
+
         if (diffLog != null && !diffLog.isBlank()) {
-            AuditContextHolder.setLogDetalhes("Dados atualizados: " + diffLog);
+            AuditContextHolder.setLogDetalhes("ATUALIZAÇÃO: " + diffLog);
         } else {
-            AuditContextHolder.setLogDetalhes("Atualização de Perfil: Nenhuma alteração detectada.");
+            AuditContextHolder.setLogDetalhes("ATUALIZAÇÃO: Nenhuma atualização detectada.");
         }
 
         return newSnapshot;
@@ -134,7 +135,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
 
         // 3. Auditoria
         String diffLog = AuditDiffUtil.generateDiff(oldSnapshot, newSnapshot);
-        AuditContextHolder.setLogDetalhes("Reset de Senha pelo Admin: " + diffLog);
+        AuditContextHolder.setLogDetalhes("ATUALIZAÇÃO DE SENHA: " + diffLog);
 
         return new AdminResetPasswordResponseDTO(temporaryPassword);
     }

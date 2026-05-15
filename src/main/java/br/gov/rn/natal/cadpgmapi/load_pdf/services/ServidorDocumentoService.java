@@ -46,10 +46,8 @@ public class ServidorDocumentoService {
 
         // 1. "Fofoca" para o Auditoria o que está acontecendo
         AuditContextHolder.setEntityName("Documento");
-        AuditContextHolder.setFriendlyId(clearName);
-        AuditContextHolder.setLogDetalhes("Upload de documento para o servidor: " + servidor.getNome());
-
-        System.out.println("ATENÇÃO: " + clearName + " - " + servidor.getNome());
+        AuditContextHolder.setFriendlyId(servidor.getNome());
+        AuditContextHolder.setLogDetalhes("DOCUMENTO ANEXADO: " + clearName);
 
         String objectName = servidorId + "/" + UUID.randomUUID() + "-" + clearName;
         storageService.upload(file, objectName);
@@ -85,9 +83,8 @@ public class ServidorDocumentoService {
 
         // 2. Prepara o log antes de excluir
         AuditContextHolder.setEntityName("Documento");
-        AuditContextHolder.setFriendlyId(documento.getOriginalName());
-        AuditContextHolder.setLogDetalhes("Documento removido do cadastro do servidor: "
-                + documento.getServidor().getNome());
+        AuditContextHolder.setFriendlyId(documento.getServidor().getNome());
+        AuditContextHolder.setLogDetalhes("DOCUMENTO EXCLUÍDO: " + documento.getOriginalName());
 
         storageService.remove(documento.getObjectName());
         documentoRepository.delete(documento);

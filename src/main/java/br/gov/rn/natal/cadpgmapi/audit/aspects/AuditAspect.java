@@ -117,10 +117,12 @@ public class AuditAspect {
                 // Mensagens automáticas inteligentes baseadas na ação
                 switch (auditable.action()) {
                     case INSERT:
-                        log.setDetails(entityName + " ID: " + affectedId + " criado(a) com sucesso.");
+                        log.setDetails("INCLUSÃO " + affectedId + " criado(a) com sucesso.");
+//                        log.setDetails(entityName + " ID: " + affectedId + " criado(a) com sucesso.");
                         break;
                     case DELETE:
-                        log.setDetails(entityName + " ID: " + affectedId + " excluído(a) com sucesso.");
+                        log.setDetails("EXCLUSÃO: " + affectedId + " excluído(a) com sucesso.");
+//                        log.setDetails(entityName + " ID: " + affectedId + " excluído(a) com sucesso.");
                         break;
                     default:
                         log.setDetails("Método executado: " + joinPoint.getSignature().getName());

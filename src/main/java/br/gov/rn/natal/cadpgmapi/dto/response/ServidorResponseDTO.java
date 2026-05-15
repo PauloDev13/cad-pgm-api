@@ -3,13 +3,15 @@ package br.gov.rn.natal.cadpgmapi.dto.response;
 import br.gov.rn.natal.cadpgmapi.audit.annotations.AuditFriendlyId;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 public record ServidorResponseDTO(
         Integer id,
+        // Etiqueta para auditoria
+        @AuditFriendlyId
         String nome,
         String matricula,
-        @AuditFriendlyId
         String cpf,
         LocalDate dataNascimento,
         String genero,
@@ -18,6 +20,8 @@ public record ServidorResponseDTO(
         String emailInstitucional,
         String endereco,
         String filiacao,
+        Boolean excluded,
+        LocalDateTime excludedDate,
 
         // Relações N:1 devolvidas como DTOs
         CargoResponseDTO cargo,

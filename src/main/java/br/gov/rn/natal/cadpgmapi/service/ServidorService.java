@@ -110,6 +110,13 @@ public class ServidorService extends BaseGenericService<
         return servidorRepository.findAllExcluded(pageable).map(mapper::toDto);
     }
 
+    @Transactional(readOnly = true)
+    public ServidorResponseDTO getExcludedById(Integer id) {
+        Servidor servidor = servidorRepository.getExcludedById(id).orElseThrow(
+                () -> new ResourceNotFoundException("Servidor não encontrado para o ID informado."));
+        return  mapper.toDto(servidor);
+    }
+
     // Método de busca paginada com filtros dinâmicos para registros EXCLUÍDOS
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> searchExcluded(

@@ -5,9 +5,9 @@ import br.gov.rn.natal.cadpgmapi.audit.annotations.AuditFriendlyId;
 public record UsuarioRegisterResponseDTO(
         Integer id,
         String name,
-        String userName,
-
+        // Etiqueta para auditoria
         @AuditFriendlyId
+        String userName,
         String email
 ) {
 }

@@ -38,6 +38,11 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>, Jp
             nativeQuery = true)
     Page<Servidor> findAllExcluded(Pageable pageable);
 
+    // Busca um servidor excluído por ID via Native Query
+    @Query(value = "SELECT * FROM servidor WHERE excluded = true AND id = :id",
+            nativeQuery = true)
+    Optional<Servidor> getExcludedById(Integer id);
+
     // Opcional: Busca de excluídos por nome/cpf (Search da aba de excluídos)
     @Query(value = "SELECT * FROM servidor WHERE excluded = true AND (nome LIKE CONCAT('%', :term, '%') OR cpf LIKE CONCAT('%', :term, '%'))",
             countQuery = "SELECT count(*) FROM servidor WHERE excluded = true AND (nome LIKE CONCAT('%', :term, '%') OR cpf LIKE CONCAT('%', :term, '%'))",

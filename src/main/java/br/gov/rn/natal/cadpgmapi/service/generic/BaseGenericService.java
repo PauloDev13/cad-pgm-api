@@ -56,8 +56,6 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
         // Salva e garante o ID gerado no banco
         entity = repository.save(entity);
 
-        // O PAI CHAMA O NOVO GANCHO AQUI!
-        // Dá a chance do filho fazer associações Muitos-para-Muitos
         afterSave(entity, dto);
 
         return mapper.toDto(entity);
@@ -114,9 +112,9 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
         String diffLog = AuditDiffUtil.generateDiff(oldSnapshot, newSnapshot);
 
         if (!diffLog.isBlank()) {
-            AuditContextHolder.setLogDetalhes("Dados atualizados: " + diffLog);
+            AuditContextHolder.setLogDetalhes("ATUALIZAÇÃO: " + diffLog);
         } else {
-            AuditContextHolder.setLogDetalhes("Nenhuma alteração detectada nos dados.");
+            AuditContextHolder.setLogDetalhes("Nenhuma atualização detectada nos dados.");
         }
 
         // O retorno já virá "hidratado" se o filho usou o entityManager.refresh no afterSave
