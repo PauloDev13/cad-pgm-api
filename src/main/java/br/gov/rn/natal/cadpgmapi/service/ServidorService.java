@@ -63,7 +63,13 @@ public class ServidorService extends BaseGenericService<
     // Método de busca paginada com filtros dinâmicos para registros ATIVOS
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> findByFilters(
-            String cpf, String matricula, String nome, Integer statusId, Pageable pageable
+            String cpf,
+            String matricula,
+            String nome,
+            Integer statusId,
+            Integer cargoId,
+            Integer setorId,
+            Pageable pageable
     ) {
         // BLOCO DA SPECIFICATION: Monta as regras (a "receita" do SQL)
         Specification<Servidor> spec = (root, query, cb) -> {
@@ -92,9 +98,18 @@ public class ServidorService extends BaseGenericService<
 
             }
 
-            // Se o ID do Status for imformado, monta o SQL de busca pelo ID do Status
+            // Se o ID de Status, Cargo e Setor forem imformados,
+            // monta o SQL de busca pelo ID de cada um combinados
             if (statusId != null) {
                 predicate = cb.and(predicate, cb.equal(root.get("status").get("id"), statusId));
+            }
+
+            if (cargoId != null) {
+                predicate = cb.and(predicate, cb.equal(root.get("cargo").get("id"), cargoId));
+            }
+
+            if (setorId != null) {
+                predicate = cb.and(predicate, cb.equal(root.get("setor").get("id"), setorId));
             }
 
             // Encerra a montagem das regras

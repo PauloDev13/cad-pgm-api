@@ -45,19 +45,20 @@ public class ServidorController extends BaseController<
 
     // Mantemos APENAS o endpoint que é exclusivo desta entidade
     @GetMapping("/searchFilter")
-    @Operation(summary = "Buscar servidor por CPF, Matrícula, Nome e Status",
-            description = "Informe o CPF ou a Matrícula ou o Status via query parameter. " +
-                    "Exemplo: /searchFilter?cpf=00011122233")
+    @Operation(summary = "Filtrar servidores por CPF, Matrícula, Nome Status, Cargo e Setor",
+            description = "Informe a combinação de filtros para realizar a pesquisa.")
     public Page<ServidorResponseDTO> findByFilters(
             @RequestParam(required = false) String cpf,
             @RequestParam(required = false) String matricula,
             @RequestParam(required = false) String nome,
             @RequestParam(required = false) Integer statusId,
+            @RequestParam(required = false) Integer cargoId,
+            @RequestParam(required = false) Integer setorId,
             @ParameterObject @PageableDefault(
                     sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
     ) {
 
-        return service.findByFilters(cpf, matricula, nome, statusId, pageable);
+        return service.findByFilters(cpf, matricula, nome, statusId, cargoId, setorId, pageable);
     }
 
     @GetMapping("/aniversariantes")

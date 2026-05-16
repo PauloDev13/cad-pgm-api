@@ -1,6 +1,7 @@
 package br.gov.rn.natal.cadpgmapi.controller.generic;
 
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -34,6 +35,8 @@ public abstract class BaseController<E, Req, Res, ID> {
     }
 
     @PostMapping
+    @Operation(summary = "Método genérico para criar um novo registro",
+            description = "Cadastra um novo registro")
     public ResponseEntity<Res> create(@Valid @RequestBody Req dto) {
         // Cria o recurso usando o Service
         Res createdDto = service.create(dto);
@@ -50,6 +53,8 @@ public abstract class BaseController<E, Req, Res, ID> {
     }
 
     @GetMapping
+    @Operation(summary = "Método genérico para buscar todos os registros",
+            description = "Retorna todos os registros com paginação")
     public Page<Res> findAll(@ParameterObject Pageable rawPageable) {
         // 1. Extraímos a página e o tamanho de forma segura (com fallback para 0 e 20)
         int page = rawPageable.isPaged() ? rawPageable.getPageNumber() : 0;
@@ -81,24 +86,32 @@ public abstract class BaseController<E, Req, Res, ID> {
     }
 
     @GetMapping("/select")
+    @Operation(summary = "Método genérico para buscar todos os registros",
+            description = "Retorna os todos registros de uma entidade")
     public List<Res> findAllSelect() {
         // Retorna 200 OK com a lista sem paginação para os componentes selects e autocomplete
         return service.findAllSelect();
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Método genérico para buscar um registro",
+            description = "Retorna apenas um registro")
     public Res findById(@PathVariable ID id) {
         // Retorna 200 OK com o recurso encontrado (se não encontrar, o Service lança 404)
         return service.findById(id);
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Método genérico para atualizar um registro",
+            description = "Atualiza um ou mais atributos de um registro")
     public Res update(@PathVariable ID id, @Valid @RequestBody Req dto) {
         // Retorna 200 OK com o recurso atualizado
         return service.update(id, dto);
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Método genérico para buscar excluir um registro",
+            description = "Exclui um registros")
     public ResponseEntity<Void> delete(@PathVariable ID id) {
         service.delete(id);
         // Retorna 204 No Content (padrão REST para deleção com sucesso sem corpo de resposta)
