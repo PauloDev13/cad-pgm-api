@@ -5,6 +5,7 @@ import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
 import br.gov.rn.natal.cadpgmapi.audit.enums.AuditAction;
 import br.gov.rn.natal.cadpgmapi.audit.utils.AuditDiffUtil;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
@@ -28,7 +29,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -102,6 +105,13 @@ public class ServidorService extends BaseGenericService<
         // O retorno real que vai para o Controller
         return servidorRepository.findAll(spec, pageable)
                 .map(mapper::toDto);
+    }
+
+    // Busca os aniversarianates do mês atual do sistema
+    @Transactional(readOnly = true)
+    public List<AniversarianteResponseDTO> obterAniversariantesDoMesAtual() {
+        int currentMoth = LocalDate.now().getMonthValue();
+        return servidorRepository.findAniversariantesDoMes(currentMoth);
     }
 
     // Método de busca de todos os registros EXLCUÍDOS

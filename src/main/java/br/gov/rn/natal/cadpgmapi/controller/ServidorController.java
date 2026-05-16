@@ -2,6 +2,7 @@ package br.gov.rn.natal.cadpgmapi.controller;
 
 import br.gov.rn.natal.cadpgmapi.controller.generic.BaseController;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.service.ServidorService;
@@ -14,6 +15,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/servidores")
@@ -55,6 +58,14 @@ public class ServidorController extends BaseController<
     ) {
 
         return service.findByFilters(cpf, matricula, nome, statusId, pageable);
+    }
+
+    @GetMapping("/aniversariantes")
+    @Operation(summary = "Lista aniversariantes",
+            description = "Retorna os servidores ativos que fazem aniversário no mês vigente")
+    public ResponseEntity<List<AniversarianteResponseDTO>> getAniversariantes() {
+        List<AniversarianteResponseDTO> lista = service.obterAniversariantesDoMesAtual();
+        return ResponseEntity.ok(lista);
     }
 
     // Endpoint para a aba de excluídos. Lista todos os registros

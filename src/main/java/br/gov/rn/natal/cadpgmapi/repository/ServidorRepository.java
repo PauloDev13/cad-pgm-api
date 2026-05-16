@@ -1,5 +1,6 @@
 package br.gov.rn.natal.cadpgmapi.repository;
 
+import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
@@ -12,11 +13,24 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 
 @Repository
 public interface ServidorRepository extends JpaRepository<Servidor, Integer>, JpaSpecificationExecutor<Servidor> {
+    @Query("""
+        SELECT new br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO(
+            s.dataNascimento,
+            s.nome,
+            s.setor.nome
+        )
+        FROM Servidor s
+        WHERE MONTH(s.dataNascimento) = :mes AND s.status.descricao = 'Ativo'
+        ORDER BY DAY(s.dataNascimento) ASC, s.nome ASC
+    """)
+    List<AniversarianteResponseDTO>findAniversariantesDoMes(@Param("mes") Integer mes);
+
     // O Raio-X: Retorna a Projeção (bypassa o Hibernate)
     @Query(value = "SELECT id, excluded, cpf, matricula FROM servidor WHERE cpf = :cpf LIMIT 1", nativeQuery = true)
     Optional<ServidorShadowProjection> checkCpfStatus(@Param("cpf") String cpf);
