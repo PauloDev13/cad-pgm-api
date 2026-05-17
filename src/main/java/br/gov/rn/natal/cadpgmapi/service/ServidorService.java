@@ -10,6 +10,7 @@ import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
+import br.gov.rn.natal.cadpgmapi.load_pdf.services.DocumentoStorageService;
 import br.gov.rn.natal.cadpgmapi.mapper.ServidorMapper;
 import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
 import br.gov.rn.natal.cadpgmapi.repository.AliasRepository;
@@ -28,7 +29,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
@@ -43,6 +46,7 @@ public class ServidorService extends BaseGenericService<
     private final AliasRepository aliasRepository;
     private final ProcuradorRepository procuradorRepository;
     private final EntityManager entityManager;
+    private final DocumentoStorageService storageService;
 
     // Construtor
     public ServidorService(
@@ -50,7 +54,7 @@ public class ServidorService extends BaseGenericService<
             ServidorMapper mapper,
             SistemaRepository sistemaRepository,
             AliasRepository aliasRepository,
-            ProcuradorRepository procuradorRepository, EntityManager entityManager
+            ProcuradorRepository procuradorRepository, EntityManager entityManager, DocumentoStorageService storageService
     ){
         super(repository, mapper);
         this.servidorRepository = repository;
@@ -58,6 +62,7 @@ public class ServidorService extends BaseGenericService<
         this.aliasRepository = aliasRepository;
         this.procuradorRepository = procuradorRepository;
         this.entityManager = entityManager;
+        this.storageService = storageService;
     }
 
     // Método de busca paginada com filtros dinâmicos para registros ATIVOS
@@ -197,6 +202,37 @@ public class ServidorService extends BaseGenericService<
 
         return newSnapshot;
 
+    }
+
+
+    @Transactional
+    @Auditable(action = AuditAction.UPDATE, entity = "Servidor")
+    public void uploadProfilePicture(Integer servidorId, MultipartFile file) throws Exception {
+        // 1. Valida se o servidor existe
+        Servidor servidor = servidorRepository.findById(servidorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
+
+        // Isso garante que o log dirá exatamente de quem é a foto que foi alterada
+        AuditContextHolder.setEntityName("Servidor");
+        AuditContextHolder.setFriendlyId(servidor.getNome()); // ou getNomeCompleto(), conforme sua entidade
+        AuditContextHolder.setLogDetalhes("Inclusão/Atualização da foto de perfil do servidor: "
+                + servidor.getNome());
+
+        // 2. Valida os Magic Numbers (Segurança!)
+        validatePhotoFormat(file);
+
+        // 3. Lógica do MinIO
+        String extensao = file.getOriginalFilename()
+                .substring(file.getOriginalFilename().lastIndexOf("."));
+
+        String namePhtoMinio = "fotos/perfil-" + servidorId + extensao;
+
+        // 4. Salva no MinIO (Usando o método de upload que vocês já têm)
+        storageService.upload(file, namePhtoMinio);
+
+        // 5. Salva o caminho da foto no banco de dados, na tabela do Servidor
+        servidor.setPhotoPath(namePhtoMinio);
+        servidorRepository.save(servidor);
     }
 
     // MÉTODOS EXCLUSIVOS DE REGRA DE NEGÓCIO
@@ -374,6 +410,26 @@ public class ServidorService extends BaseGenericService<
         }
     }
 
+    // Valida o formato das fotos
+    private void validatePhotoFormat(MultipartFile file) throws Exception {
+        // 1. Lemos os 4 primeiros bytes do arquivo
+        byte[] header = new byte[4];
+        try (InputStream is = file.getInputStream()) {
+            is.read(header);
+        }
+
+        // 2. Assinatura do PNG: 89 50 4E 47
+        boolean isPng = header[0] == (byte) 0x89 && header[1] == (byte) 0x50
+                && header[2] == (byte) 0x4E && header[3] == (byte) 0x47;
+
+        // 3. Assinatura do JPEG/JPG: FF D8 FF
+        boolean isJpeg = header[0] == (byte) 0xFF && header[1] == (byte) 0xD8
+                && header[2] == (byte) 0xFF;
+
+        if (!isPng && !isJpeg) {
+            throw new BusinessException("Formato inválido. Envie apenas fotos JPG, JPEG ou PNG.");
+        }
+    }
 
     // Método para formatar o CPF como 000.000.000-00
     private String cpfFormat(String cpf) {

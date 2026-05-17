@@ -1,5 +1,8 @@
 package br.gov.rn.natal.cadpgmapi.auth.controller;
 
+import br.gov.rn.natal.cadpgmapi.audit.AuditContextHolder;
+import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
+import br.gov.rn.natal.cadpgmapi.audit.enums.AuditAction;
 import br.gov.rn.natal.cadpgmapi.auth.dto.request.ForceChangePasswordRequestDTO;
 import br.gov.rn.natal.cadpgmapi.auth.dto.request.LoginRequestDTO;
 import br.gov.rn.natal.cadpgmapi.auth.dto.response.LoginResponseDTO;
@@ -16,6 +19,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -30,7 +34,7 @@ public class AuthController {
     @PostMapping("/login")
     @Operation(summary = "Realizar login no sistema",
             description = "Recebe as credenciais do usuário e " +
-                    "devolve um token JWT para acesso às rotas protegidas. (Em fase de implementação)"
+                    "devolve um token JWT para acesso às rotas protegidas."
     )
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO dto) {
 
@@ -38,6 +42,28 @@ public class AuthController {
         String tokenJWT = authService.authenticate(dto);
 
         return ResponseEntity.ok(new LoginResponseDTO(tokenJWT));
+    }
+
+    /**
+     * O frontend DEVE chamar esta rota passando o token atual
+     * logo ANTES de apagar o token do navegador.
+     */
+    @PostMapping("/logout")
+    @Operation(summary = "Realizar logout no sistema",
+            description = "Exclui as credenciais usuário.")
+    @Auditable(action = AuditAction.LOGOUT, entity = "Acesso ao Sistema")
+    public ResponseEntity<Void> registrarLogout() {
+        // Como o usuário precisa mandar o Token JWT para acessar esta rota,
+        // o Spring Security já sabe quem ele é!
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        AuditContextHolder.setEntityName("Autenticação");
+        AuditContextHolder.setFriendlyId(username);
+        AuditContextHolder.setLogDetalhes("Logout realizado pelo usuário.");
+
+        // O backend apenas registra o log e devolve 200 OK.
+        // A responsabilidade de invalidar a credencial continua sendo do Frontend (apagar o token).
+        return ResponseEntity.status(HttpStatus.OK).build();
     }
 
     @PostMapping("/register")

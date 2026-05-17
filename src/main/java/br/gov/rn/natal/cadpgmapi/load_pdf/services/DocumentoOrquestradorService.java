@@ -4,6 +4,7 @@ import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
 import java.text.Normalizer;
 import java.util.List;
 
@@ -99,4 +100,5 @@ public class DocumentoOrquestradorService {
             throw new BusinessException("Erro ao ler o arquivo '" + file.getOriginalFilename() + "'.");
         }
     }
+
 }

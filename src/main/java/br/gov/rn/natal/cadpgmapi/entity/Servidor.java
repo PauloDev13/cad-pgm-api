@@ -80,6 +80,9 @@ public class Servidor {
     @JoinColumn(name = "vinculo_id")
     private Vinculo vinculo;
 
+    @Column(name = "photo_path")
+    private String photoPath;
+
     // Relacionamentos NN mapeando as tabelas associativas do diagrama
     @ManyToMany
     @JoinTable(name = "servidor_sistema",

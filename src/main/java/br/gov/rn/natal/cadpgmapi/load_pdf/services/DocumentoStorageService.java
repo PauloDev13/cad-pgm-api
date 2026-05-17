@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -56,5 +57,15 @@ public class DocumentoStorageService {
                 .bucket(minioConfig.getBucketName())
                 .object(objectName)
                 .build());
+    }
+
+    // Puxa o fluxo de dados (bytes) diretamente do MinIO
+    public InputStream getDownloadStream(String objectName) throws Exception {
+        return minioClient.getObject(
+                GetObjectArgs.builder()
+                        .bucket(minioConfig.getBucketName()) // O mesmo bucket que já usam
+                        .object(objectName)
+                        .build()
+        );
     }
 }

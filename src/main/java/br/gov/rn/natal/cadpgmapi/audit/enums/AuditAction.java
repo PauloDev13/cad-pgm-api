@@ -3,5 +3,8 @@ package br.gov.rn.natal.cadpgmapi.audit.enums;
 public enum AuditAction {
     INSERT,
     UPDATE,
-    DELETE
+    DELETE,
+    LOGIN,
+    LOGOUT,
+    LOGIN_FAILED
 }

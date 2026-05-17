@@ -1,19 +1,27 @@
 package br.gov.rn.natal.cadpgmapi.load_pdf.controllers;
 
+import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
+import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.load_pdf.dtos.DocumentoResponseDTO;
 import br.gov.rn.natal.cadpgmapi.load_pdf.services.DocumentoOrquestradorService;
+import br.gov.rn.natal.cadpgmapi.load_pdf.services.DocumentoStorageService;
 import br.gov.rn.natal.cadpgmapi.load_pdf.services.ServidorDocumentoService;
+import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
 import java.text.Normalizer;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/api/v1/servidores") // Ajuste para o caminho base real da sua API
@@ -24,11 +32,12 @@ public class ServidorDocumentoController {
     private final DocumentoOrquestradorService orquestradorService;
 
     // Construtor
-    public ServidorDocumentoController(ServidorDocumentoService documentoService, DocumentoOrquestradorService orquestradorService) {
+    public ServidorDocumentoController(
+            ServidorDocumentoService documentoService,
+            DocumentoOrquestradorService orquestradorService) {
         this.documentoService = documentoService;
         this.orquestradorService = orquestradorService;
     }
-
     /**
      * 1. UPLOAD: Anexar um novo documento PDF ao servidor
      * POST /api/servidores/{servidorId}/documentos
