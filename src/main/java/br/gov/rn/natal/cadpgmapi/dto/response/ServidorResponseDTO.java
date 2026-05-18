@@ -22,6 +22,7 @@ public record ServidorResponseDTO(
         String filiacao,
         Boolean excluded,
         LocalDateTime excludedDate,
+        String photoPath,
 
         // Relações N:1 devolvidas como DTOs
         CargoResponseDTO cargo,

@@ -38,12 +38,14 @@ public class ServidorController extends BaseController<
     private final ServidorService service;
     private final DocumentoStorageService storageService;
     private final ServidorRepository servidorRepository;
+    private final ServidorService servidorService;
 
-    public ServidorController(ServidorService service, DocumentoStorageService storageService, ServidorRepository servidorRepository) {
+    public ServidorController(ServidorService service, DocumentoStorageService storageService, ServidorRepository servidorRepository, ServidorService servidorService) {
         super(service);
         this.service = service;
         this.storageService = storageService;
         this.servidorRepository = servidorRepository;
+        this.servidorService = servidorService;
     }
 
     // Ensina ao pai como extrair o ID para montar a URL do HTTP 201
@@ -128,24 +130,25 @@ public class ServidorController extends BaseController<
     }
 
     @GetMapping(value = "/{servidorId}/photo")
-    @Operation(summary = "Busca a foto de perfil do servidor",
-            description = "Exibe a foto servidor no formulário de cadastro")
-    public ResponseEntity<InputStreamResource> exibirFotoPerfil(@PathVariable Integer servidorId) throws Exception {
+    @Operation(summary = "Busca a foto de perfil do Servidor ativo ou desligado",
+            description = "Exibe a foto do Servidor ativo ou desligado no formulário de cadastro")
+    public ResponseEntity<InputStreamResource> exibirFotoPerfil(
+            @PathVariable Integer servidorId,
+            @RequestParam(required = false) Boolean excluded
+    ) throws Exception {
 
-        // 1. Busca qual é o nome do arquivo lá no banco de dados (ex: "fotos/perfil-9.png")
-        Servidor servidor = servidorRepository.findById(servidorId)
-                .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
+        ServidorResponseDTO servidor = servidorService.getExcludedOrActivatedById(servidorId, excluded);
 
-        if (servidor.getPhotoPath() == null) {
+        if (servidor.photoPath() == null) {
             // Se não tiver foto, retorna um 404 limpo (o frontend trata mostrando uma foto cinza padrão)
             return ResponseEntity.notFound().build();
         }
 
         // 2. Puxa o fluxo do MinIO (o "túnel" que criamos no Passo 1)
-        InputStream streamMinio = storageService.getDownloadStream(servidor.getPhotoPath());
+        InputStream streamMinio = storageService.getDownloadStream(servidor.photoPath());
 
         // 3. Descobre o Content-Type para avisar o navegador se é JPG ou PNG
-        MediaType mediaType = servidor.getPhotoPath().endsWith(".png")
+        MediaType mediaType = servidor.photoPath().endsWith(".png")
                 ? MediaType.IMAGE_PNG
                 : MediaType.IMAGE_JPEG;
 

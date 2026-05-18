@@ -65,7 +65,7 @@ public class ServidorService extends BaseGenericService<
         this.storageService = storageService;
     }
 
-    // Método de busca paginada com filtros dinâmicos para registros ATIVOS
+    // Busca paginada com filtros dinâmicos para registros de Servidores ATIVOS
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> findByFilters(
             String cpf,
@@ -127,19 +127,36 @@ public class ServidorService extends BaseGenericService<
                 .map(mapper::toDto);
     }
 
-    // Busca os aniversarianates do mês atual do sistema
+    // Busca os Servidores ATIVOS e aniversarianates do mês atual do sistema
     @Transactional(readOnly = true)
     public List<AniversarianteResponseDTO> obterAniversariantesDoMesAtual() {
         int currentMoth = LocalDate.now().getMonthValue();
         return servidorRepository.findAniversariantesDoMes(currentMoth);
     }
 
-    // Método de busca de todos os registros EXLCUÍDOS
+    // Busca todos os registros dos Sevidores DESLIGADOS
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> listExcluded(Pageable pageable) {
         return servidorRepository.findAllExcluded(pageable).map(mapper::toDto);
     }
 
+    // Busca um Servidor DESLIGADO OU ATIVO por ID
+    @Transactional(readOnly = true)
+    public ServidorResponseDTO getExcludedOrActivatedById(Integer id, Boolean excluded) {
+        Servidor servidor;
+
+        if (excluded != null && excluded) {
+            servidor = servidorRepository.getExcludedById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
+        } else {
+            // 1. Busca qual é o nome do arquivo lá no banco de dados (ex: "fotos/perfil-9.png")
+            servidor = servidorRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
+        }
+        return mapper.toDto(servidor);
+    }
+
+    // Busca um Servidor DESLIGADO por ID
     @Transactional(readOnly = true)
     public ServidorResponseDTO getExcludedById(Integer id) {
         Servidor servidor = servidorRepository.getExcludedById(id).orElseThrow(
@@ -147,7 +164,7 @@ public class ServidorService extends BaseGenericService<
         return  mapper.toDto(servidor);
     }
 
-    // Método de busca paginada com filtros dinâmicos para registros EXCLUÍDOS
+    // Busca paginada com filtros dinâmicos para registros DESLIGADOS
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> searchExcluded(
             String term, Pageable pageable
@@ -158,7 +175,7 @@ public class ServidorService extends BaseGenericService<
         return servidorRepository.searchExcluded(term.trim(), pageable).map(mapper::toDto);
     }
 
-    // Método que "reativa" registros EXCLUÍDOS para ATIVOS
+    // Método que "reativa" registros de DESLIGADO para ATIVOS
     @Transactional
     @Auditable(action = AuditAction.UPDATE, entity = "Servidor")
     public ServidorResponseDTO reativated(Integer id, ServidorRequestDTO dto) {
@@ -204,7 +221,7 @@ public class ServidorService extends BaseGenericService<
 
     }
 
-
+    // Realiza o upload de foto para o cadastro do Servidor
     @Transactional
     @Auditable(action = AuditAction.UPDATE, entity = "Servidor")
     public void uploadProfilePicture(Integer servidorId, MultipartFile file) throws Exception {
