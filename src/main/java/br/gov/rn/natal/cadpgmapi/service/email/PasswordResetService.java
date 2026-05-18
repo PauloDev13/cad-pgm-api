@@ -1,5 +1,8 @@
 package br.gov.rn.natal.cadpgmapi.service.email;
 
+import br.gov.rn.natal.cadpgmapi.audit.AuditContextHolder;
+import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
+import br.gov.rn.natal.cadpgmapi.audit.enums.AuditAction;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
@@ -25,10 +28,16 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
+    @Auditable(action = AuditAction.PASSWORD_RECOVERY, entity = "Segurança")
     public void requestEmailReconvery(String email) {
         Usuario user = usuarioRepository.findByEmail(email.trim())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "E-mail não cadastrado. Verifique se digitou corretamente"));
+
+        // 2. Alimenta os detalhes da auditoria antes do envio
+        AuditContextHolder.setEntityName("Usuário");
+        AuditContextHolder.setFriendlyId(user.getUsername());
+        AuditContextHolder.setLogDetalhes("Link para recuperação de senha enviada para o e-mail: " + user.getEmail());
 
         // Delega a geração para o TokenService (Stateless)
         String token = tokenService.generatePasswordRecoveryToken(user);
@@ -51,9 +60,14 @@ public class PasswordResetService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.PASSWORD_RESET, entity = "Segurança")
     public void resetPassword(String token, String newPassword) {
         // 1. Reutiliza a lógica de validação que acabamos de criar
         Usuario user = validateToken(token);
+
+        AuditContextHolder.setEntityName("Usuário");
+        AuditContextHolder.setFriendlyId(user.getUsername());
+        AuditContextHolder.setLogDetalhes("Senha redefinida com sucesso através de link de recuperação.");
 
         // 2. Atualiza a senha corretamente
         user.setPassword(passwordEncoder.encode(newPassword.trim()));

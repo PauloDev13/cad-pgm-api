@@ -3,6 +3,7 @@ package br.gov.rn.natal.cadpgmapi.service.email;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -33,7 +34,10 @@ public class EmailService {
             helper.setSubject("Recuperação de Senha - PGM TI");
 
             // 3. Monta o corpo do e-mail em HTML com o botão estilizado
-            String htmlMsg = "<div style='font-family: Arial, sans-serif; color: #333333; line-height: 1.6;'>"
+            String htmlMsg = "<div style='font-family: Arial, sans-serif; color: #333333; line-height: 1.6; max-width: 600px; margin: 0 auto;'>"
+                    + "<div style='text-align: left; margin-bottom: 25px;'>"
+                    + "  <img src='cid:logoPgm' alt='Logomarca PGM' style='max-width: 250px; height: auto;' />"
+                    + "</div>"
                     + "<h2>Recuperação de Senha</h2>"
                     + "<p>Você solicitou a recuperação da sua senha.</p>"
                     + "<p>Clique no botão abaixo para redefinir sua senha de acesso:</p>"
@@ -54,7 +58,12 @@ public class EmailService {
             // 4. Seta o texto. O segundo parâmetro "true" avisa o Spring que o conteúdo é HTML!
             helper.setText(htmlMsg, true);
 
-            // 5. Dispara o e-mail
+            // O addInline DEVE ser chamado SEMPRE DEPOIS do setText!
+            // O ClassPathResource mapeia automaticamente a partir da pasta src/main/resources/
+            ClassPathResource logoImage = new ClassPathResource("images/logo.png");
+            helper.addInline("logoPgm", logoImage);
+
+            // 6. Dispara o e-mail
             mailSender.send(message);
 
         } catch (MessagingException e) {
@@ -62,15 +71,5 @@ public class EmailService {
             // para não quebrar a assinatura original do seu método.
             throw new RuntimeException("Falha ao montar o e-mail HTML de recuperação", e);
         }
-//        SimpleMailMessage message = new SimpleMailMessage();
-//        message.setFrom(remetente);
-//        message.setTo(recipient);
-//        message.setSubject("Recuperação de Senha - PGM TI");
-//        message.setText("Você solicitou a recuperação da sua senha.\n\n" +
-//                "Clique no link abaixo para redefinir sua senha:\n" + link +
-//                "\n\nEste link é válido por 30 minutos.\n" +
-//                "Se você não solicitou isso, apenas ignore este e-mail.");
-//
-//        mailSender.send(message);
     }
 }
