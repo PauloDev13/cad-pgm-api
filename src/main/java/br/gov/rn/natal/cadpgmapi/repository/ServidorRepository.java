@@ -19,6 +19,11 @@ import java.util.Optional;
 
 @Repository
 public interface ServidorRepository extends JpaRepository<Servidor, Integer>, JpaSpecificationExecutor<Servidor> {
+    /* ==================================
+     CONSULTAS PARA STATUS ATIVOS
+    *==================================== */
+
+    // Busca Data de Nascimento, Nome e Setor para montar a listagem de aviversariantes do mês
     @Query("""
         SELECT new br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO(
             s.dataNascimento,
@@ -31,39 +36,46 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>, Jp
     """)
     List<AniversarianteResponseDTO>findAniversariantesDoMes(@Param("mes") Integer mes);
 
-    // O Raio-X: Retorna a Projeção (bypassa o Hibernate)
+    /* ==================================
+     CONSULTAS PARA STATUS DESLIGADOS
+    *==================================== */
+
+    // Valida um Servidor com Status DESLIGADO pelo CPF
     @Query(value = "SELECT id, excluded, cpf, matricula FROM servidor WHERE cpf = :cpf LIMIT 1", nativeQuery = true)
     Optional<ServidorShadowProjection> checkCpfStatus(@Param("cpf") String cpf);
 
+    // Valida um Servidor com Status DESLIGADO pelo Matrícula
     @Query(value = "SELECT id, excluded, cpf, matricula FROM servidor WHERE matricula = :matricula LIMIT 1", nativeQuery = true)
     Optional<ServidorShadowProjection> checkMatriculaStatus(@Param("matricula") String matricula);
 
+    // Valida um Servidor com Status DESLIGADO pelo Email pessoal
     @Query(value = "SELECT id, excluded, email_pessoal, email_institucional " +
             "FROM servidor WHERE email_pessoal = :email LIMIT 1", nativeQuery = true)
     Optional<ServidorShadowProjection> checkEmailPessoalStatus(@Param("email") String email);
 
+    // Valida um Servidor com Status DESLIGADO pelo Email institucional
     @Query(value = "SELECT id, excluded, email_pessoal, email_institucional " +
             "FROM servidor WHERE email_institucional = :email LIMIT 1", nativeQuery = true)
     Optional<ServidorShadowProjection> checkEmailInstitucionalStatus(@Param("email") String email);
 
-    // Busca paginada de excluídos via Native Query
+    // Busca paginada de todos os Servidores com status DESLIGADO
     @Query(value = "SELECT * FROM servidor WHERE excluded = true",
             countQuery = "SELECT count(*) FROM servidor WHERE excluded = true",
             nativeQuery = true)
     Page<Servidor> findAllExcluded(Pageable pageable);
 
-    // Busca um servidor excluído por ID via Native Query
+    // Busca um Servidor com status DESLIGADO por ID
     @Query(value = "SELECT * FROM servidor WHERE excluded = true AND id = :id",
             nativeQuery = true)
     Optional<Servidor> getExcludedById(Integer id);
 
-    // Opcional: Busca de excluídos por nome/cpf (Search da aba de excluídos)
+    // Filtragem paginada de Servidores DESLIGADOS por nome/cpf (Search da aba de excluídos)
     @Query(value = "SELECT * FROM servidor WHERE excluded = true AND (nome LIKE CONCAT('%', :term, '%') OR cpf LIKE CONCAT('%', :term, '%'))",
             countQuery = "SELECT count(*) FROM servidor WHERE excluded = true AND (nome LIKE CONCAT('%', :term, '%') OR cpf LIKE CONCAT('%', :term, '%'))",
             nativeQuery = true)
     Page<Servidor> searchExcluded(@Param("term") String term, Pageable pageable);
 
-    // Busca por Matrícula mesmo que esteja excluída
+    // Faz atualização automática de um Servidor DESLIGADO para ATIVO (READMISSÃO)
     @Modifying
     @Query(value = "UPDATE servidor SET excluded = false, excluded_date = null WHERE id = :id", nativeQuery = true)
     void reviveNativeServidor(@Param("id") Integer id);

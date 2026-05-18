@@ -65,6 +65,9 @@ public class ServidorService extends BaseGenericService<
         this.storageService = storageService;
     }
 
+    /* ============================================
+        MÉTODOS GET
+    * =============================================*/
     // Busca paginada com filtros dinâmicos para registros de Servidores ATIVOS
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> findByFilters(
@@ -134,6 +137,7 @@ public class ServidorService extends BaseGenericService<
         return servidorRepository.findAniversariantesDoMes(currentMoth);
     }
 
+
     // Busca todos os registros dos Sevidores DESLIGADOS
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> listExcluded(Pageable pageable) {
@@ -175,7 +179,11 @@ public class ServidorService extends BaseGenericService<
         return servidorRepository.searchExcluded(term.trim(), pageable).map(mapper::toDto);
     }
 
-    // Método que "reativa" registros de DESLIGADO para ATIVOS
+    /* =====================================================
+        MÉTODOS UPDATE
+    * ======================================================*/
+
+    // Método que "reativa" registros de um Servidor DESLIGADO para ATIVOS
     @Transactional
     @Auditable(action = AuditAction.UPDATE, entity = "Servidor")
     public ServidorResponseDTO reativated(Integer id, ServidorRequestDTO dto) {
@@ -252,7 +260,10 @@ public class ServidorService extends BaseGenericService<
         servidorRepository.save(servidor);
     }
 
-    // MÉTODOS EXCLUSIVOS DE REGRA DE NEGÓCIO
+    /* =====================================================
+        MÉTODOS SOBRESCRITOS EXCLUSIVOS DE REGRA DE NEGÓCIO
+    * ======================================================*/
+
     @Override
     protected void beforeCreate(ServidorRequestDTO dto) {
         // 1. Validação de CPF (Bloqueia se existir o mesmo CPF em ATIVO OU EXCLUÍDO)
@@ -377,7 +388,9 @@ public class ServidorService extends BaseGenericService<
 
     }
 
-    // MÉTODOS PRIVADOS
+    /* ============================================
+        MÉTODOS AUXILIARES PRIVADOS
+    * =============================================*/
     /**
      * Recebe a entidade (já mapeada com os dados básicos pelo MapStruct)
      * e os IDs vindos do DTO para fazer a associação otimizada.

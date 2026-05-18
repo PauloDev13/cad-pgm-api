@@ -40,7 +40,12 @@ public class ServidorController extends BaseController<
     private final ServidorRepository servidorRepository;
     private final ServidorService servidorService;
 
-    public ServidorController(ServidorService service, DocumentoStorageService storageService, ServidorRepository servidorRepository, ServidorService servidorService) {
+    // Construtor
+    public ServidorController(
+            ServidorService service,
+            DocumentoStorageService storageService,
+            ServidorRepository servidorRepository,
+            ServidorService servidorService) {
         super(service);
         this.service = service;
         this.storageService = storageService;
@@ -60,7 +65,11 @@ public class ServidorController extends BaseController<
         return "nome";
     }
 
-    // Mantemos APENAS o endpoint que é exclusivo desta entidade
+    /* ==================================
+     END POINTS PARA STATUS ATIVOS
+    *==================================== */
+
+    // Busca paginada de todos os Servidores com status ATIVO
     @GetMapping("/searchFilter")
     @Operation(summary = "Filtrar servidores por CPF, Matrícula, Nome Status, Cargo e Setor",
             description = "Informe a combinação de filtros para realizar a pesquisa.")
@@ -78,6 +87,7 @@ public class ServidorController extends BaseController<
         return service.findByFilters(cpf, matricula, nome, statusId, cargoId, setorId, pageable);
     }
 
+    // Busca os aniversanriantes do mês entre os Servidores ATIVOS
     @GetMapping("/aniversariantes")
     @Operation(summary = "Lista aniversariantes",
             description = "Retorna os servidores ativos que fazem aniversário no mês vigente")
@@ -86,7 +96,32 @@ public class ServidorController extends BaseController<
         return ResponseEntity.ok(lista);
     }
 
-    // Endpoint para a aba de excluídos. Lista todos os registros
+    // Faz o upload de fotos para o Servidores com status ATIVO
+    @PostMapping(value = "/{servidorId}/photo",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Faz o upload/atualização da foto de perfil do servidor",
+            description = "Recebe a imagem, valida os Magic Numbers e salva no MinIO")
+    public ResponseEntity<Void> uploadFotoPerfil(
+            @PathVariable Integer servidorId,
+            @RequestParam("file") MultipartFile file) throws Exception {
+
+        // 1. Impedir o avanço se o arquivo vier nulo ou totalmente vazio
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("Nenhum arquivo de imagem foi selecionado.");
+        }
+
+        // 🌟 AQUI ESTÁ O USO DO SEU SERVICE!
+        // Agora o Controller chama o método que estava "isolado"
+        service.uploadProfilePicture(servidorId, file);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(null);
+    }
+
+    /* ==================================
+     END POINTS PARA STATUS DESLIGADOS
+    *==================================== */
+
+    // Busca paginada de todos os Servidores com status DESLIGADO
     @GetMapping("/excluded")
     @Operation(summary = "Buscar todos os servidores com status de excluído",
             description = "Retorna os registros excluídos com 'Soft Delete'")
@@ -97,7 +132,7 @@ public class ServidorController extends BaseController<
         return service.listExcluded(pageable);
     }
 
-    // Busca um servidor excluído pelo ID
+    // Busca um Servidor com status DESLIGADO pelo ID
     @GetMapping("/excluded/{id}")
     @Operation(summary = "Busca um servidor com status de excluído",
             description = "Retorna um registro excluído com 'Soft Delete'")
@@ -105,6 +140,7 @@ public class ServidorController extends BaseController<
         return service.getExcludedById(id);
     }
 
+    // Aplica filragem paginada nos Servidores com status DESLIGADOS
     @GetMapping("/searchExcluded")
     @Operation(summary = "Buscar por Nome ou CPF servidores com status excluído",
             description = "Informe o Nome ou o CPF via query parameter. " +
@@ -118,7 +154,7 @@ public class ServidorController extends BaseController<
         return service.searchExcluded(term, pageable);
     }
 
-    // Endpoint que o botão do Modal vai chamar para alterar o status de excluído
+    // Muda o status de um Servidor de DESLIGADO para ATIVO (READMISSÃO)
     // Usamos PATCH pois é uma alteração parcial/específica
     @PatchMapping("/{id}/reactivate")
     @Operation(summary = "Reativa o cadastro que está com status excluído",
@@ -129,6 +165,7 @@ public class ServidorController extends BaseController<
         return ResponseEntity.ok(service.reativated(id, dto));
     }
 
+    // Busca a foto do Servidor ATIVO OU DESLIGADO
     @GetMapping(value = "/{servidorId}/photo")
     @Operation(summary = "Busca a foto de perfil do Servidor ativo ou desligado",
             description = "Exibe a foto do Servidor ativo ou desligado no formulário de cadastro")
@@ -158,25 +195,5 @@ public class ServidorController extends BaseController<
                 .cacheControl(CacheControl.maxAge(30, TimeUnit.DAYS))
                 .contentType(mediaType)
                 .body(new InputStreamResource(streamMinio));
-    }
-
-    @PostMapping(value = "/{servidorId}/photo",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Faz o upload/atualização da foto de perfil do servidor",
-            description = "Recebe a imagem, valida os Magic Numbers e salva no MinIO")
-    public ResponseEntity<Void> uploadFotoPerfil(
-            @PathVariable Integer servidorId,
-            @RequestParam("file") MultipartFile file) throws Exception {
-
-        // 1. Impedir o avanço se o arquivo vier nulo ou totalmente vazio
-        if (file == null || file.isEmpty()) {
-            throw new BusinessException("Nenhum arquivo de imagem foi selecionado.");
-        }
-
-        // 🌟 AQUI ESTÁ O USO DO SEU SERVICE!
-        // Agora o Controller chama o método que estava "isolado"
-        service.uploadProfilePicture(servidorId, file);
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(null);
     }
 }
