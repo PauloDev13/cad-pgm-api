@@ -1,7 +1,7 @@
 package br.gov.rn.natal.cadpgmapi.repository;
 
+import br.gov.rn.natal.cadpgmapi.dashboard.dto.response.GraphItemDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
 import org.springframework.data.domain.Page;
@@ -13,7 +13,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import javax.swing.text.html.Option;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,6 +37,41 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
     """)
     List<AniversarianteResponseDTO>findAniversariantesDoMes(@Param("mes") Integer mes);
 
+    /* ==================================
+                   DASHBOARD
+    *==================================== */
+
+    // Conta o total de servidores ativos/na base
+    @Query("SELECT COUNT(s) FROM Servidor s WHERE s.excluded = false")
+    Long countTotalServidoresAtivos();
+
+    // Agrupa por Vínculo e já devolve no DTO
+    @Query("""
+        SELECT new br.gov.rn.natal.cadpgmapi.dashboard.dto.response.GraphItemDTO(
+        v.nome, COUNT(s.id))
+        FROM Servidor s
+        JOIN s.vinculo v
+        WHERE s.excluded = false
+        GROUP BY v.nome
+        ORDER BY COUNT(s.id) DESC
+    """)
+    List<GraphItemDTO> countDistribuicaoPorVinculo();
+
+    // Agrupa por Status e já devolve no DTO (O CAST transforma o Enum em String)
+    @Query("""
+        SELECT new br.gov.rn.natal.cadpgmapi.dashboard.dto.response.GraphItemDTO(
+        st.descricao, COUNT(s.id))
+        FROM Servidor s
+        JOIN s.status st
+        WHERE s.excluded = false
+        GROUP BY st.descricao
+        ORDER BY COUNT(s.id) DESC
+    """)
+    List<GraphItemDTO> countDistribuicaoPorStatus();
+
+    /* ==================================
+           DOWNLOAD FOTOS
+    *==================================== */
     // O nativeQuery = true faz o Hibernate ignorar o filtro de Soft Delete
     // Busca o caminho da foto no BD de qualquer Servidor independente do status
     @Query(value = "SELECT photo_path FROM servidor WHERE id = :id", nativeQuery = true)
