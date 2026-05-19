@@ -144,20 +144,12 @@ public class ServidorService extends BaseGenericService<
         return servidorRepository.findAllExcluded(pageable).map(mapper::toDto);
     }
 
-    // Busca um Servidor DESLIGADO OU ATIVO por ID
+    // Retorna a String do caminho (ex: "fotos/perfil-9.png") ou nulo se não achar
     @Transactional(readOnly = true)
-    public ServidorResponseDTO getExcludedOrActivatedById(Integer id, Boolean excluded) {
-        Servidor servidor;
+    public String getPhotoPathById(Integer id) {
+        return servidorRepository.findPhotoPathByIdIgnoreStatus(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
 
-        if (excluded != null && excluded) {
-            servidor = servidorRepository.getExcludedById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
-        } else {
-            // 1. Busca qual é o nome do arquivo lá no banco de dados (ex: "fotos/perfil-9.png")
-            servidor = servidorRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
-        }
-        return mapper.toDto(servidor);
     }
 
     // Busca um Servidor DESLIGADO por ID
@@ -232,10 +224,14 @@ public class ServidorService extends BaseGenericService<
     // Realiza o upload de foto para o cadastro do Servidor
     @Transactional
     @Auditable(action = AuditAction.UPDATE, entity = "Servidor")
-    public void uploadProfilePicture(Integer servidorId, MultipartFile file) throws Exception {
+    public void uploadProfilePicture(
+            Integer servidorId,
+            MultipartFile file
+    ) throws Exception {
         // 1. Valida se o servidor existe
         Servidor servidor = servidorRepository.findById(servidorId)
-                .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
+                .orElseGet(() -> servidorRepository.getExcludedById(servidorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado para o ID informado.")));
 
         // Isso garante que o log dirá exatamente de quem é a foto que foi alterada
         AuditContextHolder.setEntityName("Servidor");

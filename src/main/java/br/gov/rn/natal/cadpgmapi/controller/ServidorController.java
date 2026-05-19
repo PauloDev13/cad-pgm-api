@@ -170,26 +170,26 @@ public class ServidorController extends BaseController<
     @Operation(summary = "Busca a foto de perfil do Servidor ativo ou desligado",
             description = "Exibe a foto do Servidor ativo ou desligado no formulário de cadastro")
     public ResponseEntity<InputStreamResource> exibirFotoPerfil(
-            @PathVariable Integer servidorId,
-            @RequestParam(required = false) Boolean excluded
+            @PathVariable Integer servidorId
     ) throws Exception {
 
-        ServidorResponseDTO servidor = servidorService.getExcludedOrActivatedById(servidorId, excluded);
+        // Retorna o caminho da foto grava no BD
+         String photoPath = servidorService.getPhotoPathById(servidorId);
 
-        if (servidor.photoPath() == null) {
+        if (photoPath == null) {
             // Se não tiver foto, retorna um 404 limpo (o frontend trata mostrando uma foto cinza padrão)
             return ResponseEntity.notFound().build();
         }
 
-        // 2. Puxa o fluxo do MinIO (o "túnel" que criamos no Passo 1)
-        InputStream streamMinio = storageService.getDownloadStream(servidor.photoPath());
+        // Puxa o fluxo do MinIO (o "túnel")
+        InputStream streamMinio = storageService.getDownloadStream(photoPath);
 
-        // 3. Descobre o Content-Type para avisar o navegador se é JPG ou PNG
-        MediaType mediaType = servidor.photoPath().endsWith(".png")
+        // Descobre o Content-Type para avisar o navegador se é JPG ou PNG
+        MediaType mediaType = photoPath.endsWith(".png")
                 ? MediaType.IMAGE_PNG
                 : MediaType.IMAGE_JPEG;
 
-        // 4. A MÁGICA DA ENTREGA (Streaming + Cache)
+        // (Streaming + Cache)
         return ResponseEntity.ok()
                 // Diz pro navegador: "Guarde essa foto por 30 dias na sua memória"
                 .cacheControl(CacheControl.maxAge(30, TimeUnit.DAYS))

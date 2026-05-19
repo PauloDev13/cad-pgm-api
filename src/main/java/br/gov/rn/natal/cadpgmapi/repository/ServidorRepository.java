@@ -13,12 +13,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import javax.swing.text.html.Option;
 import java.util.List;
 import java.util.Optional;
 
 
 @Repository
-public interface ServidorRepository extends JpaRepository<Servidor, Integer>, JpaSpecificationExecutor<Servidor> {
+public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
+        JpaSpecificationExecutor<Servidor> {
     /* ==================================
      CONSULTAS PARA STATUS ATIVOS
     *==================================== */
@@ -35,6 +37,11 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>, Jp
         ORDER BY DAY(s.dataNascimento) ASC, s.nome ASC
     """)
     List<AniversarianteResponseDTO>findAniversariantesDoMes(@Param("mes") Integer mes);
+
+    // O nativeQuery = true faz o Hibernate ignorar o filtro de Soft Delete
+    // Busca o caminho da foto no BD de qualquer Servidor independente do status
+    @Query(value = "SELECT photo_path FROM servidor WHERE id = :id", nativeQuery = true)
+    Optional<String>findPhotoPathByIdIgnoreStatus(@Param("id") Integer id);
 
     /* ==================================
      CONSULTAS PARA STATUS DESLIGADOS
