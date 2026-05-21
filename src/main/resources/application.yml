@@ -16,6 +16,9 @@ spring:
     multipart:
       max-file-size: 1536KB    # Exatos 1.5 MB (1.5 * 1024)
       max-request-size: 20480KB # Tamanho total da requisição 20MB
+  jackson: # Os dados para o atributo do tipo Enum não precisam ser case sensitive
+    mapper:
+      accept-case-insensitive-enums: true
 server:
   tomcat:
     max-swallow-size: -1  # O valor -1 diz ao Tomcat para nunca fechar a conexão de forma abrupta

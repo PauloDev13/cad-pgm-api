@@ -1,5 +1,6 @@
 package br.gov.rn.natal.cadpgmapi.dto.request;
 
+import br.gov.rn.natal.cadpgmapi.enums.TipoAtividade;
 import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
@@ -38,6 +39,8 @@ public record ServidorRequestDTO(
 
         @Size(max = 255)
         String filiacao,
+
+        TipoAtividade tipoAtividade,
 
         // IDs das relações N:1
         @NotNull(message = "O cargo é obrigatório")

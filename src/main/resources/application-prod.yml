@@ -26,7 +26,7 @@ api:
       secret: ${JWT_SECRET}
 app:
   frontend:
-    urls: ${FRONTEND_URLS:http://localhost:8080,http://192.168.1.9:8080}
+    urls: ${FRONTEND_URLS:-http://localhost:8080,http://192.168.1.9:8080}
 minio:
   # O Spring Boot vai "puxar" os valores que o Docker Compose injetou nele!
   url: ${MINIO_URL}

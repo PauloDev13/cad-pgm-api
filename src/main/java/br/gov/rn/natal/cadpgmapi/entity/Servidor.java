@@ -1,5 +1,6 @@
 package br.gov.rn.natal.cadpgmapi.entity;
 
+import br.gov.rn.natal.cadpgmapi.enums.TipoAtividade;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
@@ -82,6 +83,10 @@ public class Servidor {
 
     @Column(name = "photo_path")
     private String photoPath;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type_activity", length = 20)
+    private TipoAtividade tipoAtividade;
 
     // Relacionamentos NN mapeando as tabelas associativas do diagrama
     @ManyToMany

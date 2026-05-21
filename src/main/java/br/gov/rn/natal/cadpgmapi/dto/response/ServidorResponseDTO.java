@@ -1,6 +1,7 @@
 package br.gov.rn.natal.cadpgmapi.dto.response;
 
 import br.gov.rn.natal.cadpgmapi.audit.annotations.AuditFriendlyId;
+import br.gov.rn.natal.cadpgmapi.enums.TipoAtividade;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,6 +24,7 @@ public record ServidorResponseDTO(
         Boolean excluded,
         LocalDateTime excludedDate,
         String photoPath,
+        TipoAtividade tipoAtividade,
 
         // Relações N:1 devolvidas como DTOs
         CargoResponseDTO cargo,
