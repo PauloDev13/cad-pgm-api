@@ -132,9 +132,9 @@ public class ServidorService extends BaseGenericService<
 
     // Busca os Servidores ATIVOS e aniversarianates do mês atual do sistema
     @Transactional(readOnly = true)
-    public List<AniversarianteResponseDTO> obterAniversariantesDoMesAtual() {
-        int currentMoth = LocalDate.now().getMonthValue();
-        return servidorRepository.findAniversariantesDoMes(currentMoth);
+    public List<AniversarianteResponseDTO> obterAniversariantesPorMes(Integer month) {
+//        int currentMoth = LocalDate.now().getMonthValue();
+        return servidorRepository.findAniversariantesDoMes(month);
     }
 
 

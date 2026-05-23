@@ -36,7 +36,8 @@ public class GlobalExceptionHandler {
                 Instant.now(),
                 HttpStatus.CONFLICT.value(),
                 "Violação da regras de negócio",
-                ex.getMessage(), request.getRequestURI()
+                ex.getMessage(),
+                request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
@@ -101,5 +102,25 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.PAYLOAD_TOO_LARGE) // Código HTTP 413
                 .body(error);
+    }
+
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ResponseEntity<StandardError> handleConstraintViolation(
+            jakarta.validation.ConstraintViolationException e,
+            HttpServletRequest request) {
+
+        // Pegamos a primeira mensagem de erro da violação (ex: "deve ser maior ou igual a 1")
+        String mensagemErro = e.getConstraintViolations().iterator().next().getMessage();
+
+        // StandardError é apenas um exemplo. Use a classe de erro padrão que vocês já adotaram no projeto!
+        StandardError err = new StandardError(
+                Instant.now(),
+                HttpStatus.BAD_REQUEST.value(), // Força o 400 Bad Request
+                "Erro de Validação",
+                mensagemErro,
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
     }
 }

@@ -12,11 +12,14 @@ import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
 import br.gov.rn.natal.cadpgmapi.service.ServidorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.repository.query.Param;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -90,9 +93,11 @@ public class ServidorController extends BaseController<
     // Busca os aniversanriantes do mês entre os Servidores ATIVOS
     @GetMapping("/aniversariantes")
     @Operation(summary = "Lista aniversariantes",
-            description = "Retorna os servidores ativos que fazem aniversário no mês vigente")
-    public ResponseEntity<List<AniversarianteResponseDTO>> getAniversariantes() {
-        List<AniversarianteResponseDTO> lista = service.obterAniversariantesDoMesAtual();
+            description = "Retorna os servidores ativos que fazem aniversário no mês informado")
+    public ResponseEntity<List<AniversarianteResponseDTO>> getAniversariantes(
+            @RequestParam("month") @Min(1) @Max(12) Integer month
+    ) {
+        List<AniversarianteResponseDTO> lista = service.obterAniversariantesPorMes(month);
         return ResponseEntity.ok(lista);
     }
 

@@ -7,8 +7,8 @@ import br.gov.rn.natal.cadpgmapi.audit.services.AuditService;
 import br.gov.rn.natal.cadpgmapi.auth.dto.request.ForceChangePasswordRequestDTO;
 import br.gov.rn.natal.cadpgmapi.auth.dto.request.LoginRequestDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
-import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.exception.ForbiddenException;
+import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.exception.UnauthorizedException;
 import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
 import br.gov.rn.natal.cadpgmapi.security.TokenService;
@@ -82,7 +82,7 @@ public class AuthService {
 
         // Buscamos o usuário no banco usando a identidade do Token
         Usuario user = usuarioRepository.findByUserName(userNameLogado)
-                .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
 
         // Buscamos o usuário no banco usando a identidade do Token
         user.setPassword(passwordEncoder.encode(dto.newPassword()));
