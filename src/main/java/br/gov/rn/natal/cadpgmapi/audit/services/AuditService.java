@@ -74,7 +74,10 @@ public class AuditService {
 
             // 1. Filtro por Utilizador
             if (username != null && !username.trim().isEmpty()) {
-                predicate = cb.and(predicate, cb.equal(root.get("username"), username.trim()));
+//                predicate = cb.and(predicate, cb.equal(root.get("username"), username.trim()));
+                predicate = cb.and(predicate, cb.like(
+                        root.get("username"), "%" + username.trim() + "%")
+                );
             }
 
             // 2. Filtro por Tipo de Ação (Enum)
