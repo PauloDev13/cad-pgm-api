@@ -6,6 +6,7 @@ import br.gov.rn.natal.cadpgmapi.audit.enums.AuditAction;
 import br.gov.rn.natal.cadpgmapi.audit.utils.AuditDiffUtil;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
@@ -13,10 +14,7 @@ import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.load_pdf.services.DocumentoStorageService;
 import br.gov.rn.natal.cadpgmapi.mapper.ServidorMapper;
 import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
-import br.gov.rn.natal.cadpgmapi.repository.AliasRepository;
-import br.gov.rn.natal.cadpgmapi.repository.ProcuradorRepository;
-import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
-import br.gov.rn.natal.cadpgmapi.repository.SistemaRepository;
+import br.gov.rn.natal.cadpgmapi.repository.*;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.Predicate;
@@ -45,8 +43,9 @@ public class ServidorService extends BaseGenericService<
     private final SistemaRepository sistemaRepository;
     private final AliasRepository aliasRepository;
     private final ProcuradorRepository procuradorRepository;
-    private final EntityManager entityManager;
     private final DocumentoStorageService storageService;
+    private final SetorRepository setorRepository;
+    private final EntityManager entityManager;
 
     // Construtor
     public ServidorService(
@@ -54,13 +53,17 @@ public class ServidorService extends BaseGenericService<
             ServidorMapper mapper,
             SistemaRepository sistemaRepository,
             AliasRepository aliasRepository,
-            ProcuradorRepository procuradorRepository, EntityManager entityManager, DocumentoStorageService storageService
-    ){
+            ProcuradorRepository procuradorRepository,
+            DocumentoStorageService storageService,
+            SetorRepository setorRepository,
+            EntityManager entityManager
+            ){
         super(repository, mapper);
         this.servidorRepository = repository;
         this.sistemaRepository = sistemaRepository;
         this.aliasRepository = aliasRepository;
         this.procuradorRepository = procuradorRepository;
+        this.setorRepository = setorRepository;
         this.entityManager = entityManager;
         this.storageService = storageService;
     }
@@ -133,10 +136,25 @@ public class ServidorService extends BaseGenericService<
     // Busca os Servidores ATIVOS e aniversarianates do mês atual do sistema
     @Transactional(readOnly = true)
     public List<AniversarianteResponseDTO> obterAniversariantesPorMes(Integer month) {
-//        int currentMoth = LocalDate.now().getMonthValue();
         return servidorRepository.findAniversariantesDoMes(month);
     }
 
+    // Busc a servidores Ativos para emissão da folha de ponto
+    @Transactional(readOnly = true)
+    public List<FolhaPontoResponseDTO> obterFolhaDePontoPorSetorId(Integer setorId) {
+
+        // Valida se o setor informado é válido
+        if (setorId == null || setorId <= 0) {
+            throw new BusinessException("Um ID de setor válido deve ser informado.");
+        }
+
+        // Se válido, valida se ele existe no BD
+        if (!setorRepository.existsById(setorId)) {
+            throw new ResourceNotFoundException("O setor informado não foi encontrado na base de dados.");
+        }
+
+        return servidorRepository.findDadosFolhaPontoBySetorId(setorId);
+    }
 
     // Busca todos os registros dos Sevidores DESLIGADOS
     @Transactional(readOnly = true)

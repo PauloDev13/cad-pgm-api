@@ -3,6 +3,7 @@ package br.gov.rn.natal.cadpgmapi.controller;
 import br.gov.rn.natal.cadpgmapi.controller.generic.BaseController;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
@@ -99,6 +100,17 @@ public class ServidorController extends BaseController<
     ) {
         List<AniversarianteResponseDTO> lista = service.obterAniversariantesPorMes(month);
         return ResponseEntity.ok(lista);
+    }
+
+    // Busca servidores por setor para emitir a folha de ponto
+    @GetMapping("/folha-ponto")
+    @Operation(summary = "Gerar dados da Folha de Ponto por ID do Setor",
+            description = "Retorna nome, vínculo e modalidade de trabalho dos servidores ativos filtrados pelo ID do setor e ordenados alfabeticamente.")
+    public ResponseEntity<List<FolhaPontoResponseDTO>> getDadosFolhaPonto(
+            @RequestParam(name = "setorId") Integer setorId
+    ) {
+        List<FolhaPontoResponseDTO> folhaPonto = servidorService.obterFolhaDePontoPorSetorId(setorId);
+        return ResponseEntity.ok(folhaPonto);
     }
 
     // Faz o upload de fotos para o Servidores com status ATIVO

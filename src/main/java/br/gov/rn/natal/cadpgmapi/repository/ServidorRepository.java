@@ -2,6 +2,7 @@ package br.gov.rn.natal.cadpgmapi.repository;
 
 import br.gov.rn.natal.cadpgmapi.dashboard.dto.response.GraphItemDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
 import org.springframework.data.domain.Page;
@@ -36,6 +37,22 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
         ORDER BY DAY(s.dataNascimento) ASC, s.nome ASC
     """)
     List<AniversarianteResponseDTO>findAniversariantesDoMes(@Param("mes") Integer mes);
+
+    @Query("""
+        SELECT new br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoResponseDTO(
+            s.nome, 
+            v.nome, 
+            st.nome, 
+            s.tipoAtividade
+        )
+        FROM Servidor s
+        JOIN s.vinculo v
+        JOIN s.setor st
+        WHERE s.excluded = false 
+        AND st.id = :setorId
+        ORDER BY s.nome ASC
+    """)
+    List<FolhaPontoResponseDTO> findDadosFolhaPontoBySetorId(@Param("setorId") Integer setorId);
 
     /* ==================================
                    DASHBOARD
