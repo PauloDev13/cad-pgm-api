@@ -2,7 +2,7 @@ package br.gov.rn.natal.cadpgmapi.repository;
 
 import br.gov.rn.natal.cadpgmapi.dashboard.dto.response.GraphItemDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoProjectionDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
 import org.springframework.data.domain.Page;
@@ -38,21 +38,24 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
     """)
     List<AniversarianteResponseDTO>findAniversariantesDoMes(@Param("mes") Integer mes);
 
+    // Busca os registro para montar a folha de ponto
     @Query("""
-        SELECT new br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoResponseDTO(
+        SELECT new br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoProjectionDTO(
+            st.nome, 
             s.nome, 
             v.nome, 
-            st.nome, 
             s.tipoAtividade
         )
         FROM Servidor s
         JOIN s.vinculo v
         JOIN s.setor st
+        JOIN s.cargo c
         WHERE s.excluded = false 
-        AND st.id = :setorId
-        ORDER BY s.nome ASC
+        AND LOWER(v.nome) NOT IN ('terceirizado', 'terceirizado ferista', 'temporário')
+        AND LOWER(c.nome) NOT IN ('procurador', 'procurador geral', 'procurador adjunto', 'chefe de procuradoria especializada')
+        ORDER BY st.nome ASC, s.nome ASC
     """)
-    List<FolhaPontoResponseDTO> findDadosFolhaPontoBySetorId(@Param("setorId") Integer setorId);
+    List<FolhaPontoProjectionDTO> findAllDadosFolhaPonto();
 
     /* ==================================
                    DASHBOARD

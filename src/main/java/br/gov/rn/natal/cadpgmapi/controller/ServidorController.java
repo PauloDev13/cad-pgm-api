@@ -3,11 +3,11 @@ package br.gov.rn.natal.cadpgmapi.controller;
 import br.gov.rn.natal.cadpgmapi.controller.generic.BaseController;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoProjectionDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoSetorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
-import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.load_pdf.services.DocumentoStorageService;
 import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
 import br.gov.rn.natal.cadpgmapi.service.ServidorService;
@@ -20,7 +20,6 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.repository.query.Param;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -102,14 +101,14 @@ public class ServidorController extends BaseController<
         return ResponseEntity.ok(lista);
     }
 
-    // Busca servidores por setor para emitir a folha de ponto
+    // Busca registros para emitir a folha de ponto
     @GetMapping("/folha-ponto")
-    @Operation(summary = "Gerar dados da Folha de Ponto por ID do Setor",
-            description = "Retorna nome, vínculo e modalidade de trabalho dos servidores ativos filtrados pelo ID do setor e ordenados alfabeticamente.")
-    public ResponseEntity<List<FolhaPontoResponseDTO>> getDadosFolhaPonto(
-            @RequestParam(name = "setorId") Integer setorId
-    ) {
-        List<FolhaPontoResponseDTO> folhaPonto = servidorService.obterFolhaDePontoPorSetorId(setorId);
+    @Operation(summary = "Gerar dados Globais da Folha de Ponto",
+            description = "Retorna todos os servidores ativos, agrupados por setor. Ordenado alfabeticamente por Setor e Servidor.")
+    public ResponseEntity<List<FolhaPontoSetorResponseDTO>> getDadosFolhaPonto() {
+
+        List<FolhaPontoSetorResponseDTO> folhaPonto = servidorService.obterFolhaDePontoGeral();
+
         return ResponseEntity.ok(folhaPonto);
     }
 

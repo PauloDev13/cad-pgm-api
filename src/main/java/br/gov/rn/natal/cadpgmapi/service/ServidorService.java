@@ -5,9 +5,7 @@ import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
 import br.gov.rn.natal.cadpgmapi.audit.enums.AuditAction;
 import br.gov.rn.natal.cadpgmapi.audit.utils.AuditDiffUtil;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoResponseDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.*;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
@@ -18,10 +16,6 @@ import br.gov.rn.natal.cadpgmapi.repository.*;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.Predicate;
-import org.javers.core.Javers;
-import org.javers.core.JaversBuilder;
-import org.javers.core.diff.Diff;
-import org.javers.core.diff.changetype.ValueChange;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -30,10 +24,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
-import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ServidorService extends BaseGenericService<
@@ -141,20 +137,42 @@ public class ServidorService extends BaseGenericService<
 
     // Busc a servidores Ativos para emissão da folha de ponto
     @Transactional(readOnly = true)
-    public List<FolhaPontoResponseDTO> obterFolhaDePontoPorSetorId(Integer setorId) {
+    public List<FolhaPontoSetorResponseDTO> obterFolhaDePontoGeral() {
+        // 1. Busca todos os dados do banco (rápidos, planos e ordenados)
+        List<FolhaPontoProjectionDTO> projecoes = servidorRepository.findAllDadosFolhaPonto();
 
-        // Valida se o setor informado é válido
-        if (setorId == null || setorId <= 0) {
-            throw new BusinessException("Um ID de setor válido deve ser informado.");
-        }
+        // 2. Agrupa por nome do setor mantendo a ordem alfabética do SQL (LinkedHashMap)
+        Map<String, List<FolhaPontoProjectionDTO>> agrupadoPorSetor = projecoes.stream()
+                .collect(Collectors.groupingBy(
+                        FolhaPontoProjectionDTO::nomeSetor,
+                        LinkedHashMap::new, // Garante que a ordem não será bagunçada!
+                        Collectors.toList()
+                ));
 
-        // Se válido, valida se ele existe no BD
-        if (!setorRepository.existsById(setorId)) {
-            throw new ResourceNotFoundException("O setor informado não foi encontrado na base de dados.");
-        }
+        // 3. Converte o Map estruturado para a lista de DTOs final do Frontend
+        return agrupadoPorSetor.entrySet().stream()
+                .map(entry -> {
+                    String nomeSetor = entry.getKey();
 
-        return servidorRepository.findDadosFolhaPontoBySetorId(setorId);
+                    // Transforma a projection no DTO interno
+                    List<FolhaPontoServidorDTO> servidores = entry.getValue().stream()
+                            .map(p -> new FolhaPontoServidorDTO(
+                                    p.nomeServidor(),
+                                    p.vinculo(),
+                                    p.tipoAtividade()
+                            ))
+                            .collect(Collectors.toList());
+
+                    // Monta o nó principal (Nome, Total, Lista)
+                    return new FolhaPontoSetorResponseDTO(
+                            nomeSetor,
+                            servidores.size(),
+                            servidores
+                    );
+                })
+                .collect(Collectors.toList());
     }
+
 
     // Busca todos os registros dos Sevidores DESLIGADOS
     @Transactional(readOnly = true)

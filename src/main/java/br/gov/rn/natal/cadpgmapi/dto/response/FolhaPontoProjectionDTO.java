@@ -2,10 +2,10 @@ package br.gov.rn.natal.cadpgmapi.dto.response;
 
 import br.gov.rn.natal.cadpgmapi.enums.TipoAtividade;
 
-public record FolhaPontoResponseDTO(
-        String nome,
+// DTO para receber o retorno do SQL
+public record FolhaPontoProjectionDTO(
+        String nomeSetor,
+        String nomeServidor,
         String vinculo,
-        String setor,
         TipoAtividade tipoAtividade
-) {
-}
+) {}
