@@ -41,7 +41,8 @@ VALUES
 ('Procurador'),
 ('Procurador Adjunto'),
 ('Procurador Geral'),
-('Professor');
+('Professor'),
+('Coordenador Geral');
 
 INSERT INTO lotacao (`nome`)
 VALUES

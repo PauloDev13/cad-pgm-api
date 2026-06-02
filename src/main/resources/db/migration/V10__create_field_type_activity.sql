@@ -1,1 +1,0 @@
-ALTER TABLE servidor ADD COLUMN type_activity VARCHAR(20) DEFAULT NULL;
