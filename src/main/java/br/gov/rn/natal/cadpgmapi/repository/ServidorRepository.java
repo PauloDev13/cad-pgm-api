@@ -5,12 +5,10 @@ import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoProjectionDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
+import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -36,6 +34,13 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
         WHERE MONTH(s.dataNascimento) = :mes AND s.status.descricao = 'Ativo'
         ORDER BY DAY(s.dataNascimento) ASC, s.nome ASC
     """)
+    // Otimiza busca no banco de dados para grandes quantidades de registros
+    @QueryHints({
+            @QueryHint(name = "org.hibernate.readyOnly", value = "true"),
+            @QueryHint(name = "org.hibernate.cacheable", value = "true"),
+            @QueryHint(name = "org.jakarta.persistence.cache.retrieveMode", value = "USE"),
+            @QueryHint(name = "org.jakarta.persistence.cache.storeMode", value = "USE"),
+    })
     List<AniversarianteResponseDTO>findAniversariantesDoMes(@Param("mes") Integer mes);
 
     // Busca os registro para montar a folha de ponto

@@ -38,3 +38,6 @@ minio:
 server:
   port: 8081
   address: 127.0.0.1
+#  compression:
+#    enabled: true
+#    mime-types: text/html, text/xml, text/plain, application/json, application/xml, text/css, text/javascript, application/javascript
