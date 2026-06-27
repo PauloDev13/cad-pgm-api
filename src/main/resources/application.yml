@@ -24,7 +24,7 @@ server:
   tomcat:
     max-swallow-size: -1  # O valor -1 diz ao Tomcat para nunca fechar a conexão de forma abrupta
   compression:
-    enabled:
+    enabled: true
     mime-types: text/html, text/xml, text/plain, application/json, application/xml, text/css, text/javascript, application/javascript
 #logging:
 #  level:

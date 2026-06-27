@@ -430,7 +430,7 @@ public class ServidorService extends BaseGenericService<
     private void associarRelacoesMuitosParaMuitos(Servidor entity, ServidorRequestDTO dto) {
 
         // Associa Sistemas
-        if (dto.sistemaIds() != null && !dto.sistemaIds().isEmpty()) {
+        if (dto.sistemaIds() != null) {
 
             // Cria uma lista caso ela seja nula ou limpa a lista se ela existir
             if (entity.getSistemas() == null) {
@@ -446,7 +446,7 @@ public class ServidorService extends BaseGenericService<
         }
 
         // Associa Aliases de E-mail
-        if (dto.aliasIds() != null && !dto.aliasIds().isEmpty()) {
+        if (dto.aliasIds() != null) {
             if (entity.getAliases() == null) {
                 entity.setAliases(new HashSet<>());
             } else {
@@ -459,7 +459,7 @@ public class ServidorService extends BaseGenericService<
         }
 
         // Associa Procuradores
-        if (dto.procuradorIds() != null && !dto.procuradorIds().isEmpty()) {
+        if (dto.procuradorIds() != null) {
             if (entity.getProcuradores() == null) {
                 entity.setProcuradores(new HashSet<>());
             } else {
