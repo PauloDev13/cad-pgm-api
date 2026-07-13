@@ -23,7 +23,7 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
      CONSULTAS PARA STATUS ATIVOS
     *==================================== */
 
-    // Busca Data de Nascimento, Nome e Setor para montar a listagem de aviversariantes do mês
+    // Busca Data de Nascimento, Nome e Setor para montar a listagem de aniversariantes do mês
     @Query("""
         SELECT new br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO(
             s.dataNascimento,
@@ -46,16 +46,16 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
     // Busca os registro para montar a folha de ponto
     @Query("""
         SELECT new br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoProjectionDTO(
-            st.nome, 
-            s.nome, 
-            v.nome, 
+            st.nome,
+            s.nome,
+            v.nome,
             s.tipoAtividade
         )
         FROM Servidor s
         JOIN s.vinculo v
         JOIN s.setor st
         JOIN s.cargo c
-        WHERE s.excluded = false 
+        WHERE s.excluded = false
         AND LOWER(v.nome) NOT IN ('terceirizado', 'terceirizado ferista', 'temporário')
         AND LOWER(c.nome) NOT IN ('procurador', 'procurador geral', 'procurador adjunto', 'chefe de procuradoria especializada')
         ORDER BY st.nome ASC, s.nome ASC
@@ -67,7 +67,7 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
     *==================================== */
 
     // Conta o total de servidores ativos/na base
-    @Query("SELECT COUNT(s) FROM Servidor s WHERE s.excluded = false")
+    @Query("SELECT COUNT(*) FROM Servidor s WHERE s.excluded = false")
     Long countTotalServidoresAtivos();
 
     // Agrupa por Vínculo e já devolve no DTO
