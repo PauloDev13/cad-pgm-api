@@ -3,13 +3,11 @@ package br.gov.rn.natal.cadpgmapi.controller;
 import br.gov.rn.natal.cadpgmapi.controller.generic.BaseController;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoProjectionDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoSetorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.load_pdf.services.DocumentoStorageService;
-import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
 import br.gov.rn.natal.cadpgmapi.service.ServidorService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,19 +38,16 @@ public class ServidorController extends BaseController<
 
     private final ServidorService service;
     private final DocumentoStorageService storageService;
-    private final ServidorRepository servidorRepository;
     private final ServidorService servidorService;
 
     // Construtor
     public ServidorController(
             ServidorService service,
             DocumentoStorageService storageService,
-            ServidorRepository servidorRepository,
             ServidorService servidorService) {
         super(service);
         this.service = service;
         this.storageService = storageService;
-        this.servidorRepository = servidorRepository;
         this.servidorService = servidorService;
     }
 
@@ -156,7 +151,7 @@ public class ServidorController extends BaseController<
         return service.getExcludedById(id);
     }
 
-    // Aplica filragem paginada nos Servidores com status DESLIGADOS
+    // Aplica filtragem paginada nos Servidores com status DESLIGADOS
     @GetMapping("/searchExcluded")
     @Operation(summary = "Buscar por Nome ou CPF servidores com status excluído",
             description = "Informe o Nome ou o CPF via query parameter. " +
@@ -171,7 +166,7 @@ public class ServidorController extends BaseController<
     }
 
     // Muda o status de um Servidor de DESLIGADO para ATIVO (READMISSÃO)
-    // Usamos PATCH pois é uma alteração parcial/específica
+    // Usamos PATCH, pois é uma alteração parcial/específica
     @PatchMapping("/{id}/reactivate")
     @Operation(summary = "Reativa o cadastro que está com status excluído",
             description = "Inverte o fluxo do 'Soft Delete'")
@@ -207,7 +202,7 @@ public class ServidorController extends BaseController<
 
         // (Streaming + Cache)
         return ResponseEntity.ok()
-                // Diz pro navegador: "Guarde essa foto por 30 dias na sua memória"
+                // Diz para navegador: "Guarde essa foto por 30 dias na sua memória"
                 .cacheControl(CacheControl.maxAge(30, TimeUnit.DAYS))
                 .contentType(mediaType)
                 .body(new InputStreamResource(streamMinio));

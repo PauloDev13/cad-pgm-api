@@ -67,7 +67,7 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
     *==================================== */
 
     // Conta o total de servidores ativos/na base
-    @Query("SELECT COUNT(*) FROM Servidor s WHERE s.excluded = false")
+    @Query("SELECT COUNT(s.excluded) FROM Servidor s WHERE s.excluded = false")
     Long countTotalServidoresAtivos();
 
     // Agrupa por Vínculo e já devolve no DTO

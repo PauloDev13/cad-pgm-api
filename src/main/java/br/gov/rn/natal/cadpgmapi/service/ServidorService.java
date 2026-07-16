@@ -16,6 +16,7 @@ import br.gov.rn.natal.cadpgmapi.repository.*;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -62,6 +63,29 @@ public class ServidorService extends BaseGenericService<
         this.setorRepository = setorRepository;
         this.entityManager = entityManager;
         this.storageService = storageService;
+    }
+
+    /* ============================================
+        OVERRIDE DE MÉTODOS PARA LIMPAR O CACHE
+        DA CONTAGEM DO TOTAL DE SERVIDORES
+    * =============================================*/
+
+    @Override
+    @CacheEvict(value = "dashboardResumoCache", allEntries = true)
+    public ServidorResponseDTO create(ServidorRequestDTO dto) {
+        return super.create(dto);
+    }
+
+    @Override
+    @CacheEvict(value = "dashboardResumoCache", allEntries = true)
+    public ServidorResponseDTO update(Integer id, ServidorRequestDTO dto) {
+        return super.update(id, dto);
+    }
+
+    @Override
+    @CacheEvict(value = "dashboardResumoCache", allEntries = true)
+    public void delete(Integer id) {
+        super.delete(id);
     }
 
     /* ============================================
@@ -213,7 +237,10 @@ public class ServidorService extends BaseGenericService<
 
     // Método que "reativa" registros de um Servidor DESLIGADO para ATIVOS
     @Transactional
+    // Ativa a auditoria na entidade Servidor
     @Auditable(action = AuditAction.UPDATE, entity = "Servidor")
+    // Limpa o cache da contagem do total de Servidores
+    @CacheEvict(value = "dashboardResumoCache", allEntries = true)
     public ServidorResponseDTO reativated(Integer id, ServidorRequestDTO dto) {
         // A. Primeiro, usamos o "Raio-X" para garantir que o registro existe
         Optional<ServidorShadowProjection> shadow = servidorRepository.checkCpfStatus(dto.cpf().trim());
