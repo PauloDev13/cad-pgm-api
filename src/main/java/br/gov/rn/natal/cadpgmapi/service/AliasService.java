@@ -7,10 +7,14 @@ import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.AliasMapper;
 import br.gov.rn.natal.cadpgmapi.repository.AliasRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 public class AliasService extends BaseGenericService<Alias, AliasRequestDTO, AliasResponseDTO, Integer> {
@@ -22,7 +26,42 @@ public class AliasService extends BaseGenericService<Alias, AliasRequestDTO, Ali
         this.aliasRepository = repository;
     }
 
+    // ================================================================
+    // MÉTODOS SOBRESCRITOS EXCLUSIVAMENTE PARA GERENCIAMENTO DO CACHE
+    // ================================================================
+
+    // CACHE DA LISTA DE DROPDOWNS (Sobrescrevendo o método avô)
+    @Override
+    @Cacheable(value = "aliasesCache")
+    public List<AliasResponseDTO> findAllSelect() {
+        return super.findAllSelect();
+    }
+
+    // CRIAÇÃO: Esvazia a gaveta "aliasesCache"
+    @Override
+    @CacheEvict(value = "aliasesCache", allEntries = true)
+    public AliasResponseDTO create(AliasRequestDTO dto) {
+        return super.create(dto);
+    }
+
+    // ATUALIZAÇÃO: Esvazia a gaveta "aliasesCache"
+    @Override
+    @CacheEvict(value = "aliasesCache", allEntries = true)
+    public AliasResponseDTO update(Integer id, AliasRequestDTO dto) {
+        return super.update(id, dto);
+    }
+
+    // EXCLUSÃO: Esvazia a gaveta "aliasesCache"
+    @Override
+    @CacheEvict(value = "aliasesCache", allEntries = true)
+    public void delete(Integer id) {
+        super.delete(id);
+    }
+
+    // ================================================================
     // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
+    // ================================================================
+
     @Override
     protected void beforeCreate(AliasRequestDTO dto) {
         if (aliasRepository.existsByEmail(dto.email().trim())) {
@@ -37,7 +76,7 @@ public class AliasService extends BaseGenericService<Alias, AliasRequestDTO, Ali
         if (!existingAlias.getEmail().equalsIgnoreCase(dto.email())) {
             if (aliasRepository.existsByEmail(dto.email())) {
                 throw new BusinessException("Este e-mail (<strong>" + dto.email() +
-                        "</strong>) já está em usoo por outro <strong>Alias</strong>.");
+                        "</strong>) já está em uso por outro <strong>Alias</strong>.");
             }
         }
     }

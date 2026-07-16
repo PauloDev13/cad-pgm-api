@@ -65,10 +65,9 @@ public class ServidorService extends BaseGenericService<
         this.storageService = storageService;
     }
 
-    /* ============================================
-        OVERRIDE DE MÉTODOS PARA LIMPAR O CACHE
-        DA CONTAGEM DO TOTAL DE SERVIDORES
-    * =============================================*/
+    // ================================================================
+    // MÉTODOS SOBRESCRITOS EXCLUSIVAMENTE PARA GERENCIAMENTO DO CACHE
+    // ================================================================
 
     @Override
     @CacheEvict(value = "dashboardResumoCache", allEntries = true)

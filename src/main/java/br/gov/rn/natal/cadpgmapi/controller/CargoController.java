@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/cargos")
 @Tag(name = "Cargos", description = "API de gestão de cargos")
 public class CargoController extends BaseNameController<Cargo, CargoRequestDTO, CargoResponseDTO, Integer> {
+
     // Construtor
     public CargoController(CargoService service) {
         super(service);

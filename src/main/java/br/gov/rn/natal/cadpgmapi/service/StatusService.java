@@ -7,21 +7,60 @@ import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.StatusMapper;
 import br.gov.rn.natal.cadpgmapi.repository.StatusRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 public class StatusService extends BaseGenericService<Status, StatusRequestDTO, StatusResponseDTO, Integer> {
     private final StatusRepository statusRepository;
 
+    // Construtor
     protected StatusService(StatusRepository repository, StatusMapper mapper) {
         super(repository, mapper);
         this.statusRepository = repository;
     }
 
+    // ================================================================
+    // MÉTODOS SOBRESCRITOS EXCLUSIVAMENTE PARA GERENCIAMENTO DO CACHE
+    // ================================================================
+
+    // CACHE DA LISTA DE DROPDOWNS (Sobrescrevendo o método avô)
+    @Override
+    @Cacheable(value = "statusCache")
+    public List<StatusResponseDTO> findAllSelect() {
+        return super.findAllSelect();
+    }
+
+    // CRIAÇÃO: Esvazia a gaveta "statusCache"
+    @Override
+    @CacheEvict(value = "statusCache", allEntries = true)
+    public StatusResponseDTO create(StatusRequestDTO dto) {
+        return super.create(dto);
+    }
+
+    // ATUALIZAÇÃO: Esvazia a gaveta "statusCache"
+    @Override
+    @CacheEvict(value = "statusCache", allEntries = true)
+    public StatusResponseDTO update(Integer id, StatusRequestDTO dto) {
+        return super.update(id, dto);
+    }
+
+    // EXCLUSÃO: Esvazia a gaveta "statusCache"
+    @Override
+    @CacheEvict(value = "statusCache", allEntries = true)
+    public void delete(Integer id) {
+        super.delete(id);
+    }
+
+    // ================================================================
     // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
+    // ================================================================
     @Override
     protected void beforeCreate(StatusRequestDTO dto) {
         if (statusRepository.existsByDescricao(dto.descricao().trim())) {

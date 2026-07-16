@@ -12,10 +12,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/setores")
 @Tag(name = "Setores", description = "API de gestão de setores")
 public class SetorController extends BaseNameController<Setor, SetorRequestDTO, SetorResponseDTO, Integer> {
+
     // Construtor
     public SetorController(SetorService service) {
         super(service);
-
     }
 
     // Implementação obrigatória do méthod abstrato do pai!

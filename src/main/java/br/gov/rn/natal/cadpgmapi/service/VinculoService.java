@@ -7,18 +7,58 @@ import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.VinculoMapper;
 import br.gov.rn.natal.cadpgmapi.repository.VinculoRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseNameGenericService;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class VinculoService extends BaseNameGenericService<Vinculo, VinculoRequestDTO, VinculoResponseDTO, Integer> {
     private final VinculoRepository vinculoRepository;
-    
+
+    // Construtor
     protected VinculoService(VinculoRepository repository, VinculoMapper mapper) {
         super(repository, mapper);
         this.vinculoRepository = repository;
     }
 
+    // ================================================================
+    // MÉTODOS SOBRESCRITOS EXCLUSIVAMENTE PARA GERENCIAMENTO DO CACHE
+    // ================================================================
+
+    // CACHE DA LISTA DE DROPDOWNS (Sobrescrevendo o método avô)
+    @Override
+    @Cacheable(value = "vinculosCache")
+    public List<VinculoResponseDTO> findAllSelect() {
+        return super.findAllSelect();
+    }
+
+    // CRIAÇÃO: Esvazia a gaveta "vinculosCache"
+    @Override
+    @CacheEvict(value = "vinculosCache", allEntries = true)
+    public VinculoResponseDTO create(VinculoRequestDTO dto) {
+        return super.create(dto);
+    }
+
+    // ATUALIZAÇÃO: Esvazia a gaveta "vinculosCache"
+    @Override
+    @CacheEvict(value = "vinculosCache", allEntries = true)
+    public VinculoResponseDTO update(Integer id, VinculoRequestDTO dto) {
+        return super.update(id, dto);
+    }
+
+    // EXCLUSÃO: Esvazia a gaveta "vinculosCache"
+    @Override
+    @CacheEvict(value = "vinculosCache", allEntries = true)
+    public void delete(Integer id) {
+        super.delete(id);
+    }
+
+    // ================================================================
     // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
+    // ================================================================
+
     @Override
     protected void beforeCreate(VinculoRequestDTO dto) {
         if (vinculoRepository.existsByNome(dto.nome().trim())) {

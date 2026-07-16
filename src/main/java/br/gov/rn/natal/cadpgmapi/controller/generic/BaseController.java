@@ -87,7 +87,7 @@ public abstract class BaseController<E, Req, Res, ID> {
 
     @GetMapping("/select")
     @Operation(summary = "Método genérico para buscar todos os registros",
-            description = "Retorna os todos registros de uma entidade")
+            description = "Retorna os todos registros sem paginação")
     public List<Res> findAllSelect() {
         // Retorna 200 OK com a lista sem paginação para os componentes selects e autocomplete
         return service.findAllSelect();

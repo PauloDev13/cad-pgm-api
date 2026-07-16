@@ -7,7 +7,11 @@ import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.SistemaMapper;
 import br.gov.rn.natal.cadpgmapi.repository.SistemaRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseNameGenericService;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class SistemaService extends BaseNameGenericService<
@@ -21,7 +25,41 @@ public class SistemaService extends BaseNameGenericService<
         this.sistemaRepository = repository;
     }
 
+    // ================================================================
+    // MÉTODOS SOBRESCRITOS EXCLUSIVAMENTE PARA GERENCIAMENTO DO CACHE
+    // ================================================================
+
+    // CACHE DA LISTA DE DROPDOWNS (Sobrescrevendo o método avô)
+    @Override
+    @Cacheable(value = "sistemasCache")
+    public List<SistemaResponseDTO> findAllSelect() {
+        return super.findAllSelect();
+    }
+
+    // CRIAÇÃO: Esvazia a gaveta "sistemasCache"
+    @Override
+    @CacheEvict(value = "sistemasCache", allEntries = true)
+    public SistemaResponseDTO create(SistemaRequestDTO dto) {
+        return super.create(dto);
+    }
+
+    // ATUALIZAÇÃO: Esvazia a gaveta "sistemasCache"
+    @Override
+    @CacheEvict(value = "sistemasCache", allEntries = true)
+    public SistemaResponseDTO update(Integer id, SistemaRequestDTO dto) {
+        return super.update(id, dto);
+    }
+
+    // EXCLUSÃO: Esvazia a gaveta "sistemasCache"
+    @Override
+    @CacheEvict(value = "sistemasCache", allEntries = true)
+    public void delete(Integer id) {
+        super.delete(id);
+    }
+
+    // ================================================================
     // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
+    // ================================================================
     @Override
     protected void beforeCreate(SistemaRequestDTO dto) {
         if (sistemaRepository.existsByNome(dto.nome().trim())) {
