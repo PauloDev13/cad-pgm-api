@@ -60,6 +60,9 @@ public class SecurityConfig {
                         // O resto da boate inteira: Só entra quem tem pulseira (autenticado)
                         .anyRequest().authenticated()
                 )
+                // Libera para que a classe EtagConfir gerencie o cache
+                .headers(headers -> headers
+                        .cacheControl(cache -> cache.disable()))
                 // Colocamos o nosso Leão de Chácara ANTES do guarda padrão do Spring Security
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
