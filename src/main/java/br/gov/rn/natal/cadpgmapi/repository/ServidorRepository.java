@@ -19,8 +19,18 @@ import java.util.Optional;
 @Repository
 public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
         JpaSpecificationExecutor<Servidor> {
+
     /* ==================================
      CONSULTAS PARA STATUS ATIVOS
+    *==================================== */
+
+    // Substitui o soft delete
+    @Modifying
+    @Query("UPDATE Servidor s SET s.excluded = true, s.excludedDate = CURRENT_TIMESTAMP WHERE s.id = :id")
+    void softDeleteByID(@Param("id") Integer id);
+
+    /* ==================================
+                   RELATÓRIOS
     *==================================== */
 
     // Busca Data de Nascimento, Nome e Setor para montar a listagem de aniversariantes do mês

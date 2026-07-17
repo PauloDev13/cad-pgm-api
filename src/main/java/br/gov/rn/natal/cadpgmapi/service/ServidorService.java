@@ -81,15 +81,20 @@ public class ServidorService extends BaseGenericService<
         return super.update(id, dto);
     }
 
+    // Esse método sobrescrito além de controlar o cache, sobstitui o soft delete por um update
     @Override
     @CacheEvict(value = "dashboardResumoCache", allEntries = true)
     public void delete(Integer id) {
-        super.delete(id);
+        Servidor entity = servidorRepository.findById(id).get();
+
+        this.beforeDelete(entity);
+
+        this.servidorRepository.softDeleteByID(id);
     }
 
-    /* ============================================
+    /* ==========================================
         MÉTODOS GET
-    * =============================================*/
+    =============================================*/
     // Busca paginada com filtros dinâmicos para registros de Servidores ATIVOS
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> findByFilters(
@@ -438,9 +443,9 @@ public class ServidorService extends BaseGenericService<
             throw new BusinessException("Não é possível excluir um servidor sem status definido");
         }
         // Compara a descrição ignorando maiúsculas e minúsculas
-        if (!entity.getStatus().getDescricao().equalsIgnoreCase("Inativo")) {
-            throw new BusinessException("Somente Servidor com Status (<strong>'INATIVO'</strong>) pode ser removido." +
-                    "Status atual: (<strong>'" + entity.getStatus().getDescricao().toUpperCase() + "'</strong>)."
+        if (!entity.getStatus().getDescricao().equalsIgnoreCase("Desligado")) {
+            throw new BusinessException("Somente Servidor com Status (<strong>'DESLIGADO'</strong>) pode ser removido." +
+                    " Status atual: (<strong>'" + entity.getStatus().getDescricao().toUpperCase() + "'</strong>)."
             );
         }
 
