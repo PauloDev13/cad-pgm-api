@@ -7,8 +7,8 @@ import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.SistemaMapper;
 import br.gov.rn.natal.cadpgmapi.repository.SistemaRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseNameGenericService;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,8 +20,11 @@ public class SistemaService extends BaseNameGenericService<
     private final SistemaRepository sistemaRepository;
 
     // Construtor
-    public SistemaService(SistemaRepository repository, SistemaMapper mapper) {
-        super(repository, mapper);
+    public SistemaService(
+            SistemaRepository repository,
+            SistemaMapper mapper,
+            ApplicationEventPublisher eventPublisher) {
+        super(repository, mapper, eventPublisher);
         this.sistemaRepository = repository;
     }
 
@@ -34,27 +37,6 @@ public class SistemaService extends BaseNameGenericService<
     @Cacheable(value = "sistemasCache")
     public List<SistemaResponseDTO> findAllSelect() {
         return super.findAllSelect();
-    }
-
-    // CRIAÇÃO: Esvazia a gaveta "sistemasCache"
-    @Override
-    @CacheEvict(value = "sistemasCache", allEntries = true)
-    public SistemaResponseDTO create(SistemaRequestDTO dto) {
-        return super.create(dto);
-    }
-
-    // ATUALIZAÇÃO: Esvazia a gaveta "sistemasCache"
-    @Override
-    @CacheEvict(value = "sistemasCache", allEntries = true)
-    public SistemaResponseDTO update(Integer id, SistemaRequestDTO dto) {
-        return super.update(id, dto);
-    }
-
-    // EXCLUSÃO: Esvazia a gaveta "sistemasCache"
-    @Override
-    @CacheEvict(value = "sistemasCache", allEntries = true)
-    public void delete(Integer id) {
-        super.delete(id);
     }
 
     // ================================================================

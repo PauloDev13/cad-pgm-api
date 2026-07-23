@@ -18,6 +18,7 @@ import br.gov.rn.natal.cadpgmapi.mapper.UsuarioUpdateMapper;
 import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -45,9 +46,10 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
             UsuarioMapper mapper,
             RegisterUserMapper registerUserMapper,
             UsuarioUpdateMapper usuarioUpdateMapper,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            ApplicationEventPublisher eventPublisher
     ) {
-        super(repository, mapper);
+        super(repository, mapper, eventPublisher);
         this.usuarioRepository = repository;
         this.usuarioUpdateMapper = usuarioUpdateMapper;
         this.passwordEncoder = passwordEncoder;

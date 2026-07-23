@@ -6,8 +6,10 @@ import br.gov.rn.natal.cadpgmapi.audit.enums.AuditAction;
 import br.gov.rn.natal.cadpgmapi.audit.utils.AuditDiffUtil;
 import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.mapper.generic.BaseMapper;
+import br.gov.rn.natal.cadpgmapi.utils.EntityChangeEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,20 +21,27 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
     protected final JpaRepository<E, ID> repository;
     protected final BaseMapper<E, Req, Res> mapper;
 
+    // Injetamos o publicador de eventos do Spring
+    protected final ApplicationEventPublisher eventPublisher;
+
     @PersistenceContext
     protected EntityManager entityManager;
 
     // Construtor
     protected BaseGenericService(
             JpaRepository<E, ID> repository,
-            BaseMapper<E, Req, Res> mapper
+            BaseMapper<E, Req, Res> mapper,
+            ApplicationEventPublisher eventPublisher
 
     ) {
         this.repository = repository;
         this.mapper = mapper;
+        this.eventPublisher = eventPublisher;
     }
 
-    // HOOKS (GANCHOS)
+    /* ============================================
+                HOOKS (GANCHOS)
+    * =============================================*/
     // Eles ficam vazios por padrão. Os filhos sobrescrevem se precisarem.
     protected void beforeCreate(Req dto) {}
     protected void beforeUpdate(Req dto, E existingEntity) {}
@@ -58,6 +67,8 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
 
         afterSave(entity, dto);
 
+        // Avisa que houve mudança!
+        eventPublisher.publishEvent(new EntityChangeEvent(entity));
         return mapper.toDto(entity);
     }
 
@@ -98,7 +109,7 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
 
         // 3. Salva e sincroniza
         existingEntity = repository.save(existingEntity);
-        // A. Garante que os dados foram pro banco antes do próximo passo
+        // A. Garante que os dados foram para o banco antes do próximo passo
         repository.flush();
         // B. Garante nomes das chaves estrangeiras
         entityManager.refresh(existingEntity);
@@ -116,6 +127,9 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
         } else {
             AuditContextHolder.setLogDetalhes("Nenhuma atualização detectada nos dados.");
         }
+
+        // Avisa que houve mudança!
+        eventPublisher.publishEvent(new EntityChangeEvent(existingEntity));
 
         // O retorno já virá "hidratado" se o filho usou o entityManager.refresh no afterSave
         return newSnapshot;
@@ -143,5 +157,8 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
 
         // 5. Gancho DEPOIS de excluir (Limpar caches, disparar emails, etc.)
         afterDelete(existingEntity);
+
+        // Avisa que houve mudança!
+        eventPublisher.publishEvent(new EntityChangeEvent(existingEntity));
     }
 }

@@ -9,6 +9,7 @@ import br.gov.rn.natal.cadpgmapi.repository.StatusRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,8 +22,11 @@ public class StatusService extends BaseGenericService<Status, StatusRequestDTO, 
     private final StatusRepository statusRepository;
 
     // Construtor
-    protected StatusService(StatusRepository repository, StatusMapper mapper) {
-        super(repository, mapper);
+    protected StatusService(
+            StatusRepository repository,
+            StatusMapper mapper,
+            ApplicationEventPublisher eventPublisher) {
+        super(repository, mapper, eventPublisher);
         this.statusRepository = repository;
     }
 
@@ -35,27 +39,6 @@ public class StatusService extends BaseGenericService<Status, StatusRequestDTO, 
     @Cacheable(value = "statusCache")
     public List<StatusResponseDTO> findAllSelect() {
         return super.findAllSelect();
-    }
-
-    // CRIAÇÃO: Esvazia a gaveta "statusCache"
-    @Override
-    @CacheEvict(value = "statusCache", allEntries = true)
-    public StatusResponseDTO create(StatusRequestDTO dto) {
-        return super.create(dto);
-    }
-
-    // ATUALIZAÇÃO: Esvazia a gaveta "statusCache"
-    @Override
-    @CacheEvict(value = "statusCache", allEntries = true)
-    public StatusResponseDTO update(Integer id, StatusRequestDTO dto) {
-        return super.update(id, dto);
-    }
-
-    // EXCLUSÃO: Esvazia a gaveta "statusCache"
-    @Override
-    @CacheEvict(value = "statusCache", allEntries = true)
-    public void delete(Integer id) {
-        super.delete(id);
     }
 
     // ================================================================

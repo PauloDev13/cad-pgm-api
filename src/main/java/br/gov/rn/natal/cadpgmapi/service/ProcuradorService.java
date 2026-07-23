@@ -7,6 +7,7 @@ import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.ProcuradorMapper;
 import br.gov.rn.natal.cadpgmapi.repository.ProcuradorRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseNameGenericService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,8 +19,9 @@ public class ProcuradorService extends
     // Construtor
     public ProcuradorService(
             ProcuradorRepository repository,
-            ProcuradorMapper mapper) {
-        super(repository, mapper);
+            ProcuradorMapper mapper,
+            ApplicationEventPublisher eventPublisher) {
+        super(repository, mapper, eventPublisher);
         this.procuradorRepository = repository;
     }
 

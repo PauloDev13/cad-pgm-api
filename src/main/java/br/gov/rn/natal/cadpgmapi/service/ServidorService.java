@@ -14,9 +14,13 @@ import br.gov.rn.natal.cadpgmapi.mapper.ServidorMapper;
 import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
 import br.gov.rn.natal.cadpgmapi.repository.*;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
+import br.gov.rn.natal.cadpgmapi.utils.EntityChangeEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.transaction.TransactionScoped;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -53,9 +57,10 @@ public class ServidorService extends BaseGenericService<
             ProcuradorRepository procuradorRepository,
             DocumentoStorageService storageService,
             SetorRepository setorRepository,
-            EntityManager entityManager
+            EntityManager entityManager,
+            ApplicationEventPublisher eventPublisher
             ){
-        super(repository, mapper);
+        super(repository, mapper, eventPublisher);
         this.servidorRepository = repository;
         this.sistemaRepository = sistemaRepository;
         this.aliasRepository = aliasRepository;
@@ -65,38 +70,34 @@ public class ServidorService extends BaseGenericService<
         this.storageService = storageService;
     }
 
-    // ================================================================
-    // MÉTODOS SOBRESCRITOS EXCLUSIVAMENTE PARA GERENCIAMENTO DO CACHE
-    // ================================================================
+    /*================================================================
+                        MÉTODOS SOBRESCRITOS
+      ================================================================ */
 
     @Override
-    @CacheEvict(value = "dashboardResumoCache", allEntries = true)
-    public ServidorResponseDTO create(ServidorRequestDTO dto) {
-        return super.create(dto);
+    @Transactional(readOnly = true)
+    public List<ServidorResponseDTO> findAllSelect() {
+        // Bloqueia os registros com excluded = false. Eles não vão na lista
+        Specification<Servidor> spec = (root, query, cb) ->
+                cb.isFalse(root.get("excluded"));
+        return mapper.toDtoList(servidorRepository.findAll(spec));
     }
 
     @Override
-    @CacheEvict(value = "dashboardResumoCache", allEntries = true)
-    public ServidorResponseDTO update(Integer id, ServidorRequestDTO dto) {
-        return super.update(id, dto);
+    @Transactional(readOnly = true)
+    public Page<ServidorResponseDTO> findAll(Pageable pageable) {
+        // Envia uma instrução direta pro banco: "WHERE excluded = false"
+        Specification<Servidor> spec = (root, query, cb) ->
+                cb.isFalse(root.get("excluded"));
+        return servidorRepository.findAll(spec, pageable).map(mapper::toDto);
     }
 
-    // Esse método sobrescrito além de controlar o cache, sobstitui o soft delete por um update
-    @Override
-    @CacheEvict(value = "dashboardResumoCache", allEntries = true)
-    public void delete(Integer id) {
-        Servidor entity = servidorRepository.findById(id).get();
-
-        this.beforeDelete(entity);
-
-        this.servidorRepository.softDeleteByID(id);
-    }
-
-    /* ==========================================
-        MÉTODOS GET
-    =============================================*/
+    /*==========================================
+                    MÉTODOS GET
+      ==========================================*/
     // Busca paginada com filtros dinâmicos para registros de Servidores ATIVOS
     @Transactional(readOnly = true)
+//    @Cacheable(value = "servidoresCache")
     public Page<ServidorResponseDTO> findByFilters(
             String cpf,
             String matricula,
@@ -110,6 +111,9 @@ public class ServidorService extends BaseGenericService<
         Specification<Servidor> spec = (root, query, cb) -> {
             // Começa neutro (1=1)
             Predicate predicate = cb.conjunction();
+
+            // Bloqueia os registros com excluded = false. Eles não vão na lista
+            predicate = cb.and(predicate, cb.isFalse(root.get("excluded")));
 
             // Se o CPF for imformado, monta o SQL de busca por CPF
             if (cpf != null && !cpf.trim().isEmpty()) {
@@ -163,7 +167,7 @@ public class ServidorService extends BaseGenericService<
         return servidorRepository.findAniversariantesDoMes(month);
     }
 
-    // Busc a servidores Ativos para emissão da folha de ponto
+    // Busca servidores Ativos para emissão da folha de ponto
     @Transactional(readOnly = true)
     public List<FolhaPontoSetorResponseDTO> obterFolhaDePontoGeral() {
         // 1. Busca todos os dados do banco (rápidos, planos e ordenados)
@@ -243,8 +247,6 @@ public class ServidorService extends BaseGenericService<
     @Transactional
     // Ativa a auditoria na entidade Servidor
     @Auditable(action = AuditAction.UPDATE, entity = "Servidor")
-    // Limpa o cache da contagem do total de Servidores
-    @CacheEvict(value = "dashboardResumoCache", allEntries = true)
     public ServidorResponseDTO reativated(Integer id, ServidorRequestDTO dto) {
         // A. Primeiro, usamos o "Raio-X" para garantir que o registro existe
         Optional<ServidorShadowProjection> shadow = servidorRepository.checkCpfStatus(dto.cpf().trim());
@@ -283,6 +285,8 @@ public class ServidorService extends BaseGenericService<
         } else {
             AuditContextHolder.setLogDetalhes("READMISSÃO: Nenhuma alteração de dados detectada.");
         }
+
+        this.eventPublisher.publishEvent(new EntityChangeEvent(servidor));
 
         return newSnapshot;
 
@@ -443,8 +447,8 @@ public class ServidorService extends BaseGenericService<
             throw new BusinessException("Não é possível excluir um servidor sem status definido");
         }
         // Compara a descrição ignorando maiúsculas e minúsculas
-        if (!entity.getStatus().getDescricao().equalsIgnoreCase("Desligado")) {
-            throw new BusinessException("Somente Servidor com Status (<strong>'DESLIGADO'</strong>) pode ser removido." +
+        if (!entity.getStatus().getDescricao().equalsIgnoreCase("Inativo")) {
+            throw new BusinessException("Somente Servidor com Status (<strong>'INATIVO'</strong>) pode ser removido." +
                     " Status atual: (<strong>'" + entity.getStatus().getDescricao().toUpperCase() + "'</strong>)."
             );
         }

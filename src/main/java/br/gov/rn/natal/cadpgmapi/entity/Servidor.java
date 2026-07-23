@@ -3,6 +3,8 @@ package br.gov.rn.natal.cadpgmapi.entity;
 import br.gov.rn.natal.cadpgmapi.enums.TipoAtividade;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.FilterDef;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -16,10 +18,8 @@ import java.util.Set;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
-// 1. Substitui o DELETE físico por um UPDATE no banco
+// Substitui o DELETE físico por um UPDATE no banco (Soft Delete)
 @SQLDelete(sql = "UPDATE servidor SET excluded = true, excluded_date = CURRENT_TIMESTAMP WHERE id = ?")
-// 2. Filtra automaticamente todos os SELECTs para ignorar os excluídos
-@SQLRestriction("excluded = false")
 public class Servidor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

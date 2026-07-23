@@ -9,6 +9,7 @@ import br.gov.rn.natal.cadpgmapi.repository.SetorRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseNameGenericService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,8 +19,11 @@ public class SetorService extends BaseNameGenericService<Setor, SetorRequestDTO,
     private final SetorRepository setorRepository;
 
     // Construtor
-    public SetorService(SetorRepository repository, SetorMapper mapper) {
-        super(repository, mapper);
+    public SetorService(
+            SetorRepository repository,
+            SetorMapper mapper,
+            ApplicationEventPublisher eventPublisher) {
+        super(repository, mapper, eventPublisher);
         this.setorRepository = repository;
     }
 
@@ -32,27 +36,6 @@ public class SetorService extends BaseNameGenericService<Setor, SetorRequestDTO,
     @Cacheable(value = "setoresCache")
     public List<SetorResponseDTO> findAllSelect(){
         return super.findAllSelect();
-    }
-
-    // CRIAÇÃO: Esvazia a gaveta "setoresCache"
-    @Override
-    @CacheEvict(value = "setoresCache", allEntries = true)
-    public SetorResponseDTO create(SetorRequestDTO dto) {
-        return super.create(dto);
-    }
-
-    // ATUALIZAÇÃO: Esvazia a gaveta "setoresCache"
-    @Override
-    @CacheEvict(value = "setoresCache", allEntries = true)
-    public SetorResponseDTO update(Integer id, SetorRequestDTO dto) {
-        return super.update(id, dto);
-    }
-
-    // EXCLUSÃO: Esvazia a gaveta "setoresCache"
-    @Override
-    @CacheEvict(value = "setoresCache", allEntries = true)
-    public void delete(Integer id) {
-        super.delete(id);
     }
 
     // ================================================================

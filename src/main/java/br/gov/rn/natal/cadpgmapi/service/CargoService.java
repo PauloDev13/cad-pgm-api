@@ -7,8 +7,8 @@ import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.CargoMapper;
 import br.gov.rn.natal.cadpgmapi.repository.CargoRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseNameGenericService;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,8 +18,11 @@ public class CargoService extends BaseNameGenericService<Cargo, CargoRequestDTO,
     private final CargoRepository cargoRepository;
 
     // Construtor
-    public CargoService(CargoRepository repository, CargoMapper mapper) {
-        super(repository, mapper);
+    public CargoService(
+            CargoRepository repository,
+            CargoMapper mapper,
+            ApplicationEventPublisher eventPublisher) {
+        super(repository, mapper, eventPublisher);
         this.cargoRepository = repository;
     }
 
@@ -32,27 +35,6 @@ public class CargoService extends BaseNameGenericService<Cargo, CargoRequestDTO,
     @Cacheable(value = "cargosCache")
     public List<CargoResponseDTO> findAllSelect() {
         return super.findAllSelect();
-    }
-
-    // CRIAÇÃO: Esvazia a gaveta "cargosCache"
-    @Override
-    @CacheEvict(value = "cargosCache", allEntries = true)
-    public CargoResponseDTO create(CargoRequestDTO dto) {
-        return super.create(dto);
-    }
-
-    // ATUALIZAÇÃO: Esvazia a gaveta "cargosCache"
-    @Override
-    @CacheEvict(value = "cargosCache", allEntries = true)
-    public CargoResponseDTO update(Integer id, CargoRequestDTO dto) {
-        return super.update(id, dto);
-    }
-
-    // EXCLUSÃO: Esvazia a gaveta "cargosCache"
-    @Override
-    @CacheEvict(value = "cargosCache", allEntries = true)
-    public void delete(Integer id) {
-        super.delete(id);
     }
 
     // ================================================================

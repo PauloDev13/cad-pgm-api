@@ -7,8 +7,8 @@ import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.AliasMapper;
 import br.gov.rn.natal.cadpgmapi.repository.AliasRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,8 +21,11 @@ public class AliasService extends BaseGenericService<Alias, AliasRequestDTO, Ali
     private final AliasRepository aliasRepository;
 
     // Construtor
-    public AliasService(AliasRepository repository, AliasMapper mapper) {
-        super(repository, mapper);
+    public AliasService(
+            AliasRepository repository,
+            AliasMapper mapper,
+            ApplicationEventPublisher eventPublisher) {
+        super(repository, mapper, eventPublisher);
         this.aliasRepository = repository;
     }
 
@@ -35,27 +38,6 @@ public class AliasService extends BaseGenericService<Alias, AliasRequestDTO, Ali
     @Cacheable(value = "aliasesCache")
     public List<AliasResponseDTO> findAllSelect() {
         return super.findAllSelect();
-    }
-
-    // CRIAÇÃO: Esvazia a gaveta "aliasesCache"
-    @Override
-    @CacheEvict(value = "aliasesCache", allEntries = true)
-    public AliasResponseDTO create(AliasRequestDTO dto) {
-        return super.create(dto);
-    }
-
-    // ATUALIZAÇÃO: Esvazia a gaveta "aliasesCache"
-    @Override
-    @CacheEvict(value = "aliasesCache", allEntries = true)
-    public AliasResponseDTO update(Integer id, AliasRequestDTO dto) {
-        return super.update(id, dto);
-    }
-
-    // EXCLUSÃO: Esvazia a gaveta "aliasesCache"
-    @Override
-    @CacheEvict(value = "aliasesCache", allEntries = true)
-    public void delete(Integer id) {
-        super.delete(id);
     }
 
     // ================================================================
