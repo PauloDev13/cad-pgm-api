@@ -266,10 +266,8 @@ public class ServidorService extends BaseGenericService<
             throw  new ResourceNotFoundException("Servidor não encontrado na base de dados de excluídos");
         }
 
-        // B. Ressuscita no banco via SQL Nativo (Limpa a flag e a data)
-        servidorRepository.reviveNativeServidor(id);
 
-        // C. Carrega os dados do Servidor
+        // B. Carrega os dados do Servidor
         Servidor servidor = servidorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Falha ao recuperar servidor na reativação"));
 
@@ -277,6 +275,9 @@ public class ServidorService extends BaseGenericService<
         // lança a exceção, o @Transactional cancela a ressurreição no banco (Rollback)
         // e bloqueia a ação de reativação
         beforeUpdate(dto, servidor);
+
+        // C. Desfaz o Soft Delete no banco via SQL Nativo (Limpa a flag 'excluded' e o atributo 'excludeDate)
+        servidorRepository.reviveNativeServidor(id);
 
         // D. Hidratação para garantir que os nomes dos cargos/setores venham preenchidos
         entityManager.refresh(servidor);
@@ -436,12 +437,14 @@ public class ServidorService extends BaseGenericService<
                     });
         }
 
-        // Validação do Status
-        if (dto.statusId() != null) {
-            // Usa o EntityManager para buscar a descrição real do Status sem risco de "Objeto Oco"
+        // Se existe Status e o Servidor não está excluído (Desligado)
+        if (dto.statusId() != null && existingServidor.isExcluded() == false) {
+            // Usa o EntityManager para buscar a descrição real do Status"
             Status selectedStatus = statusRepository.findById(dto.statusId()).orElse(null);
 
+            // Se o Status retornado é diferente de nulo e sua descrição é igual a Desligado
             if (selectedStatus != null && selectedStatus.getDescricao().equalsIgnoreCase("Desligado")) {
+                // Exibe mensagem e aborta a atualização0
                 throw new BusinessException(
                         "O Status <strong>'DESLIGADO'</strong> só pode ser " +
                                 "definido na opção de exclusão do Sistema"

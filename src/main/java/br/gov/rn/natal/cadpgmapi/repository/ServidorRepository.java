@@ -67,7 +67,7 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
         JOIN s.vinculo v
         JOIN s.setor st
         JOIN s.cargo c
-        WHERE s.excluded = false
+        WHERE s.excluded = false AND s.status.descricao = 'Ativo'
         AND LOWER(v.nome) NOT IN ('terceirizado', 'terceirizado ferista', 'temporário')
         AND LOWER(c.nome) NOT IN ('procurador', 'procurador geral', 'procurador adjunto', 'chefe de procuradoria especializada')
         ORDER BY st.nome ASC, s.nome ASC
