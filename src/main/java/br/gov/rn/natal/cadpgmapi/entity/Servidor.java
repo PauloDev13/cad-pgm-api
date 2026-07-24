@@ -3,10 +3,7 @@ package br.gov.rn.natal.cadpgmapi.entity;
 import br.gov.rn.natal.cadpgmapi.enums.TipoAtividade;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.Filter;
-import org.hibernate.annotations.FilterDef;
 import org.hibernate.annotations.SQLDelete;
-import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,7 +16,7 @@ import java.util.Set;
 @NoArgsConstructor @AllArgsConstructor
 @Builder
 // Substitui o DELETE físico por um UPDATE no banco (Soft Delete)
-@SQLDelete(sql = "UPDATE servidor SET excluded = true, excluded_date = CURRENT_TIMESTAMP WHERE id = ?")
+@SQLDelete(sql = "UPDATE servidor SET excluded = true, status_id = 2, excluded_date = CURRENT_TIMESTAMP WHERE id = ?")
 public class Servidor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

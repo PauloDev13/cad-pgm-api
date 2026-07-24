@@ -26,7 +26,9 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
 
     // Substitui o soft delete
     @Modifying
-    @Query("UPDATE Servidor s SET s.excluded = true, s.excludedDate = CURRENT_TIMESTAMP WHERE s.id = :id")
+    @Query("""
+        UPDATE Servidor s SET s.excluded = true, s.status.id = 2, s.excludedDate = CURRENT_TIMESTAMP WHERE s.id = :id
+        """)
     void softDeleteByID(@Param("id") Integer id);
 
     /* ==================================
@@ -135,7 +137,7 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
     Optional<ServidorShadowProjection> checkEmailInstitucionalStatus(@Param("email") String email);
 
     // Busca paginada de todos os Servidores com status DESLIGADO
-    @Query(value = "SELECT * FROM servidor WHERE excluded = true",
+    @Query(value = "SELECT * FROM servidor WHERE excluded = true ORDER BY excluded_date DESC ",
             countQuery = "SELECT count(*) FROM servidor WHERE excluded = true",
             nativeQuery = true)
     Page<Servidor> findAllExcluded(Pageable pageable);

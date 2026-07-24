@@ -7,6 +7,7 @@ import br.gov.rn.natal.cadpgmapi.audit.utils.AuditDiffUtil;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.*;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
+import br.gov.rn.natal.cadpgmapi.entity.Status;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.load_pdf.services.DocumentoStorageService;
@@ -46,6 +47,7 @@ public class ServidorService extends BaseGenericService<
     private final ProcuradorRepository procuradorRepository;
     private final DocumentoStorageService storageService;
     private final SetorRepository setorRepository;
+    private final StatusRepository statusRepository;
     private final EntityManager entityManager;
 
     // Construtor
@@ -58,14 +60,15 @@ public class ServidorService extends BaseGenericService<
             DocumentoStorageService storageService,
             SetorRepository setorRepository,
             EntityManager entityManager,
-            ApplicationEventPublisher eventPublisher
-            ){
+            ApplicationEventPublisher eventPublisher, StatusRepository statusRepository
+    ){
         super(repository, mapper, eventPublisher);
         this.servidorRepository = repository;
         this.sistemaRepository = sistemaRepository;
         this.aliasRepository = aliasRepository;
         this.procuradorRepository = procuradorRepository;
         this.setorRepository = setorRepository;
+        this.statusRepository = statusRepository;
         this.entityManager = entityManager;
         this.storageService = storageService;
     }
@@ -73,6 +76,15 @@ public class ServidorService extends BaseGenericService<
     /*================================================================
                         MÉTODOS SOBRESCRITOS
       ================================================================ */
+
+    // Sobrescreve o método para ensinar a classe mãe a deletar sem limpar
+    // as tabelas com relacionamento N:N (servidor_sistema, servidor_alias, etc)
+    @Override
+    protected void performDelete(Servidor entity) {
+        // Usa a query nativa do Repository, contornando a exclusão em cascata do Hibernate
+        // definida na entidade Servidor com a anotação @SQLDelete
+        servidorRepository.softDeleteByID(entity.getId());
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -261,6 +273,11 @@ public class ServidorService extends BaseGenericService<
         Servidor servidor = servidorRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Falha ao recuperar servidor na reativação"));
 
+        // Chama gancho e valida se o CPF, Matricula e Email estão duplicados. Se sim
+        // lança a exceção, o @Transactional cancela a ressurreição no banco (Rollback)
+        // e bloqueia a ação de reativação
+        beforeUpdate(dto, servidor);
+
         // D. Hidratação para garantir que os nomes dos cargos/setores venham preenchidos
         entityManager.refresh(servidor);
 
@@ -271,6 +288,12 @@ public class ServidorService extends BaseGenericService<
         mapper.updateEntityFromDTO(servidor, dto);
         associarRelacoesMuitosParaMuitos(servidor, dto);
 
+        // Se o status está "Desligado", troca o objeto do Status para "Pendente" na memória
+        Status statusPendente =  statusRepository.findByDescricaoIgnoreCase("Pendente")
+                .orElseThrow(() -> new BusinessException("Status 'Pendente' não encontrado"));
+        servidor.setStatus(statusPendente);
+
+        // Salva com o status 'Pendente' e recarrega os dados completos
         servidorRepository.saveAndFlush(servidor);
         entityManager.refresh(servidor);
 
@@ -413,6 +436,19 @@ public class ServidorService extends BaseGenericService<
                     });
         }
 
+        // Validação do Status
+        if (dto.statusId() != null) {
+            // Usa o EntityManager para buscar a descrição real do Status sem risco de "Objeto Oco"
+            Status selectedStatus = statusRepository.findById(dto.statusId()).orElse(null);
+
+            if (selectedStatus != null && selectedStatus.getDescricao().equalsIgnoreCase("Desligado")) {
+                throw new BusinessException(
+                        "O Status <strong>'DESLIGADO'</strong> só pode ser " +
+                                "definido na opção de exclusão do Sistema"
+                );
+            }
+        }
+
         // 1. Tira a foto do dado antigo antes de ser alterado
         ServidorResponseDTO oldSnapshot = mapper.toDto(existingServidor);
 
@@ -446,13 +482,6 @@ public class ServidorService extends BaseGenericService<
         if (entity.getStatus().equals(null)) {
             throw new BusinessException("Não é possível excluir um servidor sem status definido");
         }
-        // Compara a descrição ignorando maiúsculas e minúsculas
-        if (!entity.getStatus().getDescricao().equalsIgnoreCase("Inativo")) {
-            throw new BusinessException("Somente Servidor com Status (<strong>'INATIVO'</strong>) pode ser removido." +
-                    " Status atual: (<strong>'" + entity.getStatus().getDescricao().toUpperCase() + "'</strong>)."
-            );
-        }
-
     }
 
     /* ============================================

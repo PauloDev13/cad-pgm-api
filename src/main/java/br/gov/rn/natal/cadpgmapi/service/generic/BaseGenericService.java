@@ -152,13 +152,20 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
         // 3. Chamamos o gancho. Se o filho lançar uma BusinessException, a exclusão é abortada!
         beforeDelete(existingEntity);
 
-        // 4. Se o gancho passar em silêncio, deletamos a entidade
-        repository.delete(existingEntity);
+        // 4. Chama o gancho que está sobrescrito no service filho que aplica o Soft Delete
+        // ao invés de chamar o Soft Delete declarado no @SQLDelete da entidade Servidor.
+//        repository.delete(existingEntity);
+        performDelete(existingEntity);
 
         // 5. Gancho DEPOIS de excluir (Limpar caches, disparar emails, etc.)
         afterDelete(existingEntity);
 
         // Avisa que houve mudança!
         eventPublisher.publishEvent(new EntityChangeEvent(existingEntity));
+    }
+
+    // Por padrão, todos os services usarão o delete normal do Hibernate
+    protected void performDelete(E entity) {
+        repository.delete(entity);
     }
 }
