@@ -1,6 +1,7 @@
 package br.gov.rn.natal.cadpgmapi.config;
 
 import br.gov.rn.natal.cadpgmapi.entity.*;
+import br.gov.rn.natal.cadpgmapi.notifications.SseNotificationService;
 import br.gov.rn.natal.cadpgmapi.utils.EntityChangeEvent;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.event.EventListener;
@@ -9,10 +10,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class GlobalCacheListener {
     private final CacheManager cacheManager;
+    private final SseNotificationService sseService;
 
     // Construtor
-    public GlobalCacheListener(CacheManager cacheManager) {
+    public GlobalCacheListener(CacheManager cacheManager, SseNotificationService sseService) {
         this.cacheManager = cacheManager;
+        this.sseService = sseService;
     }
 
     // Fica escutando os eventos silenciosamente
@@ -41,6 +44,21 @@ public class GlobalCacheListener {
         }
         else if (entity instanceof Vinculo) {
             clearCache("vinculosCache");
+        }
+    }
+
+    @EventListener
+    public void handleEntityChange(EntityChangeEvent event) {
+        // Se a entidade que disparou o evento for um Servidor
+        if (event.getEntity() instanceof Servidor servidor) {
+
+            // Verifica se o status do servidor que acabou de ser salvo é "Pendente"
+//            if (servidor.getStatus() != null && servidor.getStatus()
+//                    .getDescricao().equalsIgnoreCase("Pendente")) {
+//                // Dispara o alerta para todo mundo que estiver com o sistema aberto!
+//                sseService.notifyPendentesUpdate();
+//            }
+            sseService.notifyPendentesUpdate();
         }
     }
 
