@@ -109,7 +109,7 @@ public class ServidorService extends BaseGenericService<
       ==========================================*/
     // Busca paginada com filtros dinâmicos para registros de Servidores ATIVOS
     @Transactional(readOnly = true)
-//    @Cacheable(value = "servidoresCache")
+    @Cacheable(value = "servidoresCache")
     public Page<ServidorResponseDTO> findByFilters(
             String cpf,
             String matricula,

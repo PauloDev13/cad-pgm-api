@@ -25,7 +25,7 @@ public class GlobalCacheListener {
         // Se a entidade que mudou foi um Servidor, limpamos o cache do Dashboard!
         if (entity instanceof Servidor) {
             clearCache("dashboardResumoCache");
-//            clearCache("servidoresCache");
+            clearCache("servidoresCache");
         }
         else if (entity instanceof Alias) {
             clearCache("aliasesCache");
@@ -53,12 +53,10 @@ public class GlobalCacheListener {
         if (event.getEntity() instanceof Servidor servidor) {
 
             // Verifica se o status do servidor que acabou de ser salvo é "Pendente"
-//            if (servidor.getStatus() != null && servidor.getStatus()
-//                    .getDescricao().equalsIgnoreCase("Pendente")) {
-//                // Dispara o alerta para todo mundo que estiver com o sistema aberto!
-//                sseService.notifyPendentesUpdate();
-//            }
-            sseService.notifyPendentesUpdate();
+            if (servidor.getStatus() != null) {
+                // Dispara o alerta para todo mundo que estiver com o sistema aberto!
+                sseService.notifyPendentesUpdate();
+            }
         }
     }
 
