@@ -184,7 +184,7 @@ public class ServidorController extends BaseController<
             @PathVariable Integer servidorId
     ) throws Exception {
 
-        // Retorna o caminho da foto grava no BD
+        // Retorna o caminho da foto gravada no BD
          String photoPath = servidorService.getPhotoPathById(servidorId);
 
         if (photoPath == null) {

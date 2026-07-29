@@ -124,7 +124,7 @@ public class ServidorService extends BaseGenericService<
             // Começa neutro (1=1)
             Predicate predicate = cb.conjunction();
 
-            // Bloqueia os registros com excluded = false. Eles não vão na lista
+            // Bloqueia os registros com excluded = true. Eles não vão na lista
             predicate = cb.and(predicate, cb.isFalse(root.get("excluded")));
 
             // Se o CPF for imformado, monta o SQL de busca por CPF
@@ -228,8 +228,7 @@ public class ServidorService extends BaseGenericService<
     @Transactional(readOnly = true)
     public String getPhotoPathById(Integer id) {
         return servidorRepository.findPhotoPathByIdIgnoreStatus(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
-
+                .orElseThrow(() -> new ResourceNotFoundException("Não há Foto cadastrada para o ID " + id));
     }
 
     // Busca um Servidor DESLIGADO por ID

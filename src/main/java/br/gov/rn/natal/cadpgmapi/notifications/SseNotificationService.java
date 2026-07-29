@@ -27,7 +27,7 @@ public class SseNotificationService {
         return emitter;
     }
 
-    // Método que envia o "Bip" para todos os conectados
+    // Métodos que envia o "Bip" para todos os conectados
     public void notifyPendentesUpdate() {
         List<SseEmitter> deadEmitters = new ArrayList<>();
 
@@ -44,4 +44,23 @@ public class SseNotificationService {
 
         emitters.removeAll(deadEmitters);
     }
+
+    public void notifyServidoresChanged(String loggedUser) {
+        List<SseEmitter> deadEmitters = new ArrayList<>();
+
+        emitters.forEach(emitter -> {
+            try {
+                // Mandamos um evento com nome diferente!
+                emitter.send(SseEmitter.event()
+                        .name("servidores-changed")
+                        .data(loggedUser));
+            } catch (IOException e) {
+                deadEmitters.add(emitter); // Se falhar (ex: rede caiu), marca para remover
+            }
+        });
+
+        emitters.removeAll(deadEmitters);
+    }
+
+
 }

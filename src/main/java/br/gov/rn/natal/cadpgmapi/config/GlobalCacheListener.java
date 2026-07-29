@@ -5,6 +5,8 @@ import br.gov.rn.natal.cadpgmapi.notifications.SseNotificationService;
 import br.gov.rn.natal.cadpgmapi.utils.EntityChangeEvent;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.event.EventListener;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -49,15 +51,23 @@ public class GlobalCacheListener {
 
     @EventListener
     public void handleEntityChange(EntityChangeEvent event) {
+        // Atribui a auth  o contexto de autenticação
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        // Atribui a loggedUser o usuário logado
+        String loggedUser = (auth != null) ? auth.getName() : "sistema";
+
         // Se a entidade que disparou o evento for um Servidor
         if (event.getEntity() instanceof Servidor servidor) {
 
             // Verifica se o status do servidor que acabou de ser salvo é "Pendente"
             if (servidor.getStatus() != null) {
-                // Dispara o alerta para todo mundo que estiver com o sistema aberto!
+                // Dispara o alerta para todos que estiverem com o sistema aberto!
                 sseService.notifyPendentesUpdate();
             }
         }
+
+        // Avisa que a tabela principal está desatualizada!
+        sseService.notifyServidoresChanged(loggedUser);
     }
 
     private void clearCache(String cacheName) {
