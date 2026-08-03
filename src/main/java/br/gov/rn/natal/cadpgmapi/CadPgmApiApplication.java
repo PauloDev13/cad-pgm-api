@@ -8,7 +8,6 @@ import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import static org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO;
 
 @SpringBootApplication
-@EnableCaching
 @EnableSpringDataWebSupport(pageSerializationMode = VIA_DTO)
 public class CadPgmApiApplication {
 
