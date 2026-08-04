@@ -9,14 +9,11 @@ import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
 import br.gov.rn.natal.cadpgmapi.security.TokenService;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Service
 @RequiredArgsConstructor
@@ -27,9 +24,41 @@ public class PasswordResetService {
     private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
 
+//    @Transactional
+//    @Auditable(action = AuditAction.PASSWORD_RECOVERY, entity = "Segurança")
+//    public void requestEmailReconvery(String email) {
+//        Usuario user = usuarioRepository.findByEmail(email.trim())
+//                .orElseThrow(() -> new ResourceNotFoundException(
+//                        "E-mail não cadastrado. Verifique se digitou corretamente"));
+//
+//        // 2. Alimenta os detalhes da auditoria antes do envio
+//        AuditContextHolder.setEntityName("Usuário");
+//        AuditContextHolder.setFriendlyId(user.getUsername());
+//        AuditContextHolder.setLogDetalhes("Link para recuperação de senha enviada para o e-mail: " + user.getEmail());
+//
+//        // Delega a geração para o TokenService (Stateless)
+//        String token = tokenService.generatePasswordRecoveryToken(user);
+//
+//        // Descobre de onde o usuário está acessando agora
+//        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder
+//                .getRequestAttributes()).getRequest();
+//
+//        // Pega a origem exata de onde vem a requisição
+//        String originRequestUser = request.getHeader("Origin");
+//
+//        // 2. Fallback de segurança (caso o cabeçalho venha nulo por algum motivo)
+//        if (originRequestUser == null || originRequestUser.isEmpty()) {
+//            originRequestUser = "http://localhost:4200";
+//        }
+//
+//        // Monta o link do Frontend e dispara o e-mail
+//        String frontendUrl = originRequestUser + "/auth/redefinir-senha?token=" + token;
+//        emailService.sendEmailRecovery(user.getEmail(), frontendUrl);
+//    }
+
     @Transactional
     @Auditable(action = AuditAction.PASSWORD_RECOVERY, entity = "Segurança")
-    public void requestEmailReconvery(String email) {
+    public void requestEmailReconvery(String email, String origin) {
         Usuario user = usuarioRepository.findByEmail(email.trim())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "E-mail não cadastrado. Verifique se digitou corretamente"));
@@ -43,20 +72,17 @@ public class PasswordResetService {
         String token = tokenService.generatePasswordRecoveryToken(user);
 
         // Descobre de onde o usuário está acessando agora
-        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder
-                .getRequestAttributes()).getRequest();
-
-        // Pega a origem exata de onde vem a requisição
-        String originRequestUser = request.getHeader("Origin");
-
-        // 2. Fallback de segurança (caso o cabeçalho venha nulo por algum motivo)
-        if (originRequestUser == null || originRequestUser.isEmpty()) {
-            originRequestUser = "http://localhost:4200";
-        }
-
-        // Monta o link do Frontend e dispara o e-mail
-        String frontendUrl = originRequestUser + "/auth/redefinir-senha?token=" + token;
+        // Monta a URL utilizando a origem recebida do Controller
+        String frontendUrl = getString(token, origin);
         emailService.sendEmailRecovery(user.getEmail(), frontendUrl);
+    }
+
+    @NotNull
+    private static String getString(String token, String origin) {
+        String originRequestUser = (origin == null || origin.isBlank())
+                ? "http://localhost:4200" : origin;
+
+        return originRequestUser + "/auth/redefinir-senha?token=" + token;
     }
 
     @Transactional

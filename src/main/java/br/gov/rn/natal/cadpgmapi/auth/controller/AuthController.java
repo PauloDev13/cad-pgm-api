@@ -77,13 +77,26 @@ public class AuthController {
     @PostMapping("/forgot-password")
     @Operation(summary = "Solicitar recuperação de senha",
             description = "Envia um link de redefinição para o e-mail informado (se existir). Retorna sempre 200 OK.")
-    public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDTO dto) {
+    public ResponseEntity<String> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequestDTO dto,
+            @RequestHeader(value = "Origin", required = false) String origin ) {
 
-        passwordResetService.requestEmailReconvery(dto.email());
+        passwordResetService.requestEmailReconvery(dto.email(), origin);
 
         // Retorno genérico de sucesso (independente de ter achado no banco ou não)
         return ResponseEntity.ok("Se o e-mail existir em nossa base, um link de recuperação foi enviado.");
     }
+
+//    @PostMapping("/forgot-password")
+//    @Operation(summary = "Solicitar recuperação de senha",
+//            description = "Envia um link de redefinição para o e-mail informado (se existir). Retorna sempre 200 OK.")
+//    public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequestDTO dto) {
+//
+//        passwordResetService.requestEmailReconvery(dto.email());
+//
+//        // Retorno genérico de sucesso (independente de ter achado no banco ou não)
+//        return ResponseEntity.ok("Se o e-mail existir em nossa base, um link de recuperação foi enviado.");
+//    }
 
     @PostMapping("/reset-password")
     @Operation(summary = "Efetivar redefinição de senha",
