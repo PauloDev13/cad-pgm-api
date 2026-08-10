@@ -4,6 +4,7 @@ import br.gov.rn.natal.cadpgmapi.dashboard.dto.response.GraphItemDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoProjectionDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
+import br.gov.rn.natal.cadpgmapi.entity.Status;
 import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
 import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Page;
@@ -24,12 +25,16 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
      CONSULTAS PARA STATUS ATIVOS
     *==================================== */
 
-    // Substitui o soft delete
+    // Substitui o soft delete, resolvendo o status 'Inativo' PELO NOME.
+    // CORREÇÃO DE BUG: antes gravava 'status.id = 2' fixo (acoplado à ordem do seed V05).
+    // O nome chega como parâmetro (Status.STATUS_INATIVO), eliminando o magic number e
+    // garantindo a semântica correta em qualquer banco.
     @Modifying
-    @Query("""
-        UPDATE Servidor s SET s.excluded = true, s.status.id = 2, s.excludedDate = CURRENT_TIMESTAMP WHERE s.id = :id
-        """)
-    void softDeleteByID(@Param("id") Integer id);
+    @Query(value = "UPDATE servidor SET excluded = true, " +
+            "status_id = (SELECT id FROM status_servidor WHERE descricao = :descricao), " +
+            "excluded_date = CURRENT_TIMESTAMP WHERE id = :id",
+            nativeQuery = true)
+    void softDeleteByID(@Param("id") Integer id, @Param("descricao") String descricao);
 
     /* ==================================
                    RELATÓRIOS
@@ -43,12 +48,14 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
             s.setor.nome
         )
         FROM Servidor s
-        WHERE MONTH(s.dataNascimento) = :mes AND s.status.descricao = 'Ativo'
+        WHERE MONTH(s.dataNascimento) = :mes AND s.status.descricao = '" + Status.STATUS_ATIVO + "'
         ORDER BY DAY(s.dataNascimento) ASC, s.nome ASC
     """)
     // Otimiza busca no banco de dados para grandes quantidades de registros
     @QueryHints({
-            @QueryHint(name = "org.hibernate.readyOnly", value = "true"),
+            // CORREÇÃO DE TYPO: antes estava "org.hibernate.readyOnly" — o hint era ignorado
+            // silenciosamente pelo Hibernate e a otimização de leitura nunca era aplicada.
+            @QueryHint(name = "org.hibernate.readOnly", value = "true"),
             @QueryHint(name = "org.hibernate.cacheable", value = "true"),
             @QueryHint(name = "org.jakarta.persistence.cache.retrieveMode", value = "USE"),
             @QueryHint(name = "org.jakarta.persistence.cache.storeMode", value = "USE"),
@@ -67,7 +74,7 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
         JOIN s.vinculo v
         JOIN s.setor st
         JOIN s.cargo c
-        WHERE s.excluded = false AND s.status.descricao = 'Ativo'
+        WHERE s.excluded = false AND s.status.descricao = '" + Status.STATUS_ATIVO + "'
         AND LOWER(v.nome) NOT IN ('terceirizado', 'terceirizado ferista', 'temporário')
         AND LOWER(c.nome) NOT IN ('procurador', 'procurador geral', 'procurador adjunto', 'chefe de procuradoria especializada')
         ORDER BY st.nome ASC, s.nome ASC
@@ -145,7 +152,7 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
     // Busca um Servidor com status DESLIGADO por ID
     @Query(value = "SELECT * FROM servidor WHERE excluded = true AND id = :id",
             nativeQuery = true)
-    Optional<Servidor> getExcludedById(Integer id);
+    Optional<Servidor> getExcludedById(@Param("id") Integer id);
 
     // Filtragem paginada de Servidores DESLIGADOS por nome/cpf (Search da aba de excluídos)
     @Query(value = "SELECT * FROM servidor WHERE excluded = true AND (nome LIKE CONCAT('%', :term, '%') OR cpf LIKE CONCAT('%', :term, '%'))",

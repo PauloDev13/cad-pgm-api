@@ -15,8 +15,11 @@ import java.util.Set;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
-// Substitui o DELETE físico por um UPDATE no banco (Soft Delete)
-@SQLDelete(sql = "UPDATE servidor SET excluded = true, status_id = 2, excluded_date = CURRENT_TIMESTAMP WHERE id = ?")
+// Substitui o DELETE físico por um UPDATE no banco (Soft Delete).
+// (Ajuste pós-refatoração): o soft delete deve marcar o servidor como 'Inativo'
+// (comportamento original). O status é resolvido PELO NOME (subquery) usando a
+// constante central — sem magic numbers acoplados à ordem do seed (V05).
+@SQLDelete(sql = "UPDATE servidor SET excluded = true, status_id = (SELECT id FROM status_servidor WHERE descricao = '" + Status.STATUS_INATIVO + "'), excluded_date = CURRENT_TIMESTAMP WHERE id = ?")
 public class Servidor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -18,7 +18,7 @@ public class CargoController extends BaseNameController<Cargo, CargoRequestDTO, 
         super(service);
 
     }
-    // Implementação obrigatória do méthod abstrato do pai!
+    // Implementação obrigatória do método abstrato do pai!
     @Override
     protected Integer getIdFromDto(CargoResponseDTO dto) {
         return dto.id();

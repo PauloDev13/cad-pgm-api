@@ -19,7 +19,7 @@ public class ProcuradorController extends BaseNameController<
         super(service);
 
     }
-    // Implementação obrigatória do méthod abstrato do pai!
+    // Implementação obrigatória do método abstrato do pai!
     @Override
     protected Integer getIdFromDto(ProcuradorResponseDTO dto) {
         return dto.id();

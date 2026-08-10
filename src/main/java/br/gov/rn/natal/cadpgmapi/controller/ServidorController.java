@@ -23,9 +23,17 @@ import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -38,17 +46,16 @@ public class ServidorController extends BaseController<
 
     private final ServidorService service;
     private final DocumentoStorageService storageService;
-    private final ServidorService servidorService;
 
-    // Construtor
+    // DEFICIÊNCIA CORRIGIDA (b4.15/b5.3): o construtor recebia o ServidorService DUAS VEZES
+    // (campos 'service' e 'servidorService' apontando para a MESMA instância), o que confundia
+    // a leitura. Agora há apenas uma referência única.
     public ServidorController(
             ServidorService service,
-            DocumentoStorageService storageService,
-            ServidorService servidorService) {
+            DocumentoStorageService storageService) {
         super(service);
         this.service = service;
         this.storageService = storageService;
-        this.servidorService = servidorService;
     }
 
     // Ensina ao pai como extrair o ID para montar a URL do HTTP 201
@@ -57,19 +64,19 @@ public class ServidorController extends BaseController<
         return dto.id();
     }
 
-    //  Define que, se o usuário não mandar paginação, a lista vem ordenada por nome!
+    // Define que, se o usuário não mandar paginação, a lista vem ordenada por nome!
     @Override
     protected String getDefaultSortProperty() {
         return "nome";
     }
 
     /* ==================================
-     END POINTS PARA STATUS ATIVOS
+     ENDPOINTS PARA STATUS ATIVOS
     *==================================== */
 
     // Busca paginada de todos os Servidores com status ATIVO
     @GetMapping("/searchFilter")
-    @Operation(summary = "Filtrar servidores por CPF, Matrícula, Nome Status, Cargo e Setor",
+    @Operation(summary = "Filtrar servidores por CPF, Matrícula, Nome, Status, Cargo e Setor",
             description = "Informe a combinação de filtros para realizar a pesquisa.")
     public Page<ServidorResponseDTO> findByFilters(
             @RequestParam(required = false) String cpf,
@@ -85,7 +92,7 @@ public class ServidorController extends BaseController<
         return service.findByFilters(cpf, matricula, nome, statusId, cargoId, setorId, pageable);
     }
 
-    // Busca os aniversanriantes do mês entre os Servidores ATIVOS
+    // Busca os aniversariantes do mês entre os Servidores ATIVOS
     @GetMapping("/aniversariantes")
     @Operation(summary = "Lista aniversariantes",
             description = "Retorna os servidores ativos que fazem aniversário no mês informado")
@@ -102,34 +109,32 @@ public class ServidorController extends BaseController<
             description = "Retorna todos os servidores ativos, agrupados por setor. Ordenado alfabeticamente por Setor e Servidor.")
     public ResponseEntity<List<FolhaPontoSetorResponseDTO>> getDadosFolhaPonto() {
 
-        List<FolhaPontoSetorResponseDTO> folhaPonto = servidorService.obterFolhaDePontoGeral();
+        List<FolhaPontoSetorResponseDTO> folhaPonto = service.obterFolhaDePontoGeral();
 
         return ResponseEntity.ok(folhaPonto);
     }
 
-    // Faz o upload de fotos para o Servidores com status ATIVO
+    // Faz o upload de fotos para os Servidores com status ATIVO
     @PostMapping(value = "/{servidorId}/photo",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Faz o upload/atualização da foto de perfil do servidor",
             description = "Recebe a imagem, valida os Magic Numbers e salva no MinIO")
     public ResponseEntity<Void> uploadFotoPerfil(
             @PathVariable Integer servidorId,
-            @RequestParam("file") MultipartFile file) throws Exception {
+            @RequestParam("file") MultipartFile file) throws IOException {
 
-        // 1. Impedir o avanço se o arquivo vier nulo ou totalmente vazio
+        // 1. Impede o avanço se o arquivo vier nulo ou totalmente vazio
         if (file == null || file.isEmpty()) {
             throw new BusinessException("Nenhum arquivo de imagem foi selecionado.");
         }
 
-        // 🌟 AQUI ESTÁ O USO DO SEU SERVICE!
-        // Agora o Controller chama o método que estava "isolado"
         service.uploadProfilePicture(servidorId, file);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(null);
     }
 
     /* ==================================
-     END POINTS PARA STATUS DESLIGADOS
+     ENDPOINTS PARA STATUS DESLIGADOS
     *==================================== */
 
     // Busca paginada de todos os Servidores com status DESLIGADO
@@ -147,7 +152,7 @@ public class ServidorController extends BaseController<
     @GetMapping("/excluded/{id}")
     @Operation(summary = "Busca um servidor com status de excluído",
             description = "Retorna um registro excluído com 'Soft Delete'")
-    public ServidorResponseDTO getExcludedById( @PathVariable Integer id) {
+    public ServidorResponseDTO getExcludedById(@PathVariable Integer id) {
         return service.getExcludedById(id);
     }
 
@@ -155,7 +160,7 @@ public class ServidorController extends BaseController<
     @GetMapping("/searchExcluded")
     @Operation(summary = "Buscar por Nome ou CPF servidores com status excluído",
             description = "Informe o Nome ou o CPF via query parameter. " +
-                    "Exemplo: /searchExcluded?cpf=00011122233")
+                    "Exemplo: /searchExcluded?term=maria")
     public Page<ServidorResponseDTO> searchExcluded(
             @RequestParam(required = false) String term,
             @ParameterObject @PageableDefault(
@@ -173,7 +178,7 @@ public class ServidorController extends BaseController<
     public ResponseEntity<ServidorResponseDTO> reactivate(
             @PathVariable Integer id,
             @RequestBody ServidorRequestDTO dto) {
-        return ResponseEntity.ok(service.reativated(id, dto));
+        return ResponseEntity.ok(service.reactivate(id, dto));
     }
 
     // Busca a foto do Servidor ATIVO OU DESLIGADO
@@ -182,10 +187,10 @@ public class ServidorController extends BaseController<
             description = "Exibe a foto do Servidor ativo ou desligado no formulário de cadastro")
     public ResponseEntity<InputStreamResource> exibirFotoPerfil(
             @PathVariable Integer servidorId
-    ) throws Exception {
+    ) throws IOException {
 
         // Retorna o caminho da foto gravada no BD
-         String photoPath = servidorService.getPhotoPathById(servidorId);
+        String photoPath = service.getPhotoPathById(servidorId);
 
         if (photoPath == null) {
             // Se não tiver foto, retorna um 404 limpo (o frontend trata mostrando uma foto cinza padrão)
@@ -200,9 +205,8 @@ public class ServidorController extends BaseController<
                 ? MediaType.IMAGE_PNG
                 : MediaType.IMAGE_JPEG;
 
-        // (Streaming + Cache)
+        // (Streaming + Cache por 30 dias)
         return ResponseEntity.ok()
-                // Diz para navegador: "Guarde essa foto por 30 dias na sua memória"
                 .cacheControl(CacheControl.maxAge(30, TimeUnit.DAYS))
                 .contentType(mediaType)
                 .body(new InputStreamResource(streamMinio));

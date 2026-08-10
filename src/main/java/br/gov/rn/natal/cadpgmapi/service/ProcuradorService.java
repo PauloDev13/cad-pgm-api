@@ -29,7 +29,7 @@ public class ProcuradorService extends
     @Override
     protected void beforeCreate(ProcuradorRequestDTO dto) {
         if (procuradorRepository.existsByNome(dto.nome().trim())) {
-            throw new BusinessException("Já existe um <strong>Procurador<strong> cadastrado como " +
+            throw new BusinessException("Já existe um <strong>Procurador</strong> cadastrado como " +
                     "(<strong>" + dto.nome() + "</strong>).");
         }
     }

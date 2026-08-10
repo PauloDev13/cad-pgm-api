@@ -18,7 +18,7 @@ public class VinculoController extends BaseNameController<Vinculo, VinculoReques
     public VinculoController(VinculoService service) {
         super(service);
     }
-    // Implementação obrigatória do méthod abstrato do pai!
+    // Implementação obrigatória do método abstrato do pai!
     @Override
     protected Integer getIdFromDto(VinculoResponseDTO dto) {
         return dto.id();

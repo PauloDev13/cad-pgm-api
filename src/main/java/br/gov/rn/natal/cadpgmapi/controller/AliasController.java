@@ -23,7 +23,7 @@ public class AliasController extends BaseController<Alias, AliasRequestDTO, Alia
         super(service);
         this.aliasService = service;
     }
-    // Implementação obrigatória do méthod abstrato do pai!
+    // Implementação obrigatória do método abstrato do pai!
     @Override
     protected Integer getIdFromDto(AliasResponseDTO dto) {
         return dto.id();

@@ -42,7 +42,7 @@ public abstract class BaseController<E, Req, Res, ID> {
         Res createdDto = service.create(dto);
 
         // Monta a URL dinâmica pegando a requisição atual (ex: http://localhost:8080/api/v1/aliases)
-        // e adicionando o /{id} no final. O méthod getIdFromDto extrai o ID correto!
+        // e adicionando o /{id} no final. O método getIdFromDto extrai o ID correto!
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(getIdFromDto(createdDto))

@@ -1,6 +1,5 @@
 package br.gov.rn.natal.cadpgmapi.repository;
 
-import br.gov.rn.natal.cadpgmapi.entity.Setor;
 import br.gov.rn.natal.cadpgmapi.entity.Status;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,5 +13,7 @@ public interface StatusRepository extends JpaRepository<Status, Integer> {
     Page<Status> findByDescricaoContainingIgnoreCase(String descricao, Pageable pageable);
     boolean existsByDescricao(String descricao);
 
-    Optional<Status> findByDescricaoIgnoreCase(String descrição);
+    // Legibilidade: o parâmetro antes se chamava "descrição" (com acento), um identificador
+    // incomum que costuma quebrar a compilação por encoding em alguns ambientes.
+    Optional<Status> findByDescricaoIgnoreCase(String descricao);
 }

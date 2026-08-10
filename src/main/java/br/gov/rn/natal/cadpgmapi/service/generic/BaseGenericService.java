@@ -86,7 +86,7 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
     public Res findById(ID id) {
         return repository.findById(id)
                 .map(mapper::toDto)
-                .orElseThrow(() -> new ResourceNotFoundException("Registro mão encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Registro não encontrado"));
     }
 
     @Transactional
@@ -97,12 +97,12 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
         E existingEntity = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Registro não encontrado"));
 
-        // 1. Tira a FOTO ANTIGA
+        // 1. Tira o SNAPSHOT ANTIGO (estado atual da entidade antes da alteração)
         Res oldSnapshot = mapper.toDto(existingEntity);
 
         // 2. Passa pelos ganchos e atualiza
         beforeUpdate(dto, existingEntity);
-        // A. Usa o méthod criado no BaseMapper para atualizar os campos da entidade buscada
+        // A. Usa o método criado no BaseMapper para atualizar os campos da entidade buscada
         mapper.updateEntityFromDTO(existingEntity, dto);
         // B. O gancho atua aqui também, já com os dados novos do DTO aplicados!
         beforeSave(existingEntity);
@@ -116,16 +116,25 @@ public abstract class BaseGenericService<E, Req, Res, ID> {
         // C. Gancho para relações N:N, refresh e auditoria de comparação
         afterSave(existingEntity, dto);
 
-        // 4. Tira a FOTO NOVA
+        // 4. Tira o SNAPSHOT NOVO (estado atualizado para o diff de auditoria)
         Res newSnapshot = mapper.toDto(existingEntity);
 
-        // 5. Gera o Log de Diferenças Universal
-        String diffLog = AuditDiffUtil.generateDiff(oldSnapshot, newSnapshot);
+        // CORREÇÃO DE BUG (item 9): em versões anteriores o diff era gerado DUAS vezes —
+        //  1) aqui no método base e 2) lá no afterSave sobrescrito de cada service (ex.:
+        //     ServidorService gera o diff com o prefixo "ATUALIZAÇÃO:" e o armazena no
+        //     AuditContextHolder). A segunda geração SOBRESCREVIA os detalhes customizados
+        //     do service e desperdiçava processamento.
+        // A regra ficou: se o afterSave JÁ forneceu os detalhes de auditoria, respeitamos;
+        // só calculamos o diff aqui quando o afterSave não fez isso (fallback p/ entidades
+        // simples como Cargo e Status, que não sobrescrevem o hook).
+        if (AuditContextHolder.getLogDetalhes() == null) {
+            String diffLog = AuditDiffUtil.generateDiff(oldSnapshot, newSnapshot);
 
-        if (!diffLog.isBlank()) {
-            AuditContextHolder.setLogDetalhes("ATUALIZAÇÃO: " + diffLog);
-        } else {
-            AuditContextHolder.setLogDetalhes("Nenhuma atualização detectada nos dados.");
+            if (!diffLog.isBlank()) {
+                AuditContextHolder.setLogDetalhes("ATUALIZAÇÃO: " + diffLog);
+            } else {
+                AuditContextHolder.setLogDetalhes("Nenhuma atualização detectada nos dados.");
+            }
         }
 
         // Avisa que houve mudança!

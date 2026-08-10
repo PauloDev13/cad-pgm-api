@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -72,9 +71,8 @@ public class AuditService {
         Specification<AuditLog> spec = (root, query, cb) -> {
             Predicate predicate = cb.conjunction();
 
-            // 1. Filtro por Utilizador
+            // 1. Filtro por Utilizador (busca parcial, tipo "contains")
             if (username != null && !username.trim().isEmpty()) {
-//                predicate = cb.and(predicate, cb.equal(root.get("username"), username.trim()));
                 predicate = cb.and(predicate, cb.like(
                         root.get("username"), "%" + username.trim() + "%")
                 );

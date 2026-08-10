@@ -4,7 +4,7 @@ import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.InputStream;
+import java.io.IOException;
 import java.text.Normalizer;
 import java.util.List;
 
@@ -21,12 +21,12 @@ public class DocumentoOrquestradorService {
      * Como ele chama o 'documentoService' de FORA, o Spring intercepta
      * a chamada e a auditoria funciona perfeitamente!
      */
-    public void processBatchUpload(Integer servidorId, List<MultipartFile> files) throws Exception {
+    public void processBatchUpload(Integer servidorId, List<MultipartFile> files) throws IOException {
         // 1. Laço de repetição: processa cada arquivo individualmente
         for (MultipartFile file : files) {
             if (file.isEmpty()) continue;
 
-            // 3. Regra de Negócio: Validação de Magic Numbers
+            // 2. Regra de Negócio: Validação de Magic Numbers
             validateFile(file);
 
             // 3. Regra de Negócio: limpa o nome do arquivo de caracteres especiais, etc
@@ -78,13 +78,13 @@ public class DocumentoOrquestradorService {
         return nomeLimpo.toLowerCase();
     }
 
-    private void validateFile(MultipartFile file) throws Exception {
-        // 2. Regra de Negócio: Validação de Extensão
+    private void validateFile(MultipartFile file) throws IOException {
+        // 1. Regra de Negócio: Validação de Extensão
         if (!"application/pdf".equalsIgnoreCase(file.getContentType())) {
             throw new BusinessException("O arquivo '" + file.getOriginalFilename() + "' não é um PDF válido.");
         }
 
-        // 3. Regra de Negócio: Validação de Magic Numbers
+        // 2. Regra de Negócio: Validação de Magic Numbers
         byte[] header = new byte[4];
         try {
             file.getInputStream().read(header);
@@ -96,7 +96,7 @@ public class DocumentoOrquestradorService {
                         "O arquivo '" + file.getOriginalFilename() + "' não é um PDF válido ou está corrompido."
                 );
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new BusinessException("Erro ao ler o arquivo '" + file.getOriginalFilename() + "'.");
         }
     }

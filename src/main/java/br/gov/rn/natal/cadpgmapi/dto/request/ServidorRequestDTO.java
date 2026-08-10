@@ -26,6 +26,10 @@ public record ServidorRequestDTO(
         @Size(max = 20)
         String telefone,
 
+        // CORREÇÃO DE BUG (b4.14): o e-mail pessoal é obrigatório na ENTIDADE
+        // (nullable = false) mas o DTO o tratava como opcional, gerando erro 500 no banco
+        // quando o frontend enviava o campo vazio. Agora a validação acontece na camada HTTP.
+        @NotBlank(message = "O e-mail pessoal é obrigatório")
         @Email(message = "E-mail pessoal inválido")
         @Size(max = 100)
         String emailPessoal,
@@ -52,10 +56,13 @@ public record ServidorRequestDTO(
         @NotNull(message = "A lotação é obrigatória")
         Integer lotacaoId,
 
-        @NotNull(message = "O status é obrigatório")
+        // CORREÇÃO DE BUG (item 8): as mensagens estavam TROCADAS entre os dois campos.
+        // vinculoId referencia a FK de "vínculo" e statusId a FK de "status" — agora cada
+        // campo valida com a mensagem correspondente ao dado que realmente espera.
+        @NotNull(message = "O vínculo é obrigatório")
         Integer vinculoId,
 
-        @NotNull(message = "O vínculo é obrigatório")
+        @NotNull(message = "O status é obrigatório")
         Integer statusId,
 
         // IDs das relações N:N

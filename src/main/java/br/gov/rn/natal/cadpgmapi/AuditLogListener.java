@@ -15,8 +15,11 @@ public class AuditLogListener {
         this.repository = repository;
     }
 
-    // O @Async faz este método rodar em uma thread separada!
-    @Async
+    // O @Async("asyncExecutor") faz este método rodar em uma thread SEPARADA, usando o pool
+    // definido no AsyncConfig (que ativa o @EnableAsync — antes essa anotação não surtia efeito).
+    // Por rodar FORA da transação do método auditado, o log de auditoria continua sendo
+    // gravado MESMO que a operação de negócio faça rollback (requisito de design).
+    @Async("asyncExecutor")
     @EventListener
     public void handleAuditLogEvent(AuditLogEvent event) {
         repository.save(event.getAuditLog());

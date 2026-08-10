@@ -1,6 +1,12 @@
 package br.gov.rn.natal.cadpgmapi.config;
 
-import br.gov.rn.natal.cadpgmapi.entity.*;
+import br.gov.rn.natal.cadpgmapi.entity.Alias;
+import br.gov.rn.natal.cadpgmapi.entity.Cargo;
+import br.gov.rn.natal.cadpgmapi.entity.Servidor;
+import br.gov.rn.natal.cadpgmapi.entity.Setor;
+import br.gov.rn.natal.cadpgmapi.entity.Sistema;
+import br.gov.rn.natal.cadpgmapi.entity.Status;
+import br.gov.rn.natal.cadpgmapi.entity.Vinculo;
 import br.gov.rn.natal.cadpgmapi.notifications.SseNotificationService;
 import br.gov.rn.natal.cadpgmapi.utils.EntityChangeEvent;
 import org.springframework.cache.CacheManager;
@@ -51,17 +57,17 @@ public class GlobalCacheListener {
 
     @EventListener
     public void handleEntityChange(EntityChangeEvent event) {
-        // Atribui a auth  o contexto de autenticação
+        // Guarda o usuário da requisição (ou "sistema" quando não há sessão)
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        // Atribui a loggedUser o usuário logado
         String loggedUser = (auth != null) ? auth.getName() : "sistema";
 
         // Se a entidade que disparou o evento for um Servidor
         if (event.getEntity() instanceof Servidor servidor) {
-
-            // Verifica se o status do servidor que acabou de ser salvo é "Pendente"
-            if (servidor.getStatus() != null) {
-                // Dispara o alerta para todos que estiverem com o sistema aberto!
+            // DEFICIÊNCIA CORRIGIDA (bloqueio de alerta): antes o "pendentes-update" era emitido
+            // para QUALQUER servidor salvo (Criação, Atualização) — qualquer movimento gerava o
+            // alerta. Agora só emitimos quando o status é o Pendente, que é o gatilho correto.
+            if (servidor.getStatus() != null
+                    && Status.STATUS_PENDENTE.equalsIgnoreCase(servidor.getStatus().getDescricao())) {
                 sseService.notifyPendentesUpdate();
             }
         }

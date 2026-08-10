@@ -67,7 +67,7 @@ public class AliasService extends BaseGenericService<Alias, AliasRequestDTO, Ali
     @Transactional(readOnly = true)
     public Page<AliasResponseDTO> findByFilterEmail(String filter, Pageable pageable) {
         if (filter == null || filter.trim().isEmpty()) {
-            return super.findAll(pageable); // Reaproveita o método do BaseCrudService!
+            return super.findAll(pageable); // Reaproveita o método do BaseGenericService!
         }
 
         return aliasRepository.findByEmailContainingIgnoreCase(filter.trim(), pageable)

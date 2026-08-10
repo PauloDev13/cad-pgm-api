@@ -7,23 +7,24 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
-// Service usado ÚNICA E EXCLUSIVAMENTE para as entidades que têem o atributo NOME
+// Service usado ÚNICA E EXCLUSIVAMENTE para as entidades que têm o atributo NOME
 public abstract class BaseNameGenericService<E, Req, Res, ID> extends BaseGenericService<E, Req, Res, ID> {
     protected final BaseNameRepository<E, ID> nameRepository;
-    protected final ApplicationEventPublisher eventPublisher;
 
+    // DEFICIÊNCIA CORRIGIDA (b5.1/b5.21): a classe redeclarava 'eventPublisher' (campo que
+    // já existe no pai, como protected), criando uma variável "sombra" redundante que ocupava
+    // memória sem necessidade. Removemos o campo duplicado; o do pai é usado normalmente.
     public BaseNameGenericService(
             BaseNameRepository<E, ID> repository,
             BaseMapper<E, Req, Res> mapper, ApplicationEventPublisher eventPublisher) {
         super(repository, mapper, eventPublisher);
         this.nameRepository = repository;
-        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
     public Page<Res> findByFilterName(String filter, Pageable pageable) {
         if (filter == null || filter.trim().isEmpty()) {
-            return super.findAll(pageable); // Reaproveita o método do BaseCrudService!
+            return super.findAll(pageable); // Reaproveita o método da classe base!
         }
 
         return nameRepository.findByNomeContainingIgnoreCase(filter.trim(), pageable)

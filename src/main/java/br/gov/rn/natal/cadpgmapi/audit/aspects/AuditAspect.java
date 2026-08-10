@@ -5,11 +5,13 @@ import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
 import br.gov.rn.natal.cadpgmapi.audit.entities.AuditLog;
 import br.gov.rn.natal.cadpgmapi.audit.events.AuditLogEvent;
 import br.gov.rn.natal.cadpgmapi.audit.utils.AuditDiffUtil;
-import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Aspect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,12 +21,15 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 
-import org.springframework.aop.support.AopUtils;
-import org.springframework.core.ResolvableType;
-
 @Aspect
 @Component
 public class AuditAspect {
+
+    // DEFICIÊNCIA CORRIGIDA (b5.4/b4.18): a versão anterior imprimia os erros com
+    // System.err.println (sem timestamps/nível) e mantinha trechos de código morto
+    // (extração de assinatura comentada; cálculo de 'entityClass' que nunca era usado;
+    // imports de AopUtils/ResolvableType). Agora usamos um logger SLF4J padrão.
+    private static final Logger log = LoggerFactory.getLogger(AuditAspect.class);
 
     private final ApplicationEventPublisher eventPublisher;
 
@@ -35,108 +40,137 @@ public class AuditAspect {
     @AfterReturning(value = "@annotation(auditable)", returning = "result")
     public void logAuditActivity(JoinPoint joinPoint, Object result, Auditable auditable) {
         try {
-            // 1. Extrai a anotação para saber a ação e a entidade
-//            MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-//            Method method = signature.getMethod();
-//            Auditable auditable = method.getAnnotation(Auditable.class);
+            // 1. Usuário logado + data/hora do login (extraída do JWT guardado nos "details")
+            SessionInfo sessao = extractSessionInfo();
 
-            // 1. Extrai dados do usuário logado via SecurityContext
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = "SISTEMA";
-            LocalDateTime dateHourLogin = null;
+            // 2. ID amigável: prioridade para o valor injetado no contexto (ex.: delete),
+            //    depois extração do resultado (insert/update) e, por fim, o primeiro argumento.
+            String affectedId = extractAffectedId(result, joinPoint);
 
-            if (authentication != null && authentication.isAuthenticated()) {
-                username = authentication.getName();
+            // 3. Nome da entidade auditada (contexto > anotação > classe do resultado)
+            String entityName = extractEntityName(auditable, result);
 
-                if (authentication.getDetails() instanceof DecodedJWT jwt) {
-                    Date iat = jwt.getIssuedAt();
-                    if (iat != null) {
-                        dateHourLogin = iat.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-                    }
-                }
-            }
-
-            // 2. Descoberta do ID (Prioridade para o ID Amigável do Contexto)
-            String affectedId = AuditContextHolder.getFriendlyId();
-
-            if (affectedId == null || affectedId.equals("N/A")) {
-                // Se não houver no contexto (ex: INSERT), tenta extrair do resultado
-                if (result != null) {
-                    affectedId = AuditDiffUtil.extractFriendlyId(result);
-                } else if (joinPoint.getArgs().length > 0) {
-                    // Fallback final para o primeiro argumento numérico
-                    affectedId = joinPoint.getArgs()[0].toString();
-                } else {
-                    affectedId = "N/A";
-                }
-            }
-
-            // 3. Nome vindo do Contexto (Setado no delete do BaseService)
-            String entityName = AuditContextHolder.getEntityName();
-
-            // 4. Se o contexto estiver vazio, tenta a anotação ou reflexão (para Insert/Update)
-            if (entityName == null || entityName.isBlank()) {
-
-                entityName = auditable.entity();
-
-                if (entityName == null || entityName.isBlank()) {
-                    // Pega a classe real em tempo de execução (ex: ServidorService)
-                    Class<?> targetClass = AopUtils.getTargetClass(joinPoint.getTarget());
-
-                    // Sobe para a superclasse genérica (BaseService) e extrai o tipo <T>
-                    Class<?> entityClass = ResolvableType.forClass(targetClass)
-                            .as(BaseGenericService.class)
-                            // 0 = Pega o primeiro genérico. Ex: <Servidor, Integer> pega Servidor.
-                            .resolveGeneric(0);
-
-
-                    entityName = entityClass.getSimpleName();
-
-                    if (result != null) {
-                        entityName = result.getClass().getSimpleName().replace("ResponseDTO", "");
-                    } else {
-                        entityName = "Unknown";
-                    }
-                }
-            }
-
-            // 5. Monta o log
-            AuditLog log = new AuditLog();
-            log.setUsername(username);
-            log.setDateHourLogin(dateHourLogin);
-            log.setDateHourAction(LocalDateTime.now());
-            log.setTypeAction(auditable.action());
-            log.setAffectedEntity(entityName);
-            log.setIdAffectedRecord(affectedId);
-
-            String extraDetails = AuditContextHolder.getLogDetalhes();
-
-            if (extraDetails != null && !extraDetails.isBlank()) {
-                log.setDetails(extraDetails);
-            } else {
-                // Mensagens automáticas inteligentes baseadas na ação
-                switch (auditable.action()) {
-                    case INSERT:
-                        log.setDetails("INCLUSÃO " + affectedId + " criado(a) com sucesso.");
-//                        log.setDetails(entityName + " ID: " + affectedId + " criado(a) com sucesso.");
-                        break;
-                    case DELETE:
-                        log.setDetails("EXCLUSÃO: " + affectedId + " excluído(a) com sucesso.");
-//                        log.setDetails(entityName + " ID: " + affectedId + " excluído(a) com sucesso.");
-                        break;
-                    default:
-                        log.setDetails("Método executado: " + joinPoint.getSignature().getName());
-                        break;
-                }
-            }
-
-            // 5. Publica o evento
-            eventPublisher.publishEvent(new AuditLogEvent(this, log));
+            // 4. Monta o log e publica o evento (o listener grava em thread separada)
+            AuditLog auditLog = buildAuditLog(
+                    joinPoint, auditable, sessao, entityName, affectedId
+            );
+            eventPublisher.publishEvent(new AuditLogEvent(this, auditLog));
 
         } catch (Exception e) {
-            System.err.println("Falha ao gerar log de auditoria: " + e.getMessage());
+            log.error("Falha ao gerar log de auditoria", e);
         } finally {
+            // Sempre limpa o ThreadLocal ao final (sucesso OU erro)
             AuditContextHolder.clear();
         }
+    }
+
+    /**
+     * CORREÇÃO DE BUG (vazamento de ThreadLocal):
+     * O advice acima usa @AfterReturning, que SÓ roda quando o método anotado termina SEM
+     * exceção. Quando uma BusinessException era lançada (ex.: validação de CPF duplicado no
+     * beforeCreate), o finally do advice acima nem chegava a rodar e o AuditContextHolder
+     * permanecia "sujo". Como o Tomcat reutiliza threads de um POOL, os dados do usuário
+     * anterior vazavam para a PRÓXIMA requisição — contaminação entre usuários + memory leak.
+     * Este advice roda quando o método auditado LANÇA qualquer exceção e garante a limpeza.
+     */
+    @AfterThrowing(value = "@annotation(auditable)", throwing = "error")
+    public void clearAuditContextOnError(Auditable auditable, Throwable error) {
+        AuditContextHolder.clear();
+    }
+
+    // ---------------- Helpers de leitura (extraídos para legibilidade - b5.11) ----------------
+
+    /** Guarda o usuário + data/hora de login extraídos do JWT. */
+    private record SessionInfo(String username, LocalDateTime dateHourLogin) {}
+
+    private SessionInfo extractSessionInfo() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = "SISTEMA";
+        LocalDateTime dateHourLogin = null;
+
+        if (authentication != null && authentication.isAuthenticated()) {
+            username = authentication.getName();
+
+            if (authentication.getDetails() instanceof DecodedJWT jwt) {
+                Date iat = jwt.getIssuedAt();
+                if (iat != null) {
+                    dateHourLogin = iat.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+                }
+            }
+        }
+        return new SessionInfo(username, dateHourLogin);
+    }
+
+    private String extractAffectedId(Object result, JoinPoint joinPoint) {
+        String affectedId = AuditContextHolder.getFriendlyId();
+
+        if (affectedId != null && !affectedId.equals("N/A")) {
+            return affectedId;
+        }
+
+        // Sem valor no contexto (ex.: INSERT), tenta extrair do resultado retornado
+        if (result != null) {
+            return AuditDiffUtil.extractFriendlyId(result);
+        }
+
+        // Fallback: primeiro argumento (deve ser um ID simples). Pula argumentos "complicados"
+        // (DTOs, MultipartFile etc.) que não são uma identificação legível de registros.
+        if (joinPoint.getArgs().length > 0) {
+            Object firstArg = joinPoint.getArgs()[0];
+            if (firstArg instanceof Number || firstArg instanceof String) {
+                return firstArg.toString();
+            }
+        }
+
+        return "N/A";
+    }
+
+    private String extractEntityName(Auditable auditable, Object result) {
+        // Prioridade 1: nome setado no contexto (feito no delete do BaseGenericService)
+        String entityName = AuditContextHolder.getEntityName();
+        if (entityName != null && !entityName.isBlank()) {
+            return entityName;
+        }
+
+        // Prioridade 2: o valor explícito da anotação @Auditable(entity = "...")
+        if (auditable != null && auditable.entity() != null && !auditable.entity().isBlank()) {
+            return auditable.entity();
+        }
+
+        // Prioridade 3: infere da classe do retorno (ex.: ServidorResponseDTO -> Servidor)
+        if (result != null) {
+            return result.getClass().getSimpleName().replace("ResponseDTO", "");
+        }
+
+        return "Unknown";
+    }
+
+    private AuditLog buildAuditLog(
+            JoinPoint joinPoint,
+            Auditable auditable,
+            SessionInfo sessao,
+            String entityName,
+            String affectedId
+    ) {
+        AuditLog auditLog = new AuditLog();
+        auditLog.setUsername(sessao.username());
+        auditLog.setDateHourLogin(sessao.dateHourLogin());
+        auditLog.setDateHourAction(LocalDateTime.now());
+        auditLog.setTypeAction(auditable.action());
+        auditLog.setAffectedEntity(entityName);
+        auditLog.setIdAffectedRecord(affectedId);
+
+        String extraDetails = AuditContextHolder.getLogDetalhes();
+
+        if (extraDetails != null && !extraDetails.isBlank()) {
+            auditLog.setDetails(extraDetails);
+        } else {
+            switch (auditable.action()) {
+                case INSERT -> auditLog.setDetails("INCLUSÃO: " + affectedId + " criado(a) com sucesso.");
+                case DELETE -> auditLog.setDetails("EXCLUSÃO: " + affectedId + " excluído(a) com sucesso.");
+                default -> auditLog.setDetails("Método executado: " + joinPoint.getSignature().getName());
+            }
+        }
+        return auditLog;
     }
 }

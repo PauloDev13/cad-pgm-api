@@ -44,8 +44,8 @@ public class VinculoService extends BaseNameGenericService<Vinculo, VinculoReque
     @Override
     protected void beforeCreate(VinculoRequestDTO dto) {
         if (vinculoRepository.existsByNome(dto.nome().trim())) {
-            throw new BusinessException("Já existe um <strong>Vinculo</strong> cadastrado como " +
-                    "(<strong>" + dto.nome() + "<strong>).");
+            throw new BusinessException("Já existe um <strong>Vínculo</strong> cadastrado como " +
+                    "(<strong>" + dto.nome() + "</strong>).");
         }
     }
 

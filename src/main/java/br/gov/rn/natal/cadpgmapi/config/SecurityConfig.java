@@ -1,9 +1,7 @@
 package br.gov.rn.natal.cadpgmapi.config;
 
-import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
 import br.gov.rn.natal.cadpgmapi.security.SecurityFilter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -60,7 +58,7 @@ public class SecurityConfig {
                         // O resto da boate inteira: Só entra quem tem pulseira (autenticado)
                         .anyRequest().authenticated()
                 )
-                // Libera para que a classe EtagConfir gerencie o cache
+                // Libera para que a classe EtagConfig gerencie o cache
                 .headers(headers -> headers
                         .cacheControl(cache -> cache.disable()))
                 // Colocamos o nosso Leão de Chácara ANTES do guarda padrão do Spring Security

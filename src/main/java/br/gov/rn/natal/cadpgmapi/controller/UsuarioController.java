@@ -29,7 +29,7 @@ public class UsuarioController extends BaseController<Usuario, UsuarioRequestDTO
         super(service);
         this.usuarioService = service;
     }
-    // Implementação obrigatória do méthod abstrato do pai!
+    // Implementação obrigatória do método abstrato do pai!
     @Override
     protected Integer getIdFromDto(UsuarioResponseDTO dto) {
         return dto.id();

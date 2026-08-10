@@ -23,7 +23,7 @@ public class StatusController extends BaseController<Status, StatusRequestDTO, S
         super(service);
         this.statusService = statusService;
     }
-    // Implementação obrigatória do méthod abstrato do pai!
+    // Implementação obrigatória do método abstrato do pai!
     @Override
     protected Integer getIdFromDto(StatusResponseDTO dto) {
         return dto.id();

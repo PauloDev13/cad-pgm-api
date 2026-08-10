@@ -5,7 +5,11 @@ import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
 import br.gov.rn.natal.cadpgmapi.audit.enums.AuditAction;
 import br.gov.rn.natal.cadpgmapi.audit.utils.AuditDiffUtil;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.*;
+import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoProjectionDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoServidorDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoSetorResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.entity.Status;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
@@ -13,13 +17,16 @@ import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.load_pdf.services.DocumentoStorageService;
 import br.gov.rn.natal.cadpgmapi.mapper.ServidorMapper;
 import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
-import br.gov.rn.natal.cadpgmapi.repository.*;
+import br.gov.rn.natal.cadpgmapi.repository.AliasRepository;
+import br.gov.rn.natal.cadpgmapi.repository.ProcuradorRepository;
+import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
+import br.gov.rn.natal.cadpgmapi.repository.SetorRepository;
+import br.gov.rn.natal.cadpgmapi.repository.SistemaRepository;
+import br.gov.rn.natal.cadpgmapi.repository.StatusRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
 import br.gov.rn.natal.cadpgmapi.utils.EntityChangeEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.Predicate;
-import jakarta.transaction.TransactionScoped;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -29,12 +36,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.LinkedHashMap;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -81,9 +91,10 @@ public class ServidorService extends BaseGenericService<
     // as tabelas com relacionamento N:N (servidor_sistema, servidor_alias, etc)
     @Override
     protected void performDelete(Servidor entity) {
-        // Usa a query nativa do Repository, contornando a exclusão em cascata do Hibernate
-        // definida na entidade Servidor com a anotação @SQLDelete
-        servidorRepository.softDeleteByID(entity.getId());
+        // (Ajuste pós-refatoração): o soft delete volta a marcar o servidor com o status
+        // 'Inativo' (comportamento original). O status é resolvido PELO NOME na consulta
+        // nativa do repositório, sem magic numbers acoplados à ordem do seed (V05).
+        servidorRepository.softDeleteByID(entity.getId(), Status.STATUS_INATIVO);
     }
 
     @Override
@@ -107,9 +118,12 @@ public class ServidorService extends BaseGenericService<
     /*==========================================
                     MÉTODOS GET
       ==========================================*/
-    // Busca paginada com filtros dinâmicos para registros de Servidores ATIVOS
+    // Busca paginada com filtros dinâmicos para registros de Servidores ATIVOS.
+    // DEFICIÊNCIA CORRIGIDA (cache): sem a 'key', o Spring usava a chave vazia (SimpleKey.EMPTY) e
+    // TODAS as combinações de filtro/paginação retornavam o MESMO resultado da primeira chamada.
+    // Agora cada combinação de parâmetros tem sua própria entrada no cache.
     @Transactional(readOnly = true)
-    @Cacheable(value = "servidoresCache")
+    @Cacheable(value = "servidoresCache", key = "{#cpf, #matricula, #nome, #statusId, #cargoId, #setorId, #pageable}")
     public Page<ServidorResponseDTO> findByFilters(
             String cpf,
             String matricula,
@@ -173,7 +187,7 @@ public class ServidorService extends BaseGenericService<
                 .map(mapper::toDto);
     }
 
-    // Busca os Servidores ATIVOS e aniversarianates do mês atual do sistema
+    // Busca os Servidores ATIVOS e aniversariantes do mês atual do sistema
     @Transactional(readOnly = true)
     public List<AniversarianteResponseDTO> obterAniversariantesPorMes(Integer month) {
         return servidorRepository.findAniversariantesDoMes(month);
@@ -218,7 +232,7 @@ public class ServidorService extends BaseGenericService<
     }
 
 
-    // Busca todos os registros dos Sevidores DESLIGADOS
+    // Busca todos os registros dos Servidores DESLIGADOS
     @Transactional(readOnly = true)
     public Page<ServidorResponseDTO> listExcluded(Pageable pageable) {
         return servidorRepository.findAllExcluded(pageable).map(mapper::toDto);
@@ -254,21 +268,21 @@ public class ServidorService extends BaseGenericService<
         MÉTODOS UPDATE
     * ======================================================*/
 
-    // Método que "reativa" registros de um Servidor DESLIGADO para ATIVOS
+    // Método que "reativa" registros de um Servidor DESLIGADO para ATIVO
     @Transactional
     // Ativa a auditoria na entidade Servidor
     @Auditable(action = AuditAction.UPDATE, entity = "Servidor")
-    public ServidorResponseDTO reativated(Integer id, ServidorRequestDTO dto) {
-        // A. Primeiro, usamos o "Raio-X" para garantir que o registro existe
+    public ServidorResponseDTO reactivate(Integer id, ServidorRequestDTO dto) {
+        // A. Primeiro usamos o "Raio-X" para garantir que o registro (excluído) existe
         Optional<ServidorShadowProjection> shadow = servidorRepository.checkCpfStatus(dto.cpf().trim());
         if (shadow.isEmpty() || !shadow.get().getExcluded()) {
-            throw  new ResourceNotFoundException("Servidor não encontrado na base de dados de excluídos");
+            throw new ResourceNotFoundException("Servidor não encontrado na base de dados de excluídos");
         }
 
 
         // B. Carrega os dados do Servidor
         Servidor servidor = servidorRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Falha ao recuperar servidor na reativação"));
+                .orElseThrow(() -> new ResourceNotFoundException("Falha ao recuperar servidor na reativação"));
 
         // Chama gancho e valida se o CPF, Matricula e Email estão duplicados. Se sim
         // lança a exceção, o @Transactional cancela a ressurreição no banco (Rollback)
@@ -281,15 +295,16 @@ public class ServidorService extends BaseGenericService<
         // D. Hidratação para garantir que os nomes dos cargos/setores venham preenchidos
         entityManager.refresh(servidor);
 
-        // E. Tira a "foto" antiga (Ele já não está 'excluído', mas Cargo/Setor/Email ainda são os antigos)
+        // E. Tira o SNAPSHOT antigo (Ele já não está 'excluído', mas Cargo/Setor/Email ainda são os antigos)
         ServidorResponseDTO oldSnapshot = mapper.toDto(servidor);
 
         // F. Aplica os novos dados vindos do Modal (Novo cargo, novo setor, etc.)
         mapper.updateEntityFromDTO(servidor, dto);
         associarRelacoesMuitosParaMuitos(servidor, dto);
 
-        // Se o status está "Desligado", troca o objeto do Status para "Pendente" na memória
-        Status statusPendente =  statusRepository.findByDescricaoIgnoreCase("Pendente")
+        // Após a reativação, o servidor volta à base ATIVA com o status 'Pendente'
+        // (aguardando a equipe de RH revisar os dados)
+        Status statusPendente = statusRepository.findByDescricaoIgnoreCase(Status.STATUS_PENDENTE)
                 .orElseThrow(() -> new BusinessException("Status 'Pendente' não encontrado"));
         servidor.setStatus(statusPendente);
 
@@ -297,7 +312,7 @@ public class ServidorService extends BaseGenericService<
         servidorRepository.saveAndFlush(servidor);
         entityManager.refresh(servidor);
 
-        // G. Tira a "foto" nova com os dados atualizados
+        // G. Tira o SNAPSHOT novo com os dados atualizados
         ServidorResponseDTO newSnapshot = mapper.toDto(servidor);
 
         // H. Usa a nossa classe utilitária universal!
@@ -321,32 +336,33 @@ public class ServidorService extends BaseGenericService<
     public void uploadProfilePicture(
             Integer servidorId,
             MultipartFile file
-    ) throws Exception {
-        // 1. Valida se o servidor existe
+    ) throws IOException {
+        // 1. Valida se o servidor existe (procurando também entre os DESLIGADOS)
         Servidor servidor = servidorRepository.findById(servidorId)
                 .orElseGet(() -> servidorRepository.getExcludedById(servidorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado para o ID informado.")));
 
         // Isso garante que o log dirá exatamente de quem é a foto que foi alterada
         AuditContextHolder.setEntityName("Servidor");
-        AuditContextHolder.setFriendlyId(servidor.getNome()); // ou getNomeCompleto(), conforme sua entidade
+        AuditContextHolder.setFriendlyId(servidor.getNome());
         AuditContextHolder.setLogDetalhes("Inclusão/Atualização da foto de perfil do servidor: "
                 + servidor.getNome());
 
-        // 2. Valida os Magic Numbers (Segurança!)
-        validatePhotoFormat(file);
+        // 2. Valida os Magic Numbers e devolve o formato REAL detectado nos bytes ("png" ou "jpg").
+        // ANTES: a extensão era extraída de file.getOriginalFilename() com
+        // 'substring(lastIndexOf("."))' — lançava StringIndexOutOfBoundsException em arquivos
+        // sem extensão e aceitava extensões forjadas (ex.: "foto.php"). Agora a extensão vem
+        // dos próprios bytes do arquivo, que é a fonte confiável após validar a assinatura.
+        String formatoImagem = detectImageFormat(file);
 
-        // 3. Lógica do MinIO
-        String extensao = file.getOriginalFilename()
-                .substring(file.getOriginalFilename().lastIndexOf("."));
-
-        String namePhtoMinio = "fotos/perfil-" + servidorId + extensao;
+        // 3. Monta o caminho no MinIO usando o formato detectado, sem depender do nome do arquivo
+        String photoObjectName = "fotos/perfil-" + servidorId + "." + formatoImagem;
 
         // 4. Salva no MinIO (Usando o método de upload que vocês já têm)
-        storageService.upload(file, namePhtoMinio);
+        storageService.upload(file, photoObjectName);
 
         // 5. Salva o caminho da foto no banco de dados, na tabela do Servidor
-        servidor.setPhotoPath(namePhtoMinio);
+        servidor.setPhotoPath(photoObjectName);
         servidorRepository.save(servidor);
     }
 
@@ -360,7 +376,7 @@ public class ServidorService extends BaseGenericService<
         Optional<ServidorShadowProjection> shadowCpf = servidorRepository.checkCpfStatus(dto.cpf().trim());
         if (shadowCpf.isPresent()) {
             throw new BusinessException(
-                    "Este CPF (<strong>" + cpfFormat(dto.cpf()) + "</strong>)</br>já está em uso em outro cadastro."
+                    "Este CPF (<strong>" + cpfFormat(dto.cpf()) + "</strong>)<br/>já está em uso em outro cadastro."
             );
         }
 
@@ -368,23 +384,29 @@ public class ServidorService extends BaseGenericService<
         Optional<ServidorShadowProjection> shadowMatricula = servidorRepository.checkMatriculaStatus(dto.matricula().trim());
         if (shadowMatricula.isPresent()) {
             throw new BusinessException(
-                    "Esta Matrícula (<strong>" + dto.matricula() + "</strong>)</br>" +
+                    "Esta Matrícula (<strong>" + dto.matricula() + "</strong>)<br/>" +
                             "já está em uso em outro cadastro."
             );
         }
 
         // 3. Validação de E-mail Pessoal
-        servidorRepository.checkEmailPessoalStatus(dto.emailPessoal().trim())
-                .ifPresent(s -> {
-                    throw new BusinessException("Este E-mail (<strong>" + dto.emailPessoal() + "</strong>)</br>" +
-                            "já está em uso em outro cadastro.");
-                });
+        // DEFICIÊNCIA CORRIGIDA (NPE): o DTO permite emailPessoal nulo/em branco e a versão
+        // anterior chamava dto.emailPessoal().trim() cegamente — NPE em tentativas inválidas.
+        // Agora só consultamos o banco quando há um valor de fato informado.
+        String emailPessoal = trimmedOrNull(dto.emailPessoal());
+        if (emailPessoal != null) {
+            servidorRepository.checkEmailPessoalStatus(emailPessoal)
+                    .ifPresent(s -> {
+                        throw new BusinessException("Este E-mail (<strong>" + emailPessoal + "</strong>)<br/>" +
+                                "já está em uso em outro cadastro.");
+                    });
+        }
 
         // 4. Validação de E-mail Institucional (Só valida se for informado)
         if (dto.emailInstitucional() != null && !dto.emailInstitucional().isBlank()) {
             servidorRepository.checkEmailInstitucionalStatus(dto.emailInstitucional().trim())
                     .ifPresent(s -> {
-                        throw new BusinessException("Este E-mail (<strong>" + dto.emailInstitucional() + "</strong>)</br>" +
+                        throw new BusinessException("Este E-mail (<strong>" + dto.emailInstitucional() + "</strong>)<br/>" +
                                 "já está em uso em outro cadastro.");
                     });
         }
@@ -398,7 +420,7 @@ public class ServidorService extends BaseGenericService<
 
             if (shadowCpf.isPresent()) {
                 throw new BusinessException(
-                        "Este CPF (<strong>" + cpfFormat(dto.cpf()) + "</strong>)</br>já está em uso em outro cadastro."
+                        "Este CPF (<strong>" + cpfFormat(dto.cpf()) + "</strong>)<br/>já está em uso em outro cadastro."
                 );
             }
         }
@@ -408,53 +430,47 @@ public class ServidorService extends BaseGenericService<
             Optional<ServidorShadowProjection> shadowMatricula = servidorRepository.checkMatriculaStatus(dto.matricula().trim());
             if (shadowMatricula.isPresent()) {
                 throw new BusinessException(
-                        "Esta Matrícula (<strong>" + dto.matricula() + "</strong>)</br>já está em uso em outro cadastro."
+                        "Esta Matrícula (<strong>" + dto.matricula() + "</strong>)<br/>já está em uso em outro cadastro."
                 );
             }
         }
 
         // Validação de E-mail Pessoal
-        if (!existingServidor.getEmailPessoal().equalsIgnoreCase(dto.emailPessoal().trim())) {
-            servidorRepository.checkEmailPessoalStatus(dto.emailPessoal().trim())
+        // DEFICIÊNCIA CORRIGIDA (NPE): dto.emailPessoal() pode vir nulo; antes o .trim() lançava
+        // NullPointerException. Agora, se não vier e-mail, a validação é simplesmente ignorada.
+        String emailPessoalNovo = trimmedOrNull(dto.emailPessoal());
+        if (emailPessoalNovo != null
+                && !emailPessoalNovo.equalsIgnoreCase(existingServidor.getEmailPessoal())) {
+            servidorRepository.checkEmailPessoalStatus(emailPessoalNovo)
                     .ifPresent(s -> {
-                        throw new BusinessException("Este E-mail (<strong>" + dto.emailPessoal() + "</strong>)</br>" +
+                        throw new BusinessException("Este E-mail (<strong>" + emailPessoalNovo + "</strong>)<br/>" +
                                 "já está em uso em outro cadastro."
                         );
                     });
         }
 
         // Validação de E-mail Institucional
-        String newEmailInst = dto.emailInstitucional() != null ? dto.emailInstitucional().trim() : "";
+        String newEmailInst = trimmedOrNull(dto.emailInstitucional());
         String oldEmailInst = existingServidor.getEmailInstitucional() != null
                 ? existingServidor.getEmailInstitucional() : "";
 
-        if (!newEmailInst.isBlank() && !newEmailInst.equalsIgnoreCase(oldEmailInst)) {
+        if (newEmailInst != null && !newEmailInst.equalsIgnoreCase(oldEmailInst)) {
             servidorRepository.checkEmailInstitucionalStatus(newEmailInst)
                     .ifPresent(s -> {
-                        throw new BusinessException("Este E-mail (<strong>" + newEmailInst + "</strong>)</br>" +
+                        throw new BusinessException("Este E-mail (<strong>" + newEmailInst + "</strong>)<br/>" +
                                 "já está em uso em outro cadastro.");
                     });
         }
 
-        // Se existe Status e o Servidor não está excluído (Desligado)
-        if (dto.statusId() != null && existingServidor.isExcluded() == false) {
-            // Usa o EntityManager para buscar a descrição real do Status"
-            Status selectedStatus = statusRepository.findById(dto.statusId()).orElse(null);
+        // (Ajuste pós-refatoração) O bloco que BLOQUEAVA o status 'Desligado' na atualização
+        // foi removido: ele só fazia sentido enquanto o soft delete marcava o servidor como
+        // 'Desligado'. Com o status do soft delete de volta para 'Inativo' (que é um status
+        // comum do domínio, selecionável no formulário), não existe mais estado especial a proteger.
 
-            // Se o Status retornado é diferente de nulo e sua descrição é igual a Desligado
-            if (selectedStatus != null && selectedStatus.getDescricao().equalsIgnoreCase("Desligado")) {
-                // Exibe mensagem e aborta a atualização0
-                throw new BusinessException(
-                        "O Status <strong>'DESLIGADO'</strong> só pode ser " +
-                                "definido na opção de exclusão do Sistema"
-                );
-            }
-        }
-
-        // 1. Tira a foto do dado antigo antes de ser alterado
+        // 5. Captura o snapshot (estado antigo) antes de aplicar as alterações
         ServidorResponseDTO oldSnapshot = mapper.toDto(existingServidor);
 
-        // 2. Guarda temporariamente para usar no afterSave (usando o contexto da thread)
+        // 6. Guarda o snapshot no contexto para o afterSave calcular o diff
         AuditContextHolder.setOldSnapshot(oldSnapshot);
     }
 
@@ -480,8 +496,11 @@ public class ServidorService extends BaseGenericService<
 
     @Override
     protected void beforeDelete(Servidor entity) {
-        // Programação Defensiva: Verifica se o servidor tem um status associado para evitar NullPointerException
-        if (entity.getStatus().equals(null)) {
+        // CORREÇÃO DE BUG: antes era 'entity.getStatus().equals(null)':
+        //  1) com status null, lançava NullPointerException em vez da regra de negócio;
+        //  2) com status preenchido, '.equals(null)' sempre retorna false — a regra nunca disparava.
+        // A forma correta de testar AUSÊNCIA de objeto é comparar a referência com '== null'.
+        if (entity.getStatus() == null) {
             throw new BusinessException("Não é possível excluir um servidor sem status definido");
         }
     }
@@ -492,54 +511,55 @@ public class ServidorService extends BaseGenericService<
     /**
      * Recebe a entidade (já mapeada com os dados básicos pelo MapStruct)
      * e os IDs vindos do DTO para fazer a associação otimizada.
+     * DEFICIÊNCIA DE LEGIBILIDADE (item 5.6): as três associações (Sistemas, Aliases e
+     * Procuradores) repetiam o MESMO padrão "if null -> limpar -> forEach add". Extraímos
+     * esse padrão para o helper genérico replaceCollectionAssociations e cada chamada abaixo
+     * só informa qual repositório resolve o ID para a referência JPA.
      */
     private void associarRelacoesMuitosParaMuitos(Servidor entity, ServidorRequestDTO dto) {
 
         // Associa Sistemas
-        if (dto.sistemaIds() != null) {
-
-            // Cria uma lista caso ela seja nula ou limpa a lista se ela existir
-            if (entity.getSistemas() == null) {
-                entity.setSistemas(new HashSet<>());
-            } else {
-                entity.getSistemas().clear();
-            }
-
-            // Adiciona os IDs à tabela de junção
-            dto.sistemaIds().forEach(id -> {
-                entity.getSistemas().add(sistemaRepository.getReferenceById(id));
-            });
-        }
+        replaceCollectionAssociations(
+                entity.getSistemas(), dto.sistemaIds(), sistemaRepository::getReferenceById
+        );
 
         // Associa Aliases de E-mail
-        if (dto.aliasIds() != null) {
-            if (entity.getAliases() == null) {
-                entity.setAliases(new HashSet<>());
-            } else {
-                entity.getAliases().clear();
-            }
-
-            dto.aliasIds().forEach(id -> {
-                entity.getAliases().add(aliasRepository.getReferenceById(id));
-            });
-        }
+        replaceCollectionAssociations(
+                entity.getAliases(), dto.aliasIds(), aliasRepository::getReferenceById
+        );
 
         // Associa Procuradores
-        if (dto.procuradorIds() != null) {
-            if (entity.getProcuradores() == null) {
-                entity.setProcuradores(new HashSet<>());
-            } else {
-                entity.getProcuradores().clear();
-            }
-
-            dto.procuradorIds().forEach(id -> {
-                entity.getProcuradores().add(procuradorRepository.getReferenceById(id));
-            });
-        }
+        replaceCollectionAssociations(
+                entity.getProcuradores(), dto.procuradorIds(), procuradorRepository::getReferenceById
+        );
     }
 
-    // Valida o formato das fotos
-    private void validatePhotoFormat(MultipartFile file) throws Exception {
+    // Esvazia a coleção de referência e a repovoa a partir dos IDs do DTO.
+    // O target nunca é nulo aqui: entidades gerenciadas pelo Hibernate inicializam as coleções
+    // e as entidades recém-criadas usam o @Builder.Default da entidade Servidor.
+    private <T> void replaceCollectionAssociations(
+            Set<T> current, Set<Integer> ids, Function<Integer, T> referenceResolver
+    ) {
+        if (ids == null) {
+            return;
+        }
+        current.clear();
+        ids.forEach(id -> current.add(referenceResolver.apply(id)));
+    }
+
+    // Normaliza um texto vindo do DTO (ex.: e-mails opcionais), evitando NPE no .trim().
+    private String trimmedOrNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    // Valida os Magic Numbers da imagem e devolve o formato real ("png" ou "jpg").
+    // A versão anterior (validatePhotoFormat) apenas validava os bytes: a extensão usada no
+    // caminho do MinIO continuava vinda do NOME do arquivo, o que causava
+    // StringIndexOutOfBoundsException em arquivos sem extensão e aceitava extensões enganosas.
+    private String detectImageFormat(MultipartFile file) throws IOException {
         // 1. Lemos os 4 primeiros bytes do arquivo
         byte[] header = new byte[4];
         try (InputStream is = file.getInputStream()) {
@@ -554,9 +574,14 @@ public class ServidorService extends BaseGenericService<
         boolean isJpeg = header[0] == (byte) 0xFF && header[1] == (byte) 0xD8
                 && header[2] == (byte) 0xFF;
 
-        if (!isPng && !isJpeg) {
-            throw new BusinessException("Formato inválido. Envie apenas fotos JPG, JPEG ou PNG.");
+        if (isPng) {
+            return "png";
         }
+        if (isJpeg) {
+            return "jpg";
+        }
+
+        throw new BusinessException("Formato inválido. Envie apenas fotos JPG, JPEG ou PNG.");
     }
 
     // Método para formatar o CPF como 000.000.000-00

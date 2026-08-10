@@ -17,7 +17,7 @@ public class SistemaController extends BaseNameController<Sistema, SistemaReques
         super(service);
 
     }
-    // Implementação obrigatória do méthod abstrato do pai!
+    // Implementação obrigatória do método abstrato do pai!
     @Override
     protected Integer getIdFromDto(SistemaResponseDTO dto) {
         return dto.id();

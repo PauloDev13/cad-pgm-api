@@ -35,6 +35,10 @@ import java.util.stream.Collectors;
 
 @Service
 public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDTO, UsuarioResponseDTO, Integer> {
+    // B5.1: o login do Administrador Geral estava repetido DUAS vezes como literal ("pgmnet"),
+    // o que abria margem para inconsistência ao ser alterado. Agora vira uma constante única.
+    public static final String ADMIN_USERNAME = "pgmnet";
+
     private final UsuarioRepository usuarioRepository;
     private final UsuarioUpdateMapper usuarioUpdateMapper;
     private final PasswordEncoder passwordEncoder;
@@ -60,7 +64,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     @Auditable(action = AuditAction.INSERT, entity = "Usuário")
     public UsuarioRegisterResponseDTO registerNewUserPublic(UsuarioRegisterRequestDTO dto) {
         // Chama método utilitário privado para validar email e username
-       validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), null);
+        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), null);
 
         // Instancia o usuário apenas com os dados seguros
         Usuario newUser = registerUserMapper.toEntity(dto);
@@ -68,8 +72,8 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         // Se é o próprio usuário que fez o cadastro, desativa o perfil
         newUser.setActivated(false);
 
-        // Chama o méthod beforeSave para criptografar a senha e
-        // inserr a permissão padrão Guest ao usuário
+        // Chama o método beforeSave para criptografar a senha e
+        // inserir a permissão padrão Guest ao usuário
         beforeSave(newUser);
 
         // Salva no banco
@@ -83,14 +87,13 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         Usuario existingUsuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
 
-        // Valida duplicidade de E-mail (se ele estiver tentando mudar)
+        // Valida duplicidade de E-mail e Login (se ele estiver tentando mudar)
         validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), id);
 
-        // Chama o método utilitário para checar se é o Adminsitrador Geral
-        // que está logado. Se sim, deixa altetar os dados. Se não, bloqueia.
+        // Só o próprio Administrador Geral pode alterar os dados dele
         onlyAdminMakeChange(existingUsuario);
 
-        // 1. Tira a FOTO ANTIGA usando o mapper genérico do pai
+        // 1. Tira o SNAPSHOT ANTIGO usando o mapper genérico do pai
         UsuarioResponseDTO oldSnapshot = mapper.toDto(existingUsuario);
 
         // 2. Aplica as alterações e salva
@@ -100,7 +103,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         usuarioRepository.saveAndFlush(existingUsuario);
         entityManager.refresh(existingUsuario);
 
-        // 3. Tira a FOTO NOVA
+        // 3. Tira o SNAPSHOT NOVO
         UsuarioResponseDTO newSnapshot = mapper.toDto(existingUsuario);
 
         // 4. Gera o Diff e injeta no contexto
@@ -118,22 +121,22 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     @Transactional
     @Auditable(action = AuditAction.UPDATE, entity = "Usuário")
     public AdminResetPasswordResponseDTO resetPasswordByAdmin(Integer id) {
-        Usuario existingUsario = repository.findById(id)
+        Usuario existingUsuario = repository.findById(id)
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
 
-        // 1. Foto Antiga
-        UsuarioResponseDTO oldSnapshot = mapper.toDto(existingUsario);
+        // 1. Snapshot Antigo
+        UsuarioResponseDTO oldSnapshot = mapper.toDto(existingUsuario);
 
         String temporaryPassword = generateRandomPassword(8);
 
-        existingUsario.setPassword(passwordEncoder.encode(temporaryPassword));
-        existingUsario.setForcePasswordChange(true);
+        existingUsuario.setPassword(passwordEncoder.encode(temporaryPassword));
+        existingUsuario.setForcePasswordChange(true);
 
-        repository.saveAndFlush(existingUsario);
-        entityManager.refresh(existingUsario);
+        repository.saveAndFlush(existingUsuario);
+        entityManager.refresh(existingUsuario);
 
-        // 2. Foto Nova
-        UsuarioResponseDTO newSnapshot = mapper.toDto(existingUsario);
+        // 2. Snapshot Novo
+        UsuarioResponseDTO newSnapshot = mapper.toDto(existingUsuario);
 
         // 3. Auditoria
         String diffLog = AuditDiffUtil.generateDiff(oldSnapshot, newSnapshot);
@@ -165,7 +168,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
                 );
             }
 
-            if (email!= null && !email.trim().isEmpty()) {
+            if (email != null && !email.trim().isEmpty()) {
                 predicate = cb.and(
                         predicate, cb.like(
                                 cb.lower(root.get("email")), "%" + email.trim().toLowerCase() + "%")
@@ -186,11 +189,10 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     @Override
     protected void beforeCreate(UsuarioRequestDTO dto) {
         // Chama método utilitário privado para validar email e username
-       validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), null);
-
+        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), null);
     }
 
-    // Methodo com assinatura original declarada na classe pai (BasicGenericService)
+    // Método com assinatura original declarada na classe pai (BaseGenericService)
     @Override
     protected void beforeUpdate(UsuarioRequestDTO dto, Usuario entity) {
         // Chama método utilitário privado para validar email e username
@@ -198,7 +200,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         onlyAdminMakeChange(entity);
     }
 
-    // Criptografa a senha
+    // Criptografa a senha e injeta a permissão padrão
     @Override
     protected void beforeSave(Usuario entity) {
         // Pega a senha enviada
@@ -206,11 +208,16 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
 
         // Verifica se a senha existe
         if (pwd != null) {
+            // CORREÇÃO DE BUG: o prefixo correto do BCrypt é '$2y$' (o '$3y$' não existe no padrão).
+            // Antes, uma senha já hashada com "$2y$" não era reconhecida como hash e era
+            // criptografada NOVAMENTE (dupla criptografia) em qualquer save que passasse por aqui,
+            // quebrando o fluxo de login e redefinição de senha desse usuário.
+            //
             // Um hash BCrypt válido SEMPRE tem 60 caracteres e começa com $2a$, $2b$ ou $2y$
             boolean isAlreadyHashed = pwd.length() == 60
-                    && (pwd.startsWith("$2a$") || pwd.startsWith("$2b$") || pwd.startsWith("$3y$"));
+                    && (pwd.startsWith("$2a$") || pwd.startsWith("$2b$") || pwd.startsWith("$2y$"));
 
-            // 3. Se NÃO for um hash, a senha é criptografada
+            // Se NÃO for um hash, a senha é criptografada
             if (!isAlreadyHashed) {
                 entity.setPassword(passwordEncoder.encode(pwd));
             }
@@ -222,18 +229,18 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         }
     }
 
+    @Override
     protected void beforeDelete(Usuario entity) {
-        String loggedUser = getLoggedUser();
-        String targetUser = entity.getUsername().trim();
-
-        // Buscamos o usuário no banco usando a identidade do Token
-        if (entity == null || entity.getPassword() == null || entity.getPassword().isEmpty()) {
+        if (entity == null) {
             return;
         }
 
-        // Ninguém apaga o Procurador Geral
-        if ("pgmnet".trim().equalsIgnoreCase(targetUser)) {
-            throw new BusinessException("O (<strong> Adminsitrador Geral </strong>) " +
+        String loggedUser = getLoggedUser();
+        String targetUser = entity.getUsername().trim();
+
+        // Ninguém apaga o Administrador Geral
+        if (ADMIN_USERNAME.equalsIgnoreCase(targetUser)) {
+            throw new BusinessException("O (<strong>Administrador Geral</strong>) " +
                     "não pode ser removido."
             );
         }
@@ -269,7 +276,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
                 .collect(Collectors.joining());
     }
 
-    // Méthod utilitário para pegar o login de quem fez a requisição
+    // Método utilitário para pegar o login de quem fez a requisição
     private String getLoggedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -284,14 +291,14 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         return null;
     }
 
-    // Methodo utilitário que impede outro usuário
-    // Adminsitrador alterar os dados do Administrador Geral
+    // Método utilitário que impede outro usuário
+    // de alterar os dados do Administrador Geral
     private void onlyAdminMakeChange(Usuario existingUsuario) {
         String loggedUser = getLoggedUser();
         String targetUser = existingUsuario.getUsername().trim();
 
-        if ("pgmnet".equalsIgnoreCase(targetUser)) {
-            if (!"pgmnet".equalsIgnoreCase(loggedUser)) {
+        if (ADMIN_USERNAME.equalsIgnoreCase(targetUser)) {
+            if (!ADMIN_USERNAME.equalsIgnoreCase(loggedUser)) {
                 throw new BusinessException("<strong>ACESSO NEGADO</strong>: Apenas o próprio " +
                         "Administrador Geral pode alterar os seus dados.");
             }

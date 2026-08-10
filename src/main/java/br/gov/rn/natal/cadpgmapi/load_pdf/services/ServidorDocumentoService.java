@@ -10,14 +10,11 @@ import br.gov.rn.natal.cadpgmapi.load_pdf.dtos.DocumentoResponseDTO;
 import br.gov.rn.natal.cadpgmapi.load_pdf.entities.ServidorDocumento;
 import br.gov.rn.natal.cadpgmapi.load_pdf.repositories.ServidorDocumentoRepository;
 import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.InputStream;
-import java.text.Normalizer;
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -27,7 +24,7 @@ public class ServidorDocumentoService {
 
     private final ServidorDocumentoRepository documentoRepository;
     private final ServidorRepository servidorRepository;
-    private final DocumentoStorageService storageService; // Aquele do Passo 3 anterior
+    private final DocumentoStorageService storageService;
 
     // Construtor
     public ServidorDocumentoService(
@@ -41,7 +38,7 @@ public class ServidorDocumentoService {
 
     @Transactional
     @Auditable(action = AuditAction.INSERT, entity = "Documento Servidor")
-    public void attachDocument(Integer servidorId, MultipartFile file, String clearName) throws Exception {
+    public void attachDocument(Integer servidorId, MultipartFile file, String clearName) throws IOException {
         Servidor servidor = servidorRepository.findById(servidorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Servidor não encontrado"));
 
@@ -78,7 +75,7 @@ public class ServidorDocumentoService {
 
     @Transactional
     @Auditable(action = AuditAction.DELETE, entity = "Documento Servidor")
-    public void deleteDocument(Integer documentId) throws Exception {
+    public void deleteDocument(Integer documentId) throws IOException {
         ServidorDocumento documento = documentoRepository.findById(documentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Documento não encontrado"));
 
@@ -93,9 +90,9 @@ public class ServidorDocumentoService {
 
     // Link
     @Transactional(readOnly = true)
-    public String generateAccessLink(Integer documentId) throws Exception {
+    public String generateAccessLink(Integer documentId) throws IOException {
         ServidorDocumento documento = documentoRepository.findById(documentId)
-                .orElseThrow(() -> new RuntimeException("Documento não encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Documento não encontrado"));
 
         // Retorna o link pré-assinado do MinIO (com duração de 15 min)
         return storageService.getDownloadUrl(documento.getObjectName());

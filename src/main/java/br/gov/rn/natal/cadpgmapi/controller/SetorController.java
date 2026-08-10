@@ -18,7 +18,7 @@ public class SetorController extends BaseNameController<Setor, SetorRequestDTO, 
         super(service);
     }
 
-    // Implementação obrigatória do méthod abstrato do pai!
+    // Implementação obrigatória do método abstrato do pai!
     @Override
     protected Integer getIdFromDto(SetorResponseDTO dto) {
         return dto.id();

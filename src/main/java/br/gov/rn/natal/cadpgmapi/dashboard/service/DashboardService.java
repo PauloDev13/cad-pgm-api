@@ -40,7 +40,9 @@ public class DashboardService {
 
     // Método auxiliar para deixar o rótulo do status amigável (ex: LICENÇA_MATERNIDADE -> Licença Maternidade)
     private String formatarRotulo(String enumName) {
-        if (enumName == null) return "Desconhecido";
+        // B4.23: antes apenas o null era tratado — um rótulo vazio ("") estourava
+        // StringIndexOutOfBoundsException no substring(0,1). Agora ambos são cobertos.
+        if (enumName == null || enumName.isBlank()) return "Desconhecido";
         String formatado = enumName.replace("_", " ").toLowerCase();
         // Capitaliza a primeira letra
         return formatado.substring(0, 1).toUpperCase() + formatado.substring(1);

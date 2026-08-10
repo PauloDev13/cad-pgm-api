@@ -1,5 +1,6 @@
 package br.gov.rn.natal.cadpgmapi.service.email;
 
+import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
@@ -69,7 +70,7 @@ public class EmailService {
         } catch (MessagingException e) {
             // Como o MimeMessageHelper exige tratamento de exceção, nós encapsulamos e lançamos
             // para não quebrar a assinatura original do seu método.
-            throw new RuntimeException("Falha ao montar o e-mail HTML de recuperação", e);
+            throw new BusinessException("Falha ao montar o e-mail HTML de recuperação", e);
         }
     }
 }

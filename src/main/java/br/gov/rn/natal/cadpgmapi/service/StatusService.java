@@ -7,7 +7,6 @@ import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.StatusMapper;
 import br.gov.rn.natal.cadpgmapi.repository.StatusRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -57,7 +56,7 @@ public class StatusService extends BaseGenericService<Status, StatusRequestDTO, 
         // Só valida duplicidade se o usuário estiver de fato tentando MUDAR o e-mail
         if (!existingStatus.getDescricao().equalsIgnoreCase(dto.descricao())) {
             if (statusRepository.existsByDescricao(dto.descricao())) {
-                throw new BusinessException("Este <strong>Status<strong> (<strong>"+ dto.descricao() +
+                throw new BusinessException("Este <strong>Status</strong> (<strong>" + dto.descricao() +
                         "</strong>) já está em uso.");
             }
         }
@@ -67,7 +66,7 @@ public class StatusService extends BaseGenericService<Status, StatusRequestDTO, 
     @Transactional(readOnly = true)
     public Page<StatusResponseDTO> findByFilterDescricao(String filter, Pageable pageable) {
         if (filter == null || filter.trim().isEmpty()) {
-            return super.findAll(pageable); // Reaproveita o méthod do BaseCrudService!
+            return super.findAll(pageable); // Reaproveita o método do BaseGenericService!
         }
 
         return statusRepository.findByDescricaoContainingIgnoreCase(filter.trim(), pageable)
