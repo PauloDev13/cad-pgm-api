@@ -93,14 +93,14 @@ public class GlobalExceptionHandler {
             MaxUploadSizeExceededException ex, HttpServletRequest request) {
         StandardError error = new StandardError(
                 Instant.now(),
-                HttpStatus.PAYLOAD_TOO_LARGE.value(), // 413
+                HttpStatus.CONTENT_TOO_LARGE.value(), // 413
                 "Tamanho de Arquivo Excedido", // Título coerente com o erro
                 "O arquivo enviado excede o limite máximo permitido de 1.5 MB.", // Mensagem amigável para o usuário
                 request.getRequestURI()
         );
         // Aqui você retorna o JSON no padrão de erro da sua API
         return ResponseEntity
-                .status(HttpStatus.PAYLOAD_TOO_LARGE) // Código HTTP 413
+                .status(HttpStatus.CONTENT_TOO_LARGE) // Código HTTP 413
                 .body(error);
     }
 

@@ -1,5 +1,5 @@
 # Estágio 1: Build
-FROM eclipse-temurin:17-jdk-alpine AS builder
+FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /app
 # Copia o wrapper e o pom.xml (ajuste para Gradle se necessário)
 COPY .mvn/ .mvn
@@ -14,4 +14,4 @@ WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
 # O Spring Boot expõe a porta 8080 por padrão
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

@@ -3,6 +3,9 @@ spring:
     name: cad_pgm_api
   profiles:
     active: dev # Se você não avisar nada, ele sobe como 'dev'
+  threads:
+    virtual:
+      enabled: true # Executa Tomcat e @Async em Virtual Threads (requer JDK 21+)
   jpa:
     open-in-view: false
     properties:
@@ -17,9 +20,6 @@ spring:
     multipart:
       max-file-size: 1536KB    # Exatos 1.5 MB (1.5 * 1024)
       max-request-size: 20480KB # Tamanho total da requisição 20MB
-  jackson: # Os dados para o atributo do tipo Enum não precisam ser case sensitive
-    mapper:
-      accept-case-insensitive-enums: true
 server:
   tomcat:
     max-swallow-size: -1  # O valor -1 diz ao Tomcat para nunca fechar a conexão de forma abrupta
