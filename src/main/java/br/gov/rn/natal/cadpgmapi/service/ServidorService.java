@@ -190,14 +190,14 @@ public class ServidorService extends BaseGenericService<
     // Busca os Servidores ATIVOS e aniversariantes do mês atual do sistema
     @Transactional(readOnly = true)
     public List<AniversarianteResponseDTO> obterAniversariantesPorMes(Integer month) {
-        return servidorRepository.findAniversariantesDoMes(month);
+        return servidorRepository.findAniversariantesDoMes(month, Status.STATUS_ATIVO);
     }
 
     // Busca servidores Ativos para emissão da folha de ponto
     @Transactional(readOnly = true)
     public List<FolhaPontoSetorResponseDTO> obterFolhaDePontoGeral() {
         // 1. Busca todos os dados do banco (rápidos, planos e ordenados)
-        List<FolhaPontoProjectionDTO> projecoes = servidorRepository.findAllDadosFolhaPonto();
+        List<FolhaPontoProjectionDTO> projecoes = servidorRepository.findAllDadosFolhaPonto(Status.STATUS_ATIVO);
 
         // 2. Agrupa por nome do setor mantendo a ordem alfabética do SQL (LinkedHashMap)
         Map<String, List<FolhaPontoProjectionDTO>> agrupadoPorSetor = projecoes.stream()

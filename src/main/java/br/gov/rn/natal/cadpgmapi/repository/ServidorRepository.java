@@ -4,7 +4,6 @@ import br.gov.rn.natal.cadpgmapi.dashboard.dto.response.GraphItemDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoProjectionDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
-import br.gov.rn.natal.cadpgmapi.entity.Status;
 import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
 import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Page;
@@ -48,7 +47,7 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
             s.setor.nome
         )
         FROM Servidor s
-        WHERE MONTH(s.dataNascimento) = :mes AND s.status.descricao = '" + Status.STATUS_ATIVO + "'
+        WHERE MONTH(s.dataNascimento) = :mes AND s.status.descricao = :descricao
         ORDER BY DAY(s.dataNascimento) ASC, s.nome ASC
     """)
     // Otimiza busca no banco de dados para grandes quantidades de registros
@@ -60,7 +59,8 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
             @QueryHint(name = "org.jakarta.persistence.cache.retrieveMode", value = "USE"),
             @QueryHint(name = "org.jakarta.persistence.cache.storeMode", value = "USE"),
     })
-    List<AniversarianteResponseDTO>findAniversariantesDoMes(@Param("mes") Integer mes);
+    List<AniversarianteResponseDTO>findAniversariantesDoMes(@Param("mes") Integer mes,
+                                                            @Param("descricao") String descricao);
 
     // Busca os registro para montar a folha de ponto
     @Query("""
@@ -74,12 +74,12 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
         JOIN s.vinculo v
         JOIN s.setor st
         JOIN s.cargo c
-        WHERE s.excluded = false AND s.status.descricao = '" + Status.STATUS_ATIVO + "'
+        WHERE s.excluded = false AND s.status.descricao = :descricao
         AND LOWER(v.nome) NOT IN ('terceirizado', 'terceirizado ferista', 'temporário')
         AND LOWER(c.nome) NOT IN ('procurador', 'procurador geral', 'procurador adjunto', 'chefe de procuradoria especializada')
         ORDER BY st.nome ASC, s.nome ASC
     """)
-    List<FolhaPontoProjectionDTO> findAllDadosFolhaPonto();
+    List<FolhaPontoProjectionDTO> findAllDadosFolhaPonto(@Param("descricao") String descricao);
 
     /* ==================================
                    DASHBOARD
