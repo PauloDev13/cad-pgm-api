@@ -44,7 +44,9 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
         SELECT new br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO(
             s.dataNascimento,
             s.nome,
-            s.setor.nome
+            s.setor.nome,
+            s.cargo.nome,
+            s.genero
         )
         FROM Servidor s
         WHERE MONTH(s.dataNascimento) = :mes AND s.status.descricao = :descricao
