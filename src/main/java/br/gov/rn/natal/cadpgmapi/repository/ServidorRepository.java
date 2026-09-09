@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -67,6 +68,7 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
     // Busca os registro para montar a folha de ponto
     @Query("""
         SELECT new br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoProjectionDTO(
+            st.id,
             st.nome,
             s.nome,
             v.nome,
@@ -76,12 +78,21 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
         JOIN s.vinculo v
         JOIN s.setor st
         JOIN s.cargo c
-        WHERE s.excluded = false AND s.status.descricao = :descricao
+        WHERE s.excluded = false 
+        AND s.status.descricao = :descricao
+        AND (:setorIds IS NULL OR st.id IN :setorIds)
         AND LOWER(v.nome) NOT IN ('terceirizado', 'terceirizado ferista', 'temporário')
         AND LOWER(c.nome) NOT IN ('procurador', 'procurador geral', 'procurador adjunto', 'chefe de procuradoria especializada')
         ORDER BY st.nome ASC, s.nome ASC
     """)
-    List<FolhaPontoProjectionDTO> findAllDadosFolhaPonto(@Param("descricao") String descricao);
+    @QueryHints({
+            @QueryHint(name = "org.hibernate.readOnly", value = "true"),
+            @QueryHint(name = "org.hibernate.cacheable", value = "true")
+    })
+    List<FolhaPontoProjectionDTO> findAllDadosFolhaPonto(
+            @Param("descricao") String descricao,
+            @Param("setorIds") Collection<Integer> setorIds
+    );
 
     /* ==================================
                    DASHBOARD

@@ -38,12 +38,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -195,11 +190,17 @@ public class ServidorService extends BaseGenericService<
 
     // Busca servidores Ativos para emissão da folha de ponto
     @Transactional(readOnly = true)
-    public List<FolhaPontoSetorResponseDTO> obterFolhaDePontoGeral() {
-        // 1. Busca todos os dados do banco (rápidos, planos e ordenados)
-        List<FolhaPontoProjectionDTO> projecoes = servidorRepository.findAllDadosFolhaPonto(Status.STATUS_ATIVO);
+    public List<FolhaPontoSetorResponseDTO> obterFolhaDePonto(List<Integer> setorIds) {
+        // 1. Normaliza: se a lista vier nula ou vazia, converte para null (o banco busca todos)
+        Collection<Integer> idsFiltrados = (setorIds != null && !setorIds.isEmpty()) ? setorIds : null;
 
-        // 2. Agrupa por nome do setor mantendo a ordem alfabética do SQL (LinkedHashMap)
+        // 2. Executa a consulta otimizada no repositório
+        List<FolhaPontoProjectionDTO> projecoes = servidorRepository.findAllDadosFolhaPonto(
+                Status.STATUS_ATIVO,
+                idsFiltrados
+        );
+
+        // 3. Agrupa por nome/id do setor preservando a ordem do SQL (LinkedHashMap)
         Map<String, List<FolhaPontoProjectionDTO>> agrupadoPorSetor = projecoes.stream()
                 .collect(Collectors.groupingBy(
                         FolhaPontoProjectionDTO::nomeSetor,
@@ -207,30 +208,30 @@ public class ServidorService extends BaseGenericService<
                         Collectors.toList()
                 ));
 
-        // 3. Converte o Map estruturado para a lista de DTOs final do Frontend
+        // 4. Mapeia para a estrutura hierárquica esperada pelo Frontend
         return agrupadoPorSetor.entrySet().stream()
                 .map(entry -> {
+                    List<FolhaPontoProjectionDTO> listaProj = entry.getValue();
+                    Integer idSetor = listaProj.getFirst().idSetor();
                     String nomeSetor = entry.getKey();
 
-                    // Transforma a projection no DTO interno
-                    List<FolhaPontoServidorDTO> servidores = entry.getValue().stream()
+                    List<FolhaPontoServidorDTO> servidores = listaProj.stream()
                             .map(p -> new FolhaPontoServidorDTO(
                                     p.nomeServidor(),
                                     p.vinculo(),
                                     p.tipoAtividade()
                             ))
-                            .collect(Collectors.toList());
+                            .toList();
 
-                    // Monta o nó principal (Nome, Total, Lista)
                     return new FolhaPontoSetorResponseDTO(
+                            idSetor,
                             nomeSetor,
                             servidores.size(),
                             servidores
                     );
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
-
 
     // Busca todos os registros dos Servidores DESLIGADOS
     @Transactional(readOnly = true)

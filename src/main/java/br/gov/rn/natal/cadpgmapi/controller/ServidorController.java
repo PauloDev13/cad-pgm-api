@@ -105,12 +105,18 @@ public class ServidorController extends BaseController<
 
     // Busca registros para emitir a folha de ponto
     @GetMapping("/folha-ponto")
-    @Operation(summary = "Gerar dados Globais da Folha de Ponto",
-            description = "Retorna todos os servidores ativos, agrupados por setor. Ordenado alfabeticamente por Setor e Servidor.")
-    public ResponseEntity<List<FolhaPontoSetorResponseDTO>> getDadosFolhaPonto() {
-
-        List<FolhaPontoSetorResponseDTO> folhaPonto = service.obterFolhaDePontoGeral();
-
+    @Operation(
+            summary = "Gerar dados da Folha de Ponto por Setores",
+            description = "Retorna os servidores ativos agrupados por setor. Permite filtrar por um ou múltiplos setores. " +
+                    "Caso nenhum setor seja informado (ou lista vazia), retorna todos os setores."
+    )
+    public ResponseEntity<List<FolhaPontoSetorResponseDTO>> getDadosFolhaPonto(
+            @RequestParam(name = "setorIds", required = false) List<Integer> setorIds
+    ) {
+        System.out.println("==============================================");
+        System.out.println("SETOR IDS: " + setorIds);
+        System.out.println("==============================================");
+        List<FolhaPontoSetorResponseDTO> folhaPonto = service.obterFolhaDePonto(setorIds);
         return ResponseEntity.ok(folhaPonto);
     }
 
