@@ -5,11 +5,7 @@ import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
 import br.gov.rn.natal.cadpgmapi.audit.enums.AuditAction;
 import br.gov.rn.natal.cadpgmapi.audit.utils.AuditDiffUtil;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoProjectionDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoServidorDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoSetorResponseDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.*;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.entity.Status;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
@@ -263,6 +259,47 @@ public class ServidorService extends BaseGenericService<
             return listExcluded(pageable);
         }
         return servidorRepository.searchExcluded(term.trim(), pageable).map(mapper::toDto);
+    }
+
+    /**
+     * Retorna a lista de procuradores e seus servidores vinculados agrupados e ordenados.
+     * Caso a lista de procuradores seja nula ou vazia, busca todos os procuradores.
+     *
+     * @param procuradores Lista opcional de nomes de procuradores para filtragem
+     * @return Lista agrupada de procuradores e seus servidores (A-Z)
+     */
+    @Transactional(readOnly = true)
+    public List<ProcuradorVinculoResponseDTO> listarVinculosAgrupadosPorProcurador(List<String> procuradores) {
+        // 1. Sanitização dos parâmetros de entrada
+        List<String> nomesNormalizados = (procuradores == null)
+                ? Collections.emptyList()
+                : procuradores.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(nome -> !nome.isBlank())
+                .map(String::toLowerCase)
+                .distinct()
+                .toList();
+        boolean filtrar = !nomesNormalizados.isEmpty();
+        // 2. Consulta otimizada com ordenação no banco (p.nome ASC, s.nome ASC)
+        List<ProcuradorServidorFlatDTO> registros = servidorRepository.findVinculosProcuradores(
+                filtrar ? nomesNormalizados : Collections.singletonList(""),
+                filtrar
+        );
+        // 3. Agrupamento preservando a ordem alfabética (LinkedHashMap)
+        Map<String, List<ServidorSetorDTO>> agrupado = registros.stream()
+                .collect(Collectors.groupingBy(
+                        ProcuradorServidorFlatDTO::nomeProcurador,
+                        LinkedHashMap::new, // Mantém a ordem dos procuradores garantida pelo SQL
+                        Collectors.mapping(
+                                r -> new ServidorSetorDTO(r.nomeServidor(), r.nomeSetor()),
+                                Collectors.toList() // Mantém a ordem dos servidores garantida pelo SQL
+                        )
+                ));
+        // 4. Transformação final para o DTO de resposta
+        return agrupado.entrySet().stream()
+                .map(entry -> new ProcuradorVinculoResponseDTO(entry.getKey(), entry.getValue()))
+                .toList();
     }
 
     /* =====================================================

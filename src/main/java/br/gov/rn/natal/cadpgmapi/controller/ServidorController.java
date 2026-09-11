@@ -5,11 +5,15 @@ import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoSetorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.ProcuradorVinculoResponseDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.load_pdf.services.DocumentoStorageService;
 import br.gov.rn.natal.cadpgmapi.service.ServidorService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -113,11 +117,31 @@ public class ServidorController extends BaseController<
     public ResponseEntity<List<FolhaPontoSetorResponseDTO>> getDadosFolhaPonto(
             @RequestParam(name = "setorIds", required = false) List<Integer> setorIds
     ) {
-        System.out.println("==============================================");
-        System.out.println("SETOR IDS: " + setorIds);
-        System.out.println("==============================================");
         List<FolhaPontoSetorResponseDTO> folhaPonto = service.obterFolhaDePonto(setorIds);
         return ResponseEntity.ok(folhaPonto);
+    }
+
+    // retorna lista de procuradores com os servidores a eles vinculados (uso do certificado digitaç
+    @Operation(
+            summary = "Listar vínculos de servidores por procurador",
+            description = "Retorna a listagem de servidores (com seus respectivos setores) vinculados a um determinado " +
+                    "procurador pesquisado por nome."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Lista de servidores vinculados retornada com sucesso"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    @GetMapping("/vinculos")
+    public ResponseEntity<List<ProcuradorVinculoResponseDTO>> listarVinculosPorProcurador(
+            @Parameter(
+                    description = "Lista de nomes de procuradores para filtragem (opcional). Aceita múltiplos " +
+                            "parâmetros ou valores separados por vírgula.",
+                    example = "Carlos Eduardo, Maria Helena"
+            )
+            @RequestParam(name = "procuradores", required = false) List<String> procuradores
+    ) {
+        List<ProcuradorVinculoResponseDTO> response = service.listarVinculosAgrupadosPorProcurador(procuradores);
+        return ResponseEntity.ok(response);
     }
 
     // Faz o upload de fotos para os Servidores com status ATIVO

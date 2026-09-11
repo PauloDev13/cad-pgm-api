@@ -3,6 +3,7 @@ package br.gov.rn.natal.cadpgmapi.repository;
 import br.gov.rn.natal.cadpgmapi.dashboard.dto.response.GraphItemDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoProjectionDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.ProcuradorServidorFlatDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
 import jakarta.persistence.QueryHint;
@@ -92,6 +93,26 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
     List<FolhaPontoProjectionDTO> findAllDadosFolhaPonto(
             @Param("descricao") String descricao,
             @Param("setorIds") Collection<Integer> setorIds
+    );
+
+    @Query("""
+        SELECT DISTINCT new br.gov.rn.natal.cadpgmapi.dto.response.ProcuradorServidorFlatDTO(
+            p.nome,
+            s.nome,
+            COALESCE(seto.nome, 'Sem Setor')
+        )
+        FROM Servidor s
+        JOIN s.procuradores p
+        LEFT JOIN s.setor seto
+        WHERE (:filtrar = false OR LOWER(p.nome) IN :procuradores)
+          AND s.excluded = false
+        ORDER BY p.nome ASC, s.nome ASC
+    """)
+
+    @QueryHints(@QueryHint(name = "org.hibernate.readOnly", value = "true"))
+    List<ProcuradorServidorFlatDTO> findVinculosProcuradores(
+            @Param("procuradores") Collection<String> procuradores,
+            @Param("filtrar") boolean filtrar
     );
 
     /* ==================================
