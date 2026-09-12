@@ -88,7 +88,9 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
     """)
     @QueryHints({
             @QueryHint(name = "org.hibernate.readOnly", value = "true"),
-            @QueryHint(name = "org.hibernate.cacheable", value = "true")
+            @QueryHint(name = "org.hibernate.cacheable", value = "true"),
+            @QueryHint(name = "org.jakarta.persistence.cache.retrieveMode", value = "USE"),
+            @QueryHint(name = "org.jakarta.persistence.cache.storeMode", value = "USE"),
     })
     List<FolhaPontoProjectionDTO> findAllDadosFolhaPonto(
             @Param("descricao") String descricao,
@@ -109,7 +111,12 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
         ORDER BY p.nome ASC, s.nome ASC
     """)
 
-    @QueryHints(@QueryHint(name = "org.hibernate.readOnly", value = "true"))
+    @QueryHints({
+            @QueryHint(name = "org.hibernate.readOnly", value = "true"),
+            @QueryHint(name = "org.hibernate.cacheable", value = "true"),
+            @QueryHint(name = "org.jakarta.persistence.cache.retrieveMode", value = "USE"),
+            @QueryHint(name = "org.jakarta.persistence.cache.storeMode", value = "USE"),
+    })
     List<ProcuradorServidorFlatDTO> findVinculosProcuradores(
             @Param("procuradores") Collection<String> procuradores,
             @Param("filtrar") boolean filtrar
