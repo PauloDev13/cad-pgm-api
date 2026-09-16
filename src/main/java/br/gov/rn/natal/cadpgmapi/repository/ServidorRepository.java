@@ -79,7 +79,7 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
         JOIN s.vinculo v
         JOIN s.setor st
         JOIN s.cargo c
-        WHERE s.excluded = false 
+        WHERE s.excluded = false
         AND s.status.descricao = :descricao
         AND (:setorIds IS NULL OR st.id IN :setorIds)
         AND LOWER(v.nome) NOT IN ('terceirizado', 'terceirizado ferista', 'temporário')
@@ -188,6 +188,13 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
     @Query(value = "SELECT * FROM servidor WHERE excluded = true ORDER BY excluded_date DESC ",
             countQuery = "SELECT count(*) FROM servidor WHERE excluded = true",
             nativeQuery = true)
+
+    @QueryHints({
+            @QueryHint(name = "org.hibernate.readOnly", value = "true"),
+            @QueryHint(name = "org.hibernate.cacheable", value = "true"),
+            @QueryHint(name = "org.jakarta.persistence.cache.retrieveMode", value = "USE"),
+            @QueryHint(name = "org.jakarta.persistence.cache.storeMode", value = "USE"),
+    })
     Page<Servidor> findAllExcluded(Pageable pageable);
 
     // Busca um Servidor com status DESLIGADO por ID
@@ -199,6 +206,13 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
     @Query(value = "SELECT * FROM servidor WHERE excluded = true AND (nome LIKE CONCAT('%', :term, '%') OR cpf LIKE CONCAT('%', :term, '%'))",
             countQuery = "SELECT count(*) FROM servidor WHERE excluded = true AND (nome LIKE CONCAT('%', :term, '%') OR cpf LIKE CONCAT('%', :term, '%'))",
             nativeQuery = true)
+
+    @QueryHints({
+            @QueryHint(name = "org.hibernate.readOnly", value = "true"),
+            @QueryHint(name = "org.hibernate.cacheable", value = "true"),
+            @QueryHint(name = "org.jakarta.persistence.cache.retrieveMode", value = "USE"),
+            @QueryHint(name = "org.jakarta.persistence.cache.storeMode", value = "USE"),
+    })
     Page<Servidor> searchExcluded(@Param("term") String term, Pageable pageable);
 
     // Faz atualização automática de um Servidor DESLIGADO para ATIVO (READMISSÃO)
