@@ -1,14 +1,18 @@
 package br.gov.rn.natal.cadpgmapi.service.email;
 
+import br.gov.rn.natal.cadpgmapi.dto.response.ProcuradorResponseDTO;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.mail.SimpleMailMessage;
+//import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 public class EmailService {
@@ -17,6 +21,12 @@ public class EmailService {
 
     @Value("${spring.mail.username}")
     private String remetente;
+
+    @Value("${app.mail.certificado.remetente}")
+    private String remetenteCertificado;
+
+    @Value("${app.mail.certificado.destinatario}")
+    private String destinatarioCertificado;
 
     public EmailService(JavaMailSender mailSender) {
         this.mailSender = mailSender;
@@ -71,6 +81,60 @@ public class EmailService {
             // Como o MimeMessageHelper exige tratamento de exceção, nós encapsulamos e lançamos
             // para não quebrar a assinatura original do seu método.
             throw new BusinessException("Falha ao montar o e-mail HTML de recuperação", e);
+        }
+    }
+
+    public void enviarEmailCertificadosAVencer(List<ProcuradorResponseDTO> procuradores) {
+        if (procuradores == null || procuradores.isEmpty()) return;
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(remetenteCertificado);
+            helper.setTo(destinatarioCertificado);
+            helper.setSubject("Aviso: Certificados Digitais Próximos do Vencimento - PGM");
+
+            StringBuilder html = new StringBuilder();
+            html.append("<div style='font-family: Arial, sans-serif; color: #333333; line-height: 1.6; max-width: 600px; margin: 0 auto;'>");
+            html.append("<div style='text-align: left; margin-bottom: 25px;'>");
+            html.append("  <img src='cid:logoPgm' alt='Logomarca PGM' style='max-width: 250px; height: auto;' />");
+            html.append("</div>");
+            html.append("<h2>Certificados Digitais a Expirar (7 dias ou menos)</h2>");
+            html.append("<p>Abaixo encontra-se a lista de procuradores com certificados a necessitar de renovação:</p>");
+
+            html.append("<table style='width: 100%; border-collapse: collapse; margin-top: 20px;'>");
+            html.append("<tr style='background-color: #f2f2f2;'>")
+                    .append("<th style='border: 1px solid #dddddd; padding: 8px; text-align: left;'>Procurador</th>")
+                    .append("<th style='border: 1px solid #dddddd; padding: 8px; text-align: left;'>Tipo</th>")
+                    .append("<th style='border: 1px solid #dddddd; padding: 8px; text-align: left;'>Data de Expiração</th>")
+                    .append("</tr>");
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+            for (ProcuradorResponseDTO p : procuradores) {
+                String dataFormatada = p.dataExpiracao() != null ? p.dataExpiracao().format(formatter) : "N/D";
+                html.append("<tr>")
+                        .append("<td style='border: 1px solid #dddddd; padding: 8px;'>").append(p.nome()).append("</td>")
+                        .append("<td style='border: 1px solid #dddddd; padding: 8px;'>").append(p.tipoCertificado()).append("</td>")
+                        .append("<td style='border: 1px solid #dddddd; padding: 8px;'>").append(dataFormatada).append("</td>")
+                        .append("</tr>");
+            }
+            html.append("</table>");
+            html.append("<p style='font-size: 12px; color: #777777; border-top: 1px solid #DDDDDD; margin-top: 25px; padding-top: 15px;'>")
+                    .append("Este é um e-mail automático gerado pelo sistema CAD PGM. Por favor, não responda.</p>");
+            html.append("</div>");
+
+            helper.setText(html.toString(), true);
+
+            // Adicionar a logomarca da PGM como imagem embutida (inline)
+            ClassPathResource logoImage = new ClassPathResource("images/logo.png");
+            helper.addInline("logoPgm", logoImage);
+
+            mailSender.send(message);
+
+        } catch (MessagingException e) {
+            throw new br.gov.rn.natal.cadpgmapi.exception.BusinessException("Falha ao montar o e-mail HTML de certificados a vencer.", e);
         }
     }
 }

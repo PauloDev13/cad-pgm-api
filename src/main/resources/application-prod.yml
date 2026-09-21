@@ -31,6 +31,10 @@ api:
 app:
   frontend:
     urls: ${FRONTEND_URLS:-http://localhost:8080,http://192.168.1.9:8080}
+  mail:
+    certificado:
+      remetente: ${CERTIFICADO_MAIL_REMETENTE}
+      destinatario: ${CERTIFICADO_MAIL_DESTINATARIO}
 minio:
   # O Spring Boot vai "puxar" os valores que o Docker Compose injetou nele!
   url: ${MINIO_URL}

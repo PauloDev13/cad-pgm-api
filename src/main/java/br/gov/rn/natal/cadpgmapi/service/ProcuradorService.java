@@ -7,9 +7,13 @@ import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.ProcuradorMapper;
 import br.gov.rn.natal.cadpgmapi.repository.ProcuradorRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseNameGenericService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.util.List;
+@Slf4j
 @Service
 public class ProcuradorService extends
         BaseNameGenericService<Procurador, ProcuradorRequestDTO, ProcuradorResponseDTO, Integer> {
@@ -43,5 +47,51 @@ public class ProcuradorService extends
                         "</strong>) já foi cadastrado");
             }
         }
+    }
+
+    /**
+     * Retorna a lista de procuradores cujos certificados digitais
+     * vencem em 7 dias ou menos, incluindo os que já se encontram vencidos.
+     */
+    public List<ProcuradorResponseDTO> listarCertificadosProximosDoVencimento() {
+        LocalDate hoje = LocalDate.now();
+        LocalDate limiteVencimento = hoje.plusDays(7);
+
+        log.info("Verificando certificados... Data atual: {} | Limite (7 dias): {}", hoje, limiteVencimento);
+
+        List<ProcuradorResponseDTO> listaFiltrada = repository.findAll().stream()
+                .filter(p -> {
+                    if (p.getDataExpiracao() == null) {
+                        log.info("Procurador [{}] IGNORADO: dataExpiracao é NULL. (DataExpedicao BD: {}, TipoCertificado BD: {})",
+                                p.getNome(), p.getDataExpedicao(), p.getTipoCertificado());
+                        return false;
+                    }
+                    return true;
+                })
+                .filter(p -> {
+                    LocalDate expiracao = p.getDataExpiracao().toLocalDate();
+                    boolean noPrazo = !expiracao.isBefore(hoje) && !expiracao.isAfter(limiteVencimento);
+
+                    log.info("Procurador [{}] | Expiração calculada: {} | Entrou na janela de 7 dias? {}",
+                            p.getNome(), expiracao, noPrazo);
+
+                    return noPrazo;
+                })
+                .map(mapper::toDto)
+                .toList();
+
+        log.info("Total de certificados filtrados para envio: {}", listaFiltrada.size());
+
+        return listaFiltrada;
+
+//        return repository.findAll().stream()
+//                .filter(p -> p.getDataExpiracao() != null)
+//                .filter(p -> {
+//                    LocalDate expiracao = p.getDataExpiracao().toLocalDate();
+//                    // isAfter retorna false para datas anteriores ou iguais ao limite estipulado
+//                    return !expiracao.isBefore(hoje) && !expiracao.isAfter(limiteVencimento);
+//                })
+//                .map(mapper::toDto)
+//                .toList();
     }
 }
