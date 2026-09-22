@@ -3,6 +3,7 @@ package br.gov.rn.natal.cadpgmapi.entity;
 import br.gov.rn.natal.cadpgmapi.enums.TipoCertificado;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Formula;
 
 import java.time.LocalDateTime;
 
@@ -26,9 +27,7 @@ public class Procurador {
     @Column(name = "data_expedicao")
     private LocalDateTime dataExpedicao;
 
-    @Transient
-    public LocalDateTime getDataExpiracao() {
-        return tipoCertificado != null ? tipoCertificado.calcularDataExpiracao(dataExpedicao) : null;
-    }
+    @Formula("DATE_ADD(data_expedicao, INTERVAL CASE WHEN tipo_certificado = 'A1' THEN 1 WHEN tipo_certificado = 'A3' THEN 3 ELSE 0 END YEAR)")
+    private LocalDateTime dataExpiracao;
 }
 

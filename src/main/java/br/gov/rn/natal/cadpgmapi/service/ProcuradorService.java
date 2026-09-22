@@ -57,33 +57,6 @@ public class ProcuradorService extends
         LocalDate hoje = LocalDate.now();
         LocalDate limiteVencimento = hoje.plusDays(7);
 
-//        log.info("Verificando certificados... Data atual: {} | Limite (7 dias): {}", hoje, limiteVencimento);
-//
-//        List<ProcuradorResponseDTO> listaFiltrada = repository.findAll().stream()
-//                .filter(p -> {
-//                    if (p.getDataExpiracao() == null) {
-//                        log.info("Procurador [{}] IGNORADO: dataExpiracao é NULL. (DataExpedicao BD: {}, TipoCertificado BD: {})",
-//                                p.getNome(), p.getDataExpedicao(), p.getTipoCertificado());
-//                        return false;
-//                    }
-//                    return true;
-//                })
-//                .filter(p -> {
-//                    LocalDate expiracao = p.getDataExpiracao().toLocalDate();
-//                    boolean noPrazo = !expiracao.isBefore(hoje) && !expiracao.isAfter(limiteVencimento);
-//
-//                    log.info("Procurador [{}] | Expiração calculada: {} | Entrou na janela de 7 dias? {}",
-//                            p.getNome(), expiracao, noPrazo);
-//
-//                    return noPrazo;
-//                })
-//                .map(mapper::toDto)
-//                .toList();
-//
-//        log.info("Total de certificados filtrados para envio: {}", listaFiltrada.size());
-//
-//        return listaFiltrada;
-
         return repository.findAll().stream()
                 .filter(p -> p.getDataExpiracao() != null)
                 .filter(p -> {
