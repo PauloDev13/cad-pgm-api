@@ -88,11 +88,18 @@ public class EmailService {
         if (procuradores == null || procuradores.isEmpty()) return;
 
         try {
+            // Divide a string do .env num array, removendo espaços acidentais nas pontas
+            // (início ou fim de cada endereço de e-mail).
+            String[] destinatarios = destinatarioCertificado.split("\\s*,\\s*");
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
+            // Ativa a validação estrita nativa do Spring/JavaMail
+            helper.setValidateAddresses(true);
+
             helper.setFrom(remetenteCertificado);
-            helper.setTo(destinatarioCertificado);
+            helper.setTo(destinatarios);
             helper.setSubject("Aviso: Certificados Digitais Próximos do Vencimento - PGM");
 
             String htlmMsg
@@ -101,8 +108,17 @@ public class EmailService {
                     + "<img src='cid:logoPgm' alt='Logomarca PGM' style='max-width: 250px; height: auto;' />"
                     + "</div>"
                     + "<h2>Certificados Digitais A VENCER em 7 dias ou menos</h2>"
-                    + "<p style='font-size: 15px; margin: 0 0 15px 0;'>"
-                    + "Solicitamos o envio de autorização para EMISSÃO dos Certificados Digitais abaixo relacionados:"
+                    + "<p style='font-size: 15px; margin: 0 0 15px 0;'>";
+
+            if (procuradores.size() > 1) {
+                htlmMsg = htlmMsg
+                        + "Solicitamos o envio de autorização para EMISSÃO dos Certificados Digitais abaixo relacionados:";
+            } else {
+                htlmMsg = htlmMsg
+                        + "Solicitamos o envio de autorização para EMISSÃO do Certificado Digital abaixo relacionado:";
+            }
+
+            htlmMsg = htlmMsg
                     + "</p>"
                     + "<table style='width: 100%; border-collapse: collapse; margin-top: 20px;'>"
                     + "<tr style='background-color: #f2f2f2;'>"
