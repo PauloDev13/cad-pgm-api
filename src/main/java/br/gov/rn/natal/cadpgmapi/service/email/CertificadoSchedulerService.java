@@ -20,7 +20,8 @@ public class CertificadoSchedulerService {
     }
 
     // Para teste local imediato (dispara a cada 1 minuto), descomente a linha abaixo e comente a de produção:
-     @Scheduled(cron = "0 * * * * *")
+//     @Scheduled(cron = "0 * * * * *")
+     @Scheduled(cron = "0 0 22 * * MON")
 
     // Expressão de Produção: Executa toda segunda-feira às 08:00 AM
 //    @Scheduled(cron = "0 0 8 * * MON")

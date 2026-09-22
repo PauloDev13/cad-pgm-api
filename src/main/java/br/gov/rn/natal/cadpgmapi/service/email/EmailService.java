@@ -45,7 +45,7 @@ public class EmailService {
             helper.setSubject("Recuperação de Senha - PGM TI");
 
             // 3. Monta o corpo do e-mail em HTML com o botão estilizado
-            String htmlMsg = "<div style='font-family: Arial, sans-serif; color: #333333; line-height: 1.6; max-width: 600px; margin: 0 auto;'>"
+            String htmlMsg = "<div style='font-family: Arial, sans-serif; color: #333333; line-height: 1.6; max-width: 600px; margin: 0 padding 0;'>"
                     + "<div style='text-align: left; margin-bottom: 25px;'>"
                     + "  <img src='cid:logoPgm' alt='Logomarca PGM' style='max-width: 250px; height: auto;' />"
                     + "</div>"
@@ -95,43 +95,58 @@ public class EmailService {
             helper.setTo(destinatarioCertificado);
             helper.setSubject("Aviso: Certificados Digitais Próximos do Vencimento - PGM");
 
-            StringBuilder html = new StringBuilder();
-            html.append("<div style='font-family: Arial, sans-serif; color: #333333; line-height: 1.6; max-width: 600px; margin: 0 auto;'>");
-            html.append("<div style='text-align: left; margin-bottom: 25px;'>");
-            html.append("  <img src='cid:logoPgm' alt='Logomarca PGM' style='max-width: 250px; height: auto;' />");
-            html.append("</div>");
-            html.append("<h2>Certificados Digitais a Expirar (7 dias ou menos)</h2>");
-            html.append("<p>Abaixo encontra-se a lista de procuradores com certificados a necessitar de renovação:</p>");
-
-            html.append("<table style='width: 100%; border-collapse: collapse; margin-top: 20px;'>");
-            html.append("<tr style='background-color: #f2f2f2;'>")
-                    .append("<th style='border: 1px solid #dddddd; padding: 8px; text-align: left;'>Procurador</th>")
-                    .append("<th style='border: 1px solid #dddddd; padding: 8px; text-align: left;'>Tipo</th>")
-                    .append("<th style='border: 1px solid #dddddd; padding: 8px; text-align: left;'>Data de Expiração</th>")
-                    .append("</tr>");
+            String htlmMsg
+                    = "<div style='font-family: Arial, sans-serif; color: #333333; line-height: 1.6; max-width: 600px; margin: 0 padding 0;'>"
+                    + "<div style='text-align: left; margin-bottom: 25px;'>"
+                    + "<img src='cid:logoPgm' alt='Logomarca PGM' style='max-width: 250px; height: auto;' />"
+                    + "</div>"
+                    + "<h2>Certificados Digitais A VENCER em 7 dias ou menos</h2>"
+                    + "<p style='font-size: 15px; margin: 0 0 15px 0;'>"
+                    + "Solicitamos o envio de autorização para EMISSÃO dos Certificados Digitais abaixo relacionados:"
+                    + "</p>"
+                    + "<table style='width: 100%; border-collapse: collapse; margin-top: 20px;'>"
+                    + "<tr style='background-color: #f2f2f2;'>"
+                    + "<th style='border: 1px solid #dddddd; padding: 8px; text-align: left;'>Titular</th>"
+                    + "<th style='border: 1px solid #dddddd; padding: 8px; text-align: left;'>Tipo</th>"
+                    + "<th style='border: 1px solid #dddddd; padding: 8px; text-align: left;'>Validade</th>"
+                    + "</tr>";
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
             for (ProcuradorResponseDTO p : procuradores) {
                 String dataFormatada = p.dataExpiracao() != null ? p.dataExpiracao().format(formatter) : "N/D";
-                html.append("<tr>")
-                        .append("<td style='border: 1px solid #dddddd; padding: 8px;'>").append(p.nome()).append("</td>")
-                        .append("<td style='border: 1px solid #dddddd; padding: 8px;'>").append(p.tipoCertificado()).append("</td>")
-                        .append("<td style='border: 1px solid #dddddd; padding: 8px;'>").append(dataFormatada).append("</td>")
-                        .append("</tr>");
+
+                htlmMsg = htlmMsg
+                        + "<tr>"
+                        + "<td style='border: 1px solid #dddddd; padding: 8px;'>"
+                        + p.nome()
+                        + "</td>"
+                        + "<td style='border: 1px solid #dddddd; padding: 8px;'>"
+                        + p.tipoCertificado()
+                        + "</td>"
+                        + "<td style='border: 1px solid #dddddd; padding: 8px;'>"
+                        + dataFormatada
+                        + "</td>"
+                        + "</tr>";
             }
-            html.append("</table>");
-            html.append("<p style='font-size: 12px; color: #777777; border-top: 1px solid #DDDDDD; margin-top: 25px; padding-top: 15px;'>")
-                    .append("Este é um e-mail automático gerado pelo sistema CAD PGM. Por favor, não responda.</p>");
-            html.append("</div>");
+            htlmMsg = htlmMsg
+                    + "</table>"
+                    + "<p style='font-size: 12px; color: #777777; margin-top: 25px; padding-top: 5px;'>"
+                    + "Clayton Liberato<br>"
+                    + "Diretor do Departamento de Tecnologia da Informação<br>"
+                    + "Procuradoria Geral do Município - PGM"
+                    + "</p>"
+                    + "<p style='font-size: 12px; color: #777777; border-top: 1px solid #DDDDDD; padding-top: 15px;'>"
+                    + "Este é um e-mail automático gerado pelo sistema CAD PGM. Por favor, não responda.</p>"
+                    + "</div>";
 
-            helper.setText(html.toString(), true);
+                helper.setText(htlmMsg, true);
 
-            // Adicionar a logomarca da PGM como imagem embutida (inline)
-            ClassPathResource logoImage = new ClassPathResource("images/logo.png");
-            helper.addInline("logoPgm", logoImage);
+                // Adicionar a logomarca da PGM como imagem embutida (inline)
+                ClassPathResource logoImage = new ClassPathResource("images/logo.png");
+                helper.addInline("logoPgm", logoImage);
 
-            mailSender.send(message);
+                mailSender.send(message);
 
         } catch (MessagingException e) {
             throw new br.gov.rn.natal.cadpgmapi.exception.BusinessException("Falha ao montar o e-mail HTML de certificados a vencer.", e);
