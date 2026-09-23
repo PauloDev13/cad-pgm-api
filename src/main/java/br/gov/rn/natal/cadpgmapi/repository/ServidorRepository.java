@@ -56,8 +56,6 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
     """)
     // Otimiza busca no banco de dados para grandes quantidades de registros
     @QueryHints({
-            // CORREÇÃO DE TYPO: antes estava "org.hibernate.readyOnly" — o hint era ignorado
-            // silenciosamente pelo Hibernate e a otimização de leitura nunca era aplicada.
             @QueryHint(name = "org.hibernate.readOnly", value = "true"),
             @QueryHint(name = "org.hibernate.cacheable", value = "true"),
             @QueryHint(name = "org.jakarta.persistence.cache.retrieveMode", value = "USE"),

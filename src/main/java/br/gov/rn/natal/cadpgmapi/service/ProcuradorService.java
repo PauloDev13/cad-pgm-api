@@ -2,6 +2,7 @@ package br.gov.rn.natal.cadpgmapi.service;
 
 import br.gov.rn.natal.cadpgmapi.dto.request.ProcuradorRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ProcuradorResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.ProcuradorSelectDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Procurador;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.ProcuradorMapper;
@@ -10,6 +11,7 @@ import br.gov.rn.natal.cadpgmapi.service.generic.BaseNameGenericService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -27,6 +29,31 @@ public class ProcuradorService extends
             ApplicationEventPublisher eventPublisher) {
         super(repository, mapper, eventPublisher);
         this.procuradorRepository = repository;
+    }
+
+    /**
+     * Retorna a lista de procuradores cujos certificados digitais
+     * vencem em 7 dias ou menos, incluindo os que já se encontram vencidos.
+     */
+    @Transactional(readOnly = true)
+    public List<ProcuradorResponseDTO> listarCertificadosProximosDoVencimento() {
+        LocalDate hoje = LocalDate.now();
+        LocalDate limiteVencimento = hoje.plusDays(7);
+
+        return repository.findAll().stream()
+                .filter(p -> p.getDataExpiracao() != null)
+                .filter(p -> {
+                    LocalDate expiracao = p.getDataExpiracao().toLocalDate();
+                    // isAfter retorna false para datas anteriores ou iguais ao limite estipulado
+                    return !expiracao.isBefore(hoje) && !expiracao.isAfter(limiteVencimento);
+                })
+                .map(mapper::toDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProcuradorSelectDTO> listarProcuradoresSelect() {
+        return procuradorRepository.findAllToCombo();
     }
 
     // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
@@ -47,24 +74,5 @@ public class ProcuradorService extends
                         "</strong>) já foi cadastrado");
             }
         }
-    }
-
-    /**
-     * Retorna a lista de procuradores cujos certificados digitais
-     * vencem em 7 dias ou menos, incluindo os que já se encontram vencidos.
-     */
-    public List<ProcuradorResponseDTO> listarCertificadosProximosDoVencimento() {
-        LocalDate hoje = LocalDate.now();
-        LocalDate limiteVencimento = hoje.plusDays(7);
-
-        return repository.findAll().stream()
-                .filter(p -> p.getDataExpiracao() != null)
-                .filter(p -> {
-                    LocalDate expiracao = p.getDataExpiracao().toLocalDate();
-                    // isAfter retorna false para datas anteriores ou iguais ao limite estipulado
-                    return !expiracao.isBefore(hoje) && !expiracao.isAfter(limiteVencimento);
-                })
-                .map(mapper::toDto)
-                .toList();
     }
 }

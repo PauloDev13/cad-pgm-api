@@ -19,6 +19,11 @@ spring:
           auth: true
           starttls:
             enable: true
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true
 api:
   security:
     token:
