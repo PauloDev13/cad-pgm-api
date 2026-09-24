@@ -14,7 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
+
 @Slf4j
 @Service
 public class ProcuradorService extends
@@ -31,30 +34,29 @@ public class ProcuradorService extends
         this.procuradorRepository = repository;
     }
 
-    /**
-     * Retorna a lista de procuradores cujos certificados digitais
-     * vencem em 7 dias ou menos, incluindo os que já se encontram vencidos.
-     */
     @Transactional(readOnly = true)
-    public List<ProcuradorResponseDTO> listarCertificadosProximosDoVencimento() {
-        LocalDate hoje = LocalDate.now();
-        LocalDate limiteVencimento = hoje.plusDays(7);
-
-        return repository.findAll().stream()
-                .filter(p -> p.getDataExpiracao() != null)
-                .filter(p -> {
-                    LocalDate expiracao = p.getDataExpiracao().toLocalDate();
-                    // isAfter retorna false para datas anteriores ou iguais ao limite estipulado
-                    return !expiracao.isBefore(hoje) && !expiracao.isAfter(limiteVencimento);
-                })
-                .map(mapper::toDto)
+    public List<ProcuradorSelectDTO> listarProcuradoresSelect() {
+//        return procuradorRepository.findAllToCombo();
+        return procuradorRepository.findAllToCombo()
+                .stream()
                 .toList();
     }
 
+    /**
+     * Retorna a lista de procuradores cujos certificados digitais
+     * vencem exatamente daqui a 7 dias a contar da data atual.
+     */
     @Transactional(readOnly = true)
-    public List<ProcuradorSelectDTO> listarProcuradoresSelect() {
-        return procuradorRepository.findAllToCombo();
+    public List<ProcuradorResponseDTO> listarCertificadosProximosDoVencimento() {
+        LocalDate dataAlvo = LocalDate.now().plusDays(7);
+        LocalDateTime inicioDia = dataAlvo.atStartOfDay();
+        LocalDateTime fimDia = dataAlvo.atTime(LocalTime.MAX);
+
+        return procuradorRepository.findCertificadosExpirandoEntre(inicioDia, fimDia)
+                .stream()
+                .toList();
     }
+
 
     // SÓ REGRA DE NEGÓCIO, ZERO CÓDIGO DE INFRAESTRUTURA
     @Override

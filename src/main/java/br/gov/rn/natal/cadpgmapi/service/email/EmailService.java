@@ -97,34 +97,35 @@ public class EmailService {
 
             // Ativa a validação estrita nativa do Spring/JavaMail
             helper.setValidateAddresses(true);
-
             helper.setFrom(remetenteCertificado);
             helper.setTo(destinatarios);
-            helper.setSubject("Aviso: Certificados Digitais Próximos do Vencimento - PGM");
+            helper.setSubject("Aviso: Certificados Digitais com Vencimento em 7 dias - PGM");
 
             String htlmMsg
                     = "<div style='font-family: Arial, sans-serif; color: #333333; line-height: 1.6; max-width: 600px; margin: 0 padding 0;'>"
                     + "<div style='text-align: left; margin-bottom: 25px;'>"
                     + "<img src='cid:logoPgm' alt='Logomarca PGM' style='max-width: 250px; height: auto;' />"
                     + "</div>"
-                    + "<h2>Certificados Digitais A VENCER em 7 dias ou menos</h2>"
+                    + "<h2 style='color: #0541FF;'>Certificados Digitais A VENCER (em 7 dias)</h2>"
                     + "<p style='font-size: 15px; margin: 0 0 15px 0;'>";
 
             if (procuradores.size() > 1) {
                 htlmMsg = htlmMsg
-                        + "Solicitamos o envio de autorização para EMISSÃO dos Certificados Digitais abaixo relacionados:";
+                        + "Solicitamos o envio de autorização para RENOVAÇÃO/EMISSÃO dos Certificados Digitais abaixo " +
+                        "relacionados <strong> (vencimento em 7 dias):</strong>";
             } else {
                 htlmMsg = htlmMsg
-                        + "Solicitamos o envio de autorização para EMISSÃO do Certificado Digital abaixo relacionado:";
+                        + "Solicitamos o envio de autorização para RENOVAÇÃO/EMISSÃO do Certificado Digital abaixo " +
+                        "relacionado (vencimento em 7 dias):";
             }
 
             htlmMsg = htlmMsg
                     + "</p>"
                     + "<table style='width: 100%; border-collapse: collapse; margin-top: 20px;'>"
                     + "<tr style='background-color: #f2f2f2;'>"
-                    + "<th style='border: 1px solid #dddddd; padding: 8px; text-align: left;'>Titular</th>"
-                    + "<th style='border: 1px solid #dddddd; padding: 8px; text-align: left;'>Tipo</th>"
-                    + "<th style='border: 1px solid #dddddd; padding: 8px; text-align: left;'>Validade</th>"
+                    + "<th style='border: 1px solid #dddddd; padding: 8px; text-align: left;'>Titular/Procurador</th>"
+                    + "<th style='border: 1px solid #dddddd; padding: 8px; text-align: center;'>Tipo</th>"
+                    + "<th style='border: 1px solid #dddddd; padding: 8px; text-align: center;'>Validade</th>"
                     + "</tr>";
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -137,10 +138,10 @@ public class EmailService {
                         + "<td style='border: 1px solid #dddddd; padding: 8px;'>"
                         + p.nome()
                         + "</td>"
-                        + "<td style='border: 1px solid #dddddd; padding: 8px;'>"
+                        + "<td style='border: 1px solid #dddddd; padding: 8px; text-align: center;'>"
                         + p.tipoCertificado()
                         + "</td>"
-                        + "<td style='border: 1px solid #dddddd; padding: 8px;'>"
+                        + "<td style='border: 1px solid #dddddd; padding: 8px; text-align: right; color: #FF2C2C; font-weight: bold;'>"
                         + dataFormatada
                         + "</td>"
                         + "</tr>";

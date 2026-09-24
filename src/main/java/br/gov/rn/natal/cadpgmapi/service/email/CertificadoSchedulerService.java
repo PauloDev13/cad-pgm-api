@@ -20,21 +20,21 @@ public class CertificadoSchedulerService {
     }
 
     // Para teste local imediato (dispara a cada 1 minuto), descomente a linha abaixo e comente a de produção:
-//     @Scheduled(cron = "0 * * * * *")
-     @Scheduled(cron = "0 0 8 * * MON")
+    //@Scheduled(cron = "0 * * * * *")
 
     // Expressão de Produção: Executa toda segunda-feira às 08:00 AM
-//    @Scheduled(cron = "0 0 8 * * MON")
+    //@Scheduled(cron = "0 0 8 * * MON")
+     @Scheduled(cron = "0 0 7 * * *", zone = "America/Sao_Paulo")
     public void agendarVerificacaoCertificados() {
-        log.info("Iniciando rotina agendada: Verificação de vencimento de certificados...");
+        log.info("Iniciando rotina agendada diária: Verificação de certificados com vencimento em 7 dias...");
 
         List<ProcuradorResponseDTO> listaAVencer = procuradorService.listarCertificadosProximosDoVencimento();
 
         if (listaAVencer != null && !listaAVencer.isEmpty()) {
             emailService.enviarEmailCertificadosAVencer(listaAVencer);
-            log.info("Sucesso: E-mail de notificação enviado contendo {} certificados a vencer.", listaAVencer.size());
+            log.info("Encontrado(s) {} certificado(s) com vencimento em 7 dias. Disparando e-mail...", listaAVencer.size());
         } else {
-            log.info("Nenhum certificado próximo do vencimento encontrado na janela atual. E-mail ignorado.");
+            log.info("Nenhum certificado com vencimento para daqui a 7 dias exatos. Nenhum e-mail disparado.");
         }
     }
 }
