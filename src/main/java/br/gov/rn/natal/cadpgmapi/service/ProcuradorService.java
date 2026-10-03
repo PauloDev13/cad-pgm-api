@@ -9,6 +9,7 @@ import br.gov.rn.natal.cadpgmapi.mapper.ProcuradorMapper;
 import br.gov.rn.natal.cadpgmapi.repository.ProcuradorRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseNameGenericService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,7 @@ public class ProcuradorService extends
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "procuradoresCache")
     public List<ProcuradorSelectDTO> listarProcuradoresSelect() {
 //        return procuradorRepository.findAllToCombo();
         return procuradorRepository.findAllToCombo()
@@ -47,6 +49,7 @@ public class ProcuradorService extends
      * vencem exatamente daqui a 7 dias a contar da data atual.
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "certificadosCache")
     public List<ProcuradorResponseDTO> listarCertificadosProximosDoVencimento() {
         LocalDate dataAlvo = LocalDate.now().plusDays(7);
         LocalDateTime inicioDia = dataAlvo.atStartOfDay();

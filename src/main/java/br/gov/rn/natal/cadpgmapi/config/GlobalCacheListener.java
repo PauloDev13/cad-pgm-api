@@ -1,12 +1,6 @@
 package br.gov.rn.natal.cadpgmapi.config;
 
-import br.gov.rn.natal.cadpgmapi.entity.Alias;
-import br.gov.rn.natal.cadpgmapi.entity.Cargo;
-import br.gov.rn.natal.cadpgmapi.entity.Servidor;
-import br.gov.rn.natal.cadpgmapi.entity.Setor;
-import br.gov.rn.natal.cadpgmapi.entity.Sistema;
-import br.gov.rn.natal.cadpgmapi.entity.Status;
-import br.gov.rn.natal.cadpgmapi.entity.Vinculo;
+import br.gov.rn.natal.cadpgmapi.entity.*;
 import br.gov.rn.natal.cadpgmapi.notifications.SseNotificationService;
 import br.gov.rn.natal.cadpgmapi.utils.EntityChangeEvent;
 import org.springframework.cache.CacheManager;
@@ -38,6 +32,10 @@ public class GlobalCacheListener {
         else if (entity instanceof Alias) {
             clearCache("aliasesCache");
         }
+        else if (entity instanceof Procurador) {
+            clearCache("procuradoresCache");
+            clearCache("certificadosCache");
+        }
         else if (entity instanceof Cargo) {
             clearCache("cargosCache");
         }
@@ -52,6 +50,9 @@ public class GlobalCacheListener {
         }
         else if (entity instanceof Vinculo) {
             clearCache("vinculosCache");
+        }
+        else if (entity instanceof Feriado) {
+            clearCache("feriadosCache");
         }
     }
 

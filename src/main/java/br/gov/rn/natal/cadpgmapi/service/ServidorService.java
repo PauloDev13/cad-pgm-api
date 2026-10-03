@@ -23,6 +23,7 @@ import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
 import br.gov.rn.natal.cadpgmapi.utils.EntityChangeEvent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -310,6 +311,7 @@ public class ServidorService extends BaseGenericService<
     @Transactional
     // Ativa a auditoria na entidade Servidor
     @Auditable(action = AuditAction.UPDATE, entity = "Servidor")
+    @CacheEvict(value = "servidoresCache", allEntries = true)
     public ServidorResponseDTO reactivate(Integer id, ServidorRequestDTO dto) {
         // A. Primeiro usamos o "Raio-X" para garantir que o registro (excluído) existe
         Optional<ServidorShadowProjection> shadow = servidorRepository.checkCpfStatus(dto.cpf().trim());
