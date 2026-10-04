@@ -1,7 +1,9 @@
 package br.gov.rn.natal.cadpgmapi.load_pdf.services;
 
 import br.gov.rn.natal.cadpgmapi.config.MinioConfig;
+import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import io.minio.*;
+import io.minio.errors.ErrorResponseException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -84,8 +86,13 @@ public class DocumentoStorageService {
                             .object(objectName)
                             .build()
             );
+        } catch (ErrorResponseException e) {
+            if ("NoSuchKey".equals(e.errorResponse().code() )) {
+                throw new ResourceNotFoundException("Arquivo não encontrado no MinIO: " + objectName);
+            }
+            throw new IOException("Erro ao acessar o arquivo no MinIO: " + objectName, e );
         } catch (Exception e) {
-            throw new IOException("Falha ao abrir o fluxo do arquivo no MinIO: " + objectName, e);
+            throw new IOException("Falha ao acessar o arquivo no MinIO: " + objectName, e);
         }
     }
 }
