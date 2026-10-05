@@ -51,7 +51,9 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
             s.genero
         )
         FROM Servidor s
-        WHERE MONTH(s.dataNascimento) = :mes AND s.status.descricao = :descricao
+        WHERE MONTH(s.dataNascimento) = :mes
+        AND s.status.descricao = :descricao
+        AND LOWER(s.setor.nome) NOT IN ('outros')
         ORDER BY DAY(s.dataNascimento) ASC, s.nome ASC
     """)
     // Otimiza busca no banco de dados para grandes quantidades de registros
