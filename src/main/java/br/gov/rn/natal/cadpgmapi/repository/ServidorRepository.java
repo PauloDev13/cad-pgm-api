@@ -4,6 +4,7 @@ import br.gov.rn.natal.cadpgmapi.dashboard.dto.response.GraphItemDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoProjectionDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.ProcuradorServidorFlatDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.SistemaServidorFlatDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
 import jakarta.persistence.QueryHint;
@@ -97,6 +98,7 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
             @Param("setorIds") Collection<Integer> setorIds
     );
 
+    // Filtra servidores vinculados aos procuradores
     @Query("""
         SELECT DISTINCT new br.gov.rn.natal.cadpgmapi.dto.response.ProcuradorServidorFlatDTO(
             p.nome,
@@ -119,6 +121,30 @@ public interface ServidorRepository extends JpaRepository<Servidor, Integer>,
     })
     List<ProcuradorServidorFlatDTO> findVinculosProcuradores(
             @Param("procuradores") Collection<String> procuradores,
+            @Param("filtrar") boolean filtrar
+    );
+
+    // Filtra servidores vinculados aos Sistemas
+    @Query("""
+        SELECT DISTINCT new br.gov.rn.natal.cadpgmapi.dto.response.SistemaServidorFlatDTO(
+            sis.nome,
+            s.nome
+        )
+        FROM Servidor s
+        JOIN s.sistemas sis
+        WHERE (:filtrar = false OR LOWER(sis.nome) IN :sistemas)
+          AND s.excluded = false
+        ORDER BY sis.nome ASC, s.nome ASC
+    """)
+
+    @QueryHints({
+            @QueryHint(name = "org.hibernate.readOnly", value = "true"),
+            @QueryHint(name = "org.hibernate.cacheable", value = "true"),
+            @QueryHint(name = "org.jakarta.persistence.cache.retrieveMode", value = "USE"),
+            @QueryHint(name = "org.jakarta.persistence.cache.storeMode", value = "USE"),
+    })
+    List<SistemaServidorFlatDTO> findVinculosSistema(
+            @Param("sistemas") Collection<String> sistemas,
             @Param("filtrar") boolean filtrar
     );
 

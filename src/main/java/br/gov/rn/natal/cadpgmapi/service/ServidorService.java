@@ -303,11 +303,61 @@ public class ServidorService extends BaseGenericService<
                 .toList();
     }
 
+    /**
+     * Retorna a lista de sistemas e servidores vinculados agrupados e ordenados.
+     * Caso a lista de sistemas seja nula ou vazia, busca todos os sistemas.
+     *
+     * @param sistemas Lista opcional de nomes de sistemas para filtragem
+     * @return Lista agrupada de sistemas e servidores vinculados(A-Z)
+     */
+
+    @Transactional(readOnly = true)
+    public List<SistemaVinculoResponseDTO> listarVinculosAgrupadosPorSistema(List<String> sistemas) {
+        // 1. Sanitização dos parâmetros de entrada
+        List<String> nomesNormalizados = (sistemas == null)
+                ? Collections.emptyList()
+                : sistemas.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(nome -> !nome.isBlank())
+                .map(String::toLowerCase)
+                .distinct()
+                .toList();
+
+        boolean filtrar = !nomesNormalizados.isEmpty();
+        // 2. Consulta otimizada com ordenação no banco (p.nome ASC, s.nome ASC)
+        List<SistemaServidorFlatDTO> registros = servidorRepository.findVinculosSistema(
+                nomesNormalizados.isEmpty()
+                    ? Collections.singletonList("")
+                    : nomesNormalizados,
+                filtrar
+        );
+        // 3. Agrupamento preservando a ordem alfabética (LinkedHashMap)
+        Map<String, List<String>> agrupado = registros.stream()
+                .collect(Collectors.groupingBy(
+                        SistemaServidorFlatDTO::nomeSistema,
+                        TreeMap::new, // Mantém a ordem dos sistemas garantida pelo SQL
+                        Collectors.mapping(
+                                SistemaServidorFlatDTO::nomeServidor,
+                                Collectors.collectingAndThen(
+                                        Collectors.toCollection(TreeSet::new),
+                                        ArrayList::new
+                                ) // Mantém a ordem dos servidores garantida pelo SQL
+                        )
+                ));
+        // 4. Transformação final para o DTO de resposta
+        return agrupado.entrySet().stream()
+                .map(entry -> new SistemaVinculoResponseDTO(
+                        entry.getKey(), entry.getValue()
+                ))
+                .toList();
+    }
+
     /* =====================================================
         MÉTODOS UPDATE
     * ======================================================*/
 
-    // Método que "reativa" registros de um Servidor DESLIGADO para ATIVO
+    // Méthodo que "reativa" registros de um Servidor DESLIGADO para ATIVO
     @Transactional
     // Ativa a auditoria na entidade Servidor
     @Auditable(action = AuditAction.UPDATE, entity = "Servidor")

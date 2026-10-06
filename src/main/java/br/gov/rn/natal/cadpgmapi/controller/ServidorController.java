@@ -2,10 +2,7 @@ package br.gov.rn.natal.cadpgmapi.controller;
 
 import br.gov.rn.natal.cadpgmapi.controller.generic.BaseController;
 import br.gov.rn.natal.cadpgmapi.dto.request.ServidorRequestDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.AniversarianteResponseDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.FolhaPontoSetorResponseDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.ServidorResponseDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.ProcuradorVinculoResponseDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.*;
 import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.load_pdf.services.DocumentoStorageService;
@@ -141,6 +138,24 @@ public class ServidorController extends BaseController<
             @RequestParam(name = "procuradores", required = false) List<String> procuradores
     ) {
         List<ProcuradorVinculoResponseDTO> response = service.listarVinculosAgrupadosPorProcurador(procuradores);
+        return ResponseEntity.ok(response);
+    }
+
+    // retorna lista de sistema com os servidores a eles vinculados (uso do certificado digitaç
+    @GetMapping("/sistemas")
+    @Operation(
+            summary = "Listar vínculos de servidores por sistema",
+            description = "Retorna a listagem de servidores vinculados a um determinado sistema pesquisado por nome."
+    )
+    public ResponseEntity<List<SistemaVinculoResponseDTO>> listarVinculosPorSistema(
+            @Parameter(
+                    description = "Lista de nomes de sistema para filtragem (opcional). Aceita múltiplos " +
+                            "parâmetros ou valores separados por vírgula.",
+                    example = "eCidade, Directa"
+            )
+            @RequestParam(name = "sistemas", required = false) List<String> sistemas
+    ) {
+        List<SistemaVinculoResponseDTO> response = service.listarVinculosAgrupadosPorSistema(sistemas);
         return ResponseEntity.ok(response);
     }
 
