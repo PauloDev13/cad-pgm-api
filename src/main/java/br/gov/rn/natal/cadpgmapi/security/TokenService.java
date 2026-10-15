@@ -83,6 +83,7 @@ public class TokenService {
                     .withIssuer(ISSUER)
                     .withSubject(usuario.getUsername())
                     .withClaim("roles", permissions)
+                    .withClaim("email", usuario.getEmail())
                     .withClaim("isForcePasswordChange", usuario.isForcePasswordChange())
                     .withIssuedAt(new Date())
                     .withExpiresAt(generateExpirationDate())
