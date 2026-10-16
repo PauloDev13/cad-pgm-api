@@ -24,13 +24,14 @@ public class Usuario implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(nullable = false)
+    @Column(name = "name")
+    @Setter(AccessLevel.NONE)
     private String name;
 
     @Column(name = "user_name", nullable = false, unique = true, length = 30)
     private String userName;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "email")
     private String email;
 
     @Column(nullable = false)
@@ -43,6 +44,10 @@ public class Usuario implements UserDetails {
     @CreationTimestamp
     @Column(name = "data_created")
     private LocalDateTime dataCreated;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "servidor_id", unique = true)
+    private Servidor servidor;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
@@ -57,9 +62,40 @@ public class Usuario implements UserDetails {
     @Builder.Default
     private boolean forcePasswordChange = false;
 
-    // =========================================================================
-    // MÉTODOS OBRIGATÓRIOS DO SPRING SECURITY (O PASSAPORTE)
-    // =========================================================================
+    /* =========================================================================
+      Métodos de delegação para garantir o Servidor como FONTE ÚNICA DA VERDADE
+    ============================================================================*/
+
+    public String getName() {
+        return (this.servidor != null) ? this.servidor.getNome() : this.name;
+    }
+
+    public String getEmail() {
+        if (this.servidor != null) {
+            if (this.servidor.getEmailInstitucional() != null && !this.servidor.getEmailInstitucional().isBlank()) {
+                return this.servidor.getEmailInstitucional();
+            }
+            return this.servidor.getEmailPessoal();
+        }
+        return this.email;
+    }
+
+    public void setSystemAccountData(String name, String email) {
+        if (this.servidor != null) {
+            throw new IllegalStateException("Usuários vinculados a Servidor não aceitam nome e e-mail próprios.");
+        }
+        this.name = name;
+        this.email = email;
+    }
+
+    public boolean isSystemAdmin() {
+        return "pgmnet".equalsIgnoreCase(this.userName);
+    }
+
+
+    /* =========================================================================
+            MÉTODOS OBRIGATÓRIOS DO SPRING SECURITY (O PASSAPORTE)
+    ============================================================================*/
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -68,9 +104,10 @@ public class Usuario implements UserDetails {
         if (this.permissions == null) {
             return List.of();
         }
-        return this.permissions.stream()
-                .map(permission -> new SimpleGrantedAuthority(permission))
-                .toList();
+        return this.permissions.stream().map(SimpleGrantedAuthority::new).toList();
+     // return this.permissions.stream()
+    //      map(permission -> new SimpleGrantedAuthority(permission))
+    //      .toList();
     }
 
     @Override
