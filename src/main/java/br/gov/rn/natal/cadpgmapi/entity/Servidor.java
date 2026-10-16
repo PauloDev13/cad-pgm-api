@@ -60,6 +60,10 @@ public class Servidor {
     @Column(name = "data_desligamento")
     private LocalDate dataDesligamento ;
 
+    // Relacionamentos 1:1
+    @OneToOne(mappedBy = "servidor", fetch = FetchType.LAZY)
+    private Usuario usuario;
+
     // Relacionamentos N:1
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cargo_id")
@@ -123,5 +127,9 @@ public class Servidor {
         if (this.emailInstitucional != null && this.emailInstitucional.isBlank()) {
             this.emailInstitucional = null;
         }
+    }
+
+    public boolean hasUsuario() {
+        return this.usuario != null;
     }
 }
