@@ -1,25 +1,30 @@
 package br.gov.rn.natal.cadpgmapi.dto.update;
 
-import jakarta.validation.constraints.Email;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import java.util.Set;
 
 public record UsuarioUpdateDTO(
-        @NotBlank(message = "O Nome é obrigatório")
-        @Size(max = 255, message = "O Nome deve ter no máximo 100 caracteres")
-        String name,
-
+        @Schema(description = "Login do usuário", example = "carlos.menezes")
         @NotBlank(message = "O Login é obrigatório")
         @Size(max = 30, message = "O Login deve ter no máximo 30 caracteres")
         String userName,
-        @NotBlank(message = "O E-mail é obrigatório")
-        @Email(message = "Formato de e-mail inválido")
-        @Size(max = 255, message = "O email deve ter no máximo 100 caracteres")
-        String email,
+
+        @Schema(description = "Status de ativação", example = "true")
         boolean activated,
+
+        @Schema(description = "Permissões do usuário", example = "[\"admin\"]")
         Set<String> permissions,
-        boolean forcePasswordChange
+
+        @Schema(description = "Exige troca de senha", example = "false")
+        boolean forcePasswordChange,
+
+        @Schema(description = "Nome (editável apenas para conta de sistema 'pgmnet')")
+        String systemName,
+
+        @Schema(description = "E-mail (editável apenas para conta de sistema 'pgmnet')")
+        String systemEmail
 ) {
 }
