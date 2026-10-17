@@ -8,6 +8,7 @@ import br.gov.rn.natal.cadpgmapi.auth.dto.response.AdminResetPasswordResponseDTO
 import br.gov.rn.natal.cadpgmapi.auth.mappers.RegisterUserMapper;
 import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRegisterRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRequestDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.ServidorComboDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioRegisterResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.update.UsuarioUpdateDTO;
@@ -34,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -45,16 +47,12 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
 
     private final UsuarioRepository usuarioRepository;
     private final ServidorRepository servidorRepository;
-//    private final UsuarioUpdateMapper usuarioUpdateMapper;
     private final PasswordEncoder passwordEncoder;
-//    private final RegisterUserMapper registerUserMapper;
 
     // Construtor
     public UsuarioService(
             UsuarioRepository repository,
             UsuarioMapper mapper,
-//            RegisterUserMapper registerUserMapper,
-//            UsuarioUpdateMapper usuarioUpdateMapper,
             ServidorRepository servidorRepository,
             PasswordEncoder passwordEncoder,
             ApplicationEventPublisher eventPublisher
@@ -62,30 +60,8 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         super(repository, mapper, eventPublisher);
         this.usuarioRepository = repository;
         this.servidorRepository = servidorRepository;
-//        this.usuarioUpdateMapper = usuarioUpdateMapper;
         this.passwordEncoder = passwordEncoder;
-//        this.registerUserMapper = registerUserMapper;
     }
-
-//    @Transactional
-//    @Auditable(action = AuditAction.INSERT, entity = "Usuário")
-//    public UsuarioRegisterResponseDTO registerNewUserPublic(UsuarioRegisterRequestDTO dto) {
-//        // Chama método utilitário privado para validar email e username
-//        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), null);
-//
-//        // Instancia o usuário apenas com os dados seguros
-//        Usuario newUser = registerUserMapper.toEntity(dto);
-//
-//        // Se é o próprio usuário que fez o cadastro, desativa o perfil
-//        newUser.setActivated(false);
-//
-//        // Chama o método beforeSave para criptografar a senha e
-//        // inserir a permissão padrão Guest ao usuário
-//        beforeSave(newUser);
-//
-//        // Salva no banco
-//        return registerUserMapper.toDto(usuarioRepository.save(newUser));
-//    }
 
     @Transactional
     @Auditable(action = AuditAction.UPDATE, entity = "Usuário")
@@ -93,6 +69,14 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         // Busca o usuário atual no banco
         Usuario existingUsuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
+
+        // TRAVA: Impede reativação se o servidor estiver com status 'excluído'
+        if (existingUsuario.getServidor() != null && existingUsuario.getServidor().isExcluded() && dto.activated()) {
+            throw new BusinessException(
+                    "O servidor vinculado encontra-se com cadastro <strong>excluído/desligado</strong>. " +
+                            "Não é permitido reativar o seu perfil de acesso."
+            );
+        }
 
         if (!existingUsuario.getUsername().equalsIgnoreCase(dto.userName().trim())) {
             usuarioRepository.findByUserName(dto.userName().trim()).ifPresent(u -> {
@@ -102,18 +86,11 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
             });
         }
 
-
-        // Valida duplicidade de E-mail e Login (se ele estiver tentando mudar)
-//        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), id);
-
         // Só o próprio Administrador Geral pode alterar os dados dele
         onlyAdminMakeChange(existingUsuario);
 
         // 1. Tira o SNAPSHOT ANTIGO usando o mapper genérico do pai
         UsuarioResponseDTO oldSnapshot = mapper.toDto(existingUsuario);
-
-        // 2. Aplica as alterações e salva
-//        usuarioUpdateMapper.updateEntityFromDTO(existingUsuario, dto);
 
         existingUsuario.setUserName(dto.userName().trim());
         existingUsuario.setActivated(dto.activated());
@@ -126,8 +103,6 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
             }
         }
 
-        // Garante criptografia se houver troca de senha
-//        beforeSave(existingUsuario);
         usuarioRepository.saveAndFlush(existingUsuario);
         entityManager.refresh(existingUsuario);
 
@@ -141,12 +116,6 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
                 ? "ATUALIZAÇÃO: " + diffLog
                 : "ATUALIZAÇÃO: Nenhuma alteração.");
 
-//        if (diffLog != null && !diffLog.isBlank()) {
-//            AuditContextHolder.setLogDetalhes("ATUALIZAÇÃO: " + diffLog);
-//        } else {
-//            AuditContextHolder.setLogDetalhes("ATUALIZAÇÃO: Nenhuma atualização detectada.");
-//        }
-
         return newSnapshot;
     }
 
@@ -155,6 +124,14 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     public AdminResetPasswordResponseDTO resetPasswordByAdmin(Integer id) {
         Usuario existingUsuario = repository.findById(id)
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+
+        // TRAVA: Bloqueia geração de senha provisória para usuário cujo servidor foi desligado
+        if (existingUsuario.getServidor() != null && existingUsuario.getServidor().isExcluded()) {
+            throw new BusinessException(
+                    "Não é permitido gerar senha temporária. O servidor vinculado a este usuário está " +
+                            "<strong>excluído/desligado</strong>."
+            );
+        }
 
         // 1. Snapshot Antigo
         UsuarioResponseDTO oldSnapshot = mapper.toDto(existingUsuario);
@@ -197,9 +174,6 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
                         cb.like(cb.lower(root.get("name")), pattern)
                 );
                 predicate = cb.and(predicate, namePredicate);
-//                predicate = cb.and(predicate, cb.like(
-//                        root.get("name"), "%" + name.trim() + "%")
-//                );
             }
 
             // Se o userName for informado, monta o SQL de busca por userName
@@ -218,11 +192,6 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
                         cb.like(cb.lower(root.get("email")), pattern)
                 );
                 predicate = cb.and(predicate, emailPredicate);
-//                predicate = cb.and(
-//                        predicate, cb.like(
-//                                cb.lower(root.get("email")), "%" + email.trim().toLowerCase() + "%")
-//                );
-
             }
 
             // Encerra a montagem das regras
@@ -234,7 +203,13 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
                 .map(mapper::toDto);
     }
 
+    @Transactional(readOnly = true)
+    public List<ServidorComboDTO> findServidoresDisponiveis() {
+        return usuarioRepository.findServidoresSemUsuario();
+    }
+
     // MÉTODOS EXCLUSIVOS DE REGRA DE NEGÓCIO
+
     @Override
     protected void beforeCreate(UsuarioRequestDTO dto) {
         if (ADMIN_USERNAME.equalsIgnoreCase(dto.userName())) {
@@ -266,17 +241,19 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         if (usuarioRepository.existsByUserName(dto.userName().trim())) {
             throw new BusinessException("Este login (<strong>" + dto.userName() + "</strong>) já está em uso.");
         }
-//        // Chama método utilitário privado para validar email e username
-//        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), null);
     }
 
-    // Método com assinatura original declarada na classe pai (BaseGenericService)
-//    @Override
-//    protected void beforeUpdate(UsuarioRequestDTO dto, Usuario entity) {
-//        // Chama método utilitário privado para validar email e username
-//        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), entity.getId());
-//        onlyAdminMakeChange(entity);
-//    }
+    @Override
+    protected void beforeUpdate(UsuarioRequestDTO dto, Usuario entity) {
+        onlyAdminMakeChange(entity);
+        // TRAVA: Impede reativação se o servidor estiver com status 'excluído'
+        if (entity.getServidor() != null && entity.getServidor().isExcluded() && dto.activated()) {
+            throw new BusinessException(
+                    "O servidor vinculado encontra-se com cadastro <strong>excluído/desligado</strong>. " +
+                            "Não é permitido reativar o seu perfil de acesso."
+            );
+        }
+    }
 
     // Criptografa a senha e injeta a permissão padrão
     @Override
@@ -324,25 +301,15 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         if (targetUser.equalsIgnoreCase(loggedUser)) {
             throw new BusinessException("Você não pode excluir o seu <strong>próprio perfil</strong>.");
         }
+
+        // CORREÇÃO: Quebra o vínculo bidirecional em memória com o Servidor.
+        // Isso impede que o Hibernate veja o Servidor apontando para o Usuário deletado no flush.
+        if (entity.getServidor() != null) {
+            entity.getServidor().setUsuario(null);
+            entity.setServidor(null);
+        }
     }
 
-
-    // MÉTODOS UTILITÁRIOS PRIVADOS
-//    private void validateEmailAndUsername(String email, String userName, Integer currentUserId) {
-//        // Busca se existe outro usuário com este email
-//        usuarioRepository.findByEmail(email.trim()).ifPresent(user -> {
-//            if (!user.getId().equals(currentUserId)) {
-//                throw new BusinessException("Este E-mail (<strong>" + email + "</strong>) já está em uso.");
-//            }
-//        });
-//
-//        // Busca se existe outro usuário com este login
-//        usuarioRepository.findByUserName(userName.trim()).ifPresent(user -> {
-//            if (!user.getId().equals(currentUserId)) {
-//                throw new BusinessException("Este login (<strong>" + userName + "</strong>) já está em uso.");
-//            }
-//        });
-//    }
 
     private String generateRandomPassword(int length) {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";

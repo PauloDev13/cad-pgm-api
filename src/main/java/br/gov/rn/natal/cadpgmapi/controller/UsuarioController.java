@@ -3,6 +3,7 @@ package br.gov.rn.natal.cadpgmapi.controller;
 import br.gov.rn.natal.cadpgmapi.auth.dto.response.AdminResetPasswordResponseDTO;
 import br.gov.rn.natal.cadpgmapi.controller.generic.BaseController;
 import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRequestDTO;
+import br.gov.rn.natal.cadpgmapi.dto.response.ServidorComboDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.update.UsuarioUpdateDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
@@ -17,6 +18,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/usuarios")
@@ -50,6 +53,12 @@ public class UsuarioController extends BaseController<Usuario, UsuarioRequestDTO
                     sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
 
         return usuarioService.findByFilters(name, userName, email, pageable);
+    }
+
+    @GetMapping("/servidores-disponiveis")
+    @Operation(summary = "Lista servidores ativos que ainda não possuem conta de usuário no sistema")
+    public ResponseEntity<List<ServidorComboDTO>> getServidoresDisponiveis() {
+        return ResponseEntity.ok(usuarioService.findServidoresDisponiveis());
     }
 
     @PostMapping("/{id}/reset-password")

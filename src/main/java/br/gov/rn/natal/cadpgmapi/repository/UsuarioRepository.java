@@ -1,5 +1,6 @@
 package br.gov.rn.natal.cadpgmapi.repository;
 
+import br.gov.rn.natal.cadpgmapi.dto.response.ServidorComboDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Page;
@@ -12,6 +13,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -39,13 +41,21 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer>, JpaS
     """)
     Optional<Usuario> findByEmail(String email);
 
+    /**
+     * Busca servidores ativos que ainda não possuem credencial de usuário vinculada.
+     */
     @Query("""
-        SELECT COUNT(u) > 0 FROM Usuario u
-        LEFT JOIN u.servidor s
-        WHERE (u.servidor IS NOT NULL AND (LOWER(s.emailInstitucional) = LOWER(:email) OR LOWER(s.emailPessoal) = LOWER(:email)))
-           OR (u.servidor IS NULL AND LOWER(u.email) = LOWER(:email))
+        SELECT new br.gov.rn.natal.cadpgmapi.dto.response.ServidorComboDTO(
+            s.id,
+            CONCAT(s.nome, ' (Matrícula: ', s.matricula, ')')
+        )
+        FROM Servidor s
+        WHERE s.excluded = false
+          AND s.usuario IS NULL
+        ORDER BY s.nome ASC
     """)
-    boolean existsByEmail(@Param("email") String email);
+    List<ServidorComboDTO> findServidoresSemUsuario();
+
     boolean existsByUserName(String userName);
     boolean existsByServidorId(Integer servidorId);
 

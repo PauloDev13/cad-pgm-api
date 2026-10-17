@@ -21,6 +21,7 @@ public interface UsuarioMapper extends BaseMapper<Usuario, UsuarioRequestDTO, Us
     @Mapping(source = "servidor.id", target = "servidorId")
     @Mapping(source = "servidor.matricula", target = "matriculaServidor")
     @Mapping(source = "servidor.cargo.nome", target = "cargoServidor")
+    @Mapping(source = "servidor.excluded", target = "servidorExcluded")
     UsuarioResponseDTO toDto(Usuario entity);
 
     @Override

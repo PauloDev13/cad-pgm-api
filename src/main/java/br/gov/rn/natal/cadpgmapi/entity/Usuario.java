@@ -63,7 +63,19 @@ public class Usuario implements UserDetails {
     private boolean forcePasswordChange = false;
 
     /* =========================================================================
-      Métodos de delegação para garantir o Servidor como FONTE ÚNICA DA VERDADE
+      CALLBACK DE CICLO DE VIDA (CORREÇÃO DO TRANSIENT PROPERTY EXCEPTION)
+    ============================================================================*/
+
+    @PreRemove
+    private void preRemove() {
+        if (this.servidor != null) {
+            this.servidor.setUsuario(null);
+            this.servidor = null;
+        }
+    }
+
+    /* =========================================================================
+      MÉTODOS DE DELEGAÇÃO para garantir o Servidor como FONTE ÚNICA DA VERDADE
     ============================================================================*/
 
     public String getName() {

@@ -36,5 +36,8 @@ public record UsuarioResponseDTO(
         String matriculaServidor,
 
         @Schema(description = "Cargo do Servidor vinculado", example = "Assessor Jurídico")
-        String cargoServidor
+        String cargoServidor,
+
+        @Schema(description = "Indica se o servidor vinculado está com cadastro excluído/desligado", example = "false")
+        Boolean servidorExcluded
 ) {}
