@@ -11,12 +11,16 @@ import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioRegisterResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.update.UsuarioUpdateDTO;
+import br.gov.rn.natal.cadpgmapi.entity.Servidor;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.mapper.UsuarioMapper;
 import br.gov.rn.natal.cadpgmapi.mapper.UsuarioUpdateMapper;
+import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
 import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -40,45 +44,48 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     public static final String ADMIN_USERNAME = "pgmnet";
 
     private final UsuarioRepository usuarioRepository;
-    private final UsuarioUpdateMapper usuarioUpdateMapper;
+    private final ServidorRepository servidorRepository;
+//    private final UsuarioUpdateMapper usuarioUpdateMapper;
     private final PasswordEncoder passwordEncoder;
-    private final RegisterUserMapper registerUserMapper;
+//    private final RegisterUserMapper registerUserMapper;
 
     // Construtor
     public UsuarioService(
             UsuarioRepository repository,
             UsuarioMapper mapper,
-            RegisterUserMapper registerUserMapper,
-            UsuarioUpdateMapper usuarioUpdateMapper,
+//            RegisterUserMapper registerUserMapper,
+//            UsuarioUpdateMapper usuarioUpdateMapper,
+            ServidorRepository servidorRepository,
             PasswordEncoder passwordEncoder,
             ApplicationEventPublisher eventPublisher
     ) {
         super(repository, mapper, eventPublisher);
         this.usuarioRepository = repository;
-        this.usuarioUpdateMapper = usuarioUpdateMapper;
+        this.servidorRepository = servidorRepository;
+//        this.usuarioUpdateMapper = usuarioUpdateMapper;
         this.passwordEncoder = passwordEncoder;
-        this.registerUserMapper = registerUserMapper;
+//        this.registerUserMapper = registerUserMapper;
     }
 
-    @Transactional
-    @Auditable(action = AuditAction.INSERT, entity = "Usuário")
-    public UsuarioRegisterResponseDTO registerNewUserPublic(UsuarioRegisterRequestDTO dto) {
-        // Chama método utilitário privado para validar email e username
-        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), null);
-
-        // Instancia o usuário apenas com os dados seguros
-        Usuario newUser = registerUserMapper.toEntity(dto);
-
-        // Se é o próprio usuário que fez o cadastro, desativa o perfil
-        newUser.setActivated(false);
-
-        // Chama o método beforeSave para criptografar a senha e
-        // inserir a permissão padrão Guest ao usuário
-        beforeSave(newUser);
-
-        // Salva no banco
-        return registerUserMapper.toDto(usuarioRepository.save(newUser));
-    }
+//    @Transactional
+//    @Auditable(action = AuditAction.INSERT, entity = "Usuário")
+//    public UsuarioRegisterResponseDTO registerNewUserPublic(UsuarioRegisterRequestDTO dto) {
+//        // Chama método utilitário privado para validar email e username
+//        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), null);
+//
+//        // Instancia o usuário apenas com os dados seguros
+//        Usuario newUser = registerUserMapper.toEntity(dto);
+//
+//        // Se é o próprio usuário que fez o cadastro, desativa o perfil
+//        newUser.setActivated(false);
+//
+//        // Chama o método beforeSave para criptografar a senha e
+//        // inserir a permissão padrão Guest ao usuário
+//        beforeSave(newUser);
+//
+//        // Salva no banco
+//        return registerUserMapper.toDto(usuarioRepository.save(newUser));
+//    }
 
     @Transactional
     @Auditable(action = AuditAction.UPDATE, entity = "Usuário")
@@ -87,8 +94,17 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         Usuario existingUsuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado."));
 
+        if (!existingUsuario.getUsername().equalsIgnoreCase(dto.userName().trim())) {
+            usuarioRepository.findByUserName(dto.userName().trim()).ifPresent(u -> {
+                if (!u.getId().equals(id)) {
+                    throw new BusinessException("Este login (<strong>" + dto.userName() + "</strong>) já está em uso.");
+                }
+            });
+        }
+
+
         // Valida duplicidade de E-mail e Login (se ele estiver tentando mudar)
-        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), id);
+//        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), id);
 
         // Só o próprio Administrador Geral pode alterar os dados dele
         onlyAdminMakeChange(existingUsuario);
@@ -97,9 +113,21 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         UsuarioResponseDTO oldSnapshot = mapper.toDto(existingUsuario);
 
         // 2. Aplica as alterações e salva
-        usuarioUpdateMapper.updateEntityFromDTO(existingUsuario, dto);
+//        usuarioUpdateMapper.updateEntityFromDTO(existingUsuario, dto);
+
+        existingUsuario.setUserName(dto.userName().trim());
+        existingUsuario.setActivated(dto.activated());
+        existingUsuario.setPermissions(dto.permissions());
+        existingUsuario.setForcePasswordChange(dto.forcePasswordChange());
+
+        if (existingUsuario.isSystemAdmin()) {
+            if (dto.systemName() != null && dto.systemEmail() != null) {
+                existingUsuario.setSystemAccountData(dto.systemName().trim(), dto.systemEmail().trim());
+            }
+        }
+
         // Garante criptografia se houver troca de senha
-        beforeSave(existingUsuario);
+//        beforeSave(existingUsuario);
         usuarioRepository.saveAndFlush(existingUsuario);
         entityManager.refresh(existingUsuario);
 
@@ -109,11 +137,15 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         // 4. Gera o Diff e injeta no contexto
         String diffLog = AuditDiffUtil.generateDiff(oldSnapshot, newSnapshot);
 
-        if (diffLog != null && !diffLog.isBlank()) {
-            AuditContextHolder.setLogDetalhes("ATUALIZAÇÃO: " + diffLog);
-        } else {
-            AuditContextHolder.setLogDetalhes("ATUALIZAÇÃO: Nenhuma atualização detectada.");
-        }
+        AuditContextHolder.setLogDetalhes(diffLog != null && !diffLog.isBlank()
+                ? "ATUALIZAÇÃO: " + diffLog
+                : "ATUALIZAÇÃO: Nenhuma alteração.");
+
+//        if (diffLog != null && !diffLog.isBlank()) {
+//            AuditContextHolder.setLogDetalhes("ATUALIZAÇÃO: " + diffLog);
+//        } else {
+//            AuditContextHolder.setLogDetalhes("ATUALIZAÇÃO: Nenhuma atualização detectada.");
+//        }
 
         return newSnapshot;
     }
@@ -154,11 +186,20 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
             // Começa neutro (1=1)
             Predicate predicate = cb.conjunction();
 
+            Join<Usuario, Servidor> servidorJoin = root.join("servidor", JoinType.LEFT);
+
             // Se o Nome for informado, monta o SQL de busca por Nome
             if (name != null && !name.trim().isEmpty()) {
-                predicate = cb.and(predicate, cb.like(
-                        root.get("name"), "%" + name.trim() + "%")
+                String pattern = "%" + name.trim().toLowerCase() + "%";
+
+                Predicate namePredicate = cb.or(
+                        cb.like(cb.lower(servidorJoin.get("nome")), pattern),
+                        cb.like(cb.lower(root.get("name")), pattern)
                 );
+                predicate = cb.and(predicate, namePredicate);
+//                predicate = cb.and(predicate, cb.like(
+//                        root.get("name"), "%" + name.trim() + "%")
+//                );
             }
 
             // Se o userName for informado, monta o SQL de busca por userName
@@ -169,10 +210,18 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
             }
 
             if (email != null && !email.trim().isEmpty()) {
-                predicate = cb.and(
-                        predicate, cb.like(
-                                cb.lower(root.get("email")), "%" + email.trim().toLowerCase() + "%")
+                String pattern = "%" + email.trim().toLowerCase() + "%";
+
+                Predicate emailPredicate = cb.or(
+                        cb.like(cb.lower(servidorJoin.get("emailInstitucional")), pattern),
+                        cb.like(cb.lower(servidorJoin.get("emailPessoal")), pattern),
+                        cb.like(cb.lower(root.get("email")), pattern)
                 );
+                predicate = cb.and(predicate, emailPredicate);
+//                predicate = cb.and(
+//                        predicate, cb.like(
+//                                cb.lower(root.get("email")), "%" + email.trim().toLowerCase() + "%")
+//                );
 
             }
 
@@ -188,17 +237,46 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     // MÉTODOS EXCLUSIVOS DE REGRA DE NEGÓCIO
     @Override
     protected void beforeCreate(UsuarioRequestDTO dto) {
-        // Chama método utilitário privado para validar email e username
-        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), null);
+        if (ADMIN_USERNAME.equalsIgnoreCase(dto.userName())) {
+
+            if (dto.servidorId() != null) {
+                throw new BusinessException("A conta de Administrador Geral ('pgmnet') não pode ser vinculada a um servidor.");
+            }
+
+            if (dto.systemName() == null || dto.systemEmail() == null) {
+                throw new BusinessException("Nome e E-mail institucionais são obrigatórios para a conta de sistema.");
+            }
+        } else {
+            if (dto.servidorId() == null) {
+                throw new BusinessException("Todo usuário do sistema deve estar vinculado a um Servidor da instituição.");
+            }
+
+            Servidor servidor = servidorRepository.findById(dto.servidorId())
+                    .orElseThrow(() -> new BusinessException("Servidor informado não encontrado."));
+
+            if (servidor.isExcluded()) {
+                throw new BusinessException("Não é permitido criar usuário para servidor com cadastro excluído/desligado.");
+            }
+
+            if (usuarioRepository.existsByServidorId(dto.servidorId())) {
+                throw new BusinessException("Este Servidor já possui uma conta de usuário cadastrada.");
+            }
+        }
+
+        if (usuarioRepository.existsByUserName(dto.userName().trim())) {
+            throw new BusinessException("Este login (<strong>" + dto.userName() + "</strong>) já está em uso.");
+        }
+//        // Chama método utilitário privado para validar email e username
+//        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), null);
     }
 
     // Método com assinatura original declarada na classe pai (BaseGenericService)
-    @Override
-    protected void beforeUpdate(UsuarioRequestDTO dto, Usuario entity) {
-        // Chama método utilitário privado para validar email e username
-        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), entity.getId());
-        onlyAdminMakeChange(entity);
-    }
+//    @Override
+//    protected void beforeUpdate(UsuarioRequestDTO dto, Usuario entity) {
+//        // Chama método utilitário privado para validar email e username
+//        validateEmailAndUsername(dto.email().trim(), dto.userName().trim(), entity.getId());
+//        onlyAdminMakeChange(entity);
+//    }
 
     // Criptografa a senha e injeta a permissão padrão
     @Override
@@ -231,9 +309,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
 
     @Override
     protected void beforeDelete(Usuario entity) {
-        if (entity == null) {
-            return;
-        }
+        if (entity == null) return;
 
         String loggedUser = getLoggedUser();
         String targetUser = entity.getUsername().trim();
@@ -250,26 +326,29 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         }
     }
 
-    // MÉTODOS UTILITÁRIOS PRIVADOS
-    private void validateEmailAndUsername(String email, String userName, Integer currentUserId) {
-        // Busca se existe outro usuário com este email
-        usuarioRepository.findByEmail(email.trim()).ifPresent(user -> {
-            if (!user.getId().equals(currentUserId)) {
-                throw new BusinessException("Este E-mail (<strong>" + email + "</strong>) já está em uso.");
-            }
-        });
 
-        // Busca se existe outro usuário com este login
-        usuarioRepository.findByUserName(userName.trim()).ifPresent(user -> {
-            if (!user.getId().equals(currentUserId)) {
-                throw new BusinessException("Este login (<strong>" + userName + "</strong>) já está em uso.");
-            }
-        });
-    }
+    // MÉTODOS UTILITÁRIOS PRIVADOS
+//    private void validateEmailAndUsername(String email, String userName, Integer currentUserId) {
+//        // Busca se existe outro usuário com este email
+//        usuarioRepository.findByEmail(email.trim()).ifPresent(user -> {
+//            if (!user.getId().equals(currentUserId)) {
+//                throw new BusinessException("Este E-mail (<strong>" + email + "</strong>) já está em uso.");
+//            }
+//        });
+//
+//        // Busca se existe outro usuário com este login
+//        usuarioRepository.findByUserName(userName.trim()).ifPresent(user -> {
+//            if (!user.getId().equals(currentUserId)) {
+//                throw new BusinessException("Este login (<strong>" + userName + "</strong>) já está em uso.");
+//            }
+//        });
+//    }
 
     private String generateRandomPassword(int length) {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+
         SecureRandom random = new SecureRandom();
+
         return random.ints(length, 0, chars.length())
                 .mapToObj(chars::charAt)
                 .map(Object::toString)
@@ -280,11 +359,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
     private String getLoggedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication != null
-                && authentication.isAuthenticated()
-                && !authentication.getPrincipal().equals("anonymousUser")
-        ) {
-
+        if (authentication != null && authentication.isAuthenticated() && !authentication.getPrincipal().equals("anonymousUser")) {
             // O getName() retorna o "subject" do token, que no nosso caso é o username (login)
             return authentication.getName();
         }
