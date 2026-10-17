@@ -29,6 +29,9 @@ public record UsuarioResponseDTO(
         @Schema(description = "Exige troca de senha no próximo login", example = "false")
         boolean forcePasswordChange,
 
+        @Schema(description = "ID do Servidor vinculado", example = "10")
+        Integer servidorId,
+
         @Schema(description = "Matrícula do Servidor vinculado", example = "55025-8")
         String matriculaServidor,
 
