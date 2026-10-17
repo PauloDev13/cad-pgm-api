@@ -43,7 +43,6 @@ public class SecurityConfig {
                         // A porta de entrada: Qualquer um pode tentar fazer login (POST)
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/login",
-                                "/api/v1/auth/register",
                                 "/api/v1/auth/forgot-password",
                                 "/api/v1/auth/reset-password").permitAll()
                         .requestMatchers(HttpMethod.GET,
