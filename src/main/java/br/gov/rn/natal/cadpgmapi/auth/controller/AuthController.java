@@ -7,11 +7,8 @@ import br.gov.rn.natal.cadpgmapi.auth.dto.request.ForceChangePasswordRequestDTO;
 import br.gov.rn.natal.cadpgmapi.auth.dto.request.LoginRequestDTO;
 import br.gov.rn.natal.cadpgmapi.auth.dto.response.LoginResponseDTO;
 import br.gov.rn.natal.cadpgmapi.auth.service.AuthService;
-import br.gov.rn.natal.cadpgmapi.dto.request.UsuarioRegisterRequestDTO;
 import br.gov.rn.natal.cadpgmapi.dto.request.email.ForgotPasswordRequestDTO;
-import br.gov.rn.natal.cadpgmapi.dto.response.UsuarioRegisterResponseDTO;
 import br.gov.rn.natal.cadpgmapi.dto.response.email.ResetPasswordRequestDTO;
-import br.gov.rn.natal.cadpgmapi.service.UsuarioService;
 import br.gov.rn.natal.cadpgmapi.service.email.PasswordResetService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,16 +25,13 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Autenticação", description = "Endpoints para login e emissão de tokens de acesso")
 public class AuthController {
     private final AuthService authService;
-    private final UsuarioService usuarioService;
     private final PasswordResetService passwordResetService;
 
     @PostMapping("/login")
-    @Operation(summary = "Realizar login no sistema",
-            description = "Recebe as credenciais do usuário e " +
-                    "devolve um token JWT para acesso às rotas protegidas."
+    @Operation(summary = "Realizar login no sistema", description = "Recebe as credenciais do usuário e " +
+            "devolve um token JWT para acesso às rotas protegidas."
     )
     public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO dto) {
-
         // Chama o serviço passando o login e senha digitados
         String tokenJWT = authService.authenticate(dto);
 
@@ -49,8 +43,7 @@ public class AuthController {
      * logo ANTES de apagar o token do navegador.
      */
     @PostMapping("/logout")
-    @Operation(summary = "Realizar logout no sistema",
-            description = "Exclui as credenciais usuário.")
+    @Operation(summary = "Realizar logout no sistema", description = "Exclui as credenciais usuário.")
     @Auditable(action = AuditAction.LOGOUT, entity = "Acesso ao Sistema")
     public ResponseEntity<Void> registrarLogout() {
         // Como o usuário precisa mandar o Token JWT para acessar esta rota,
@@ -66,13 +59,13 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 
-    @PostMapping("/register")
-    @Operation(summary = "Auto-cadastro de usuário", description = "Endpoint público para novos usuários se cadastrarem.")
-    public ResponseEntity<UsuarioRegisterResponseDTO> registrar(@Valid @RequestBody UsuarioRegisterRequestDTO dto) {
-
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(usuarioService.registerNewUserPublic(dto));
-    }
+//    @PostMapping("/register")
+//    @Operation(summary = "Auto-cadastro de usuário", description = "Endpoint público para novos usuários se cadastrarem.")
+//    public ResponseEntity<UsuarioRegisterResponseDTO> registrar(@Valid @RequestBody UsuarioRegisterRequestDTO dto) {
+//
+//        return ResponseEntity.status(HttpStatus.CREATED)
+//                .body(usuarioService.registerNewUserPublic(dto));
+//    }
 
     @PostMapping("/forgot-password")
     @Operation(summary = "Solicitar recuperação de senha",
