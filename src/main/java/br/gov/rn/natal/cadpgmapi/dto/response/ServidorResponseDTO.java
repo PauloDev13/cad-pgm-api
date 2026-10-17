@@ -15,32 +15,51 @@ public record ServidorResponseDTO(
         // Etiqueta para auditoria
         @AuditFriendlyId
         String nome,
+
         @Schema(description = "Matrícula do servidor", example = "55025-8, T127")
         String matricula,
+
         @Schema(description = "CPF do servidor", example = "123.456.789-01")
         String cpf,
+
         @Schema(description = "Data de nascimento do servidor", example = "10/02/1991")
         LocalDate dataNascimento,
+
         @Schema(description = "Gênero do servidor", example = "Feminino")
         String genero,
+
         @Schema(description = "Data de nascimento do servidor", example = "10/02/1991")
         String telefone,
+
         @Schema(description = "E-mail pessoal do servidor", example = "carlos@gmail.com")
         String emailPessoal,
+
         @Schema(description = "E-mail institucional do servidor", example = "carlos@rn.gov.br")
         String emailInstitucional,
+
         @Schema(description = "Endereço completo do servidor", example = "Rua Atalaia, 79, Centro - Natal/RN")
         String endereco,
+
         @Schema(description = "Nome do Pai e Mãe do servidor", example = "José Silva e Maria Silva")
         String filiacao,
+
         @Schema(description = "Se o servidor foi excluído", example = "False")
         Boolean excluded,
+
         @Schema(description = "Data da exclusão", example = "01/01/2026")
         LocalDateTime excludedDate,
+
         @Schema(description = "Caminho da foto do servidor", example = "/fotos/123.png")
         String photoPath,
+
         @Schema(description = "Tipo de atividade do servidor", example = "Presencial, Remoto")
         TipoAtividade tipoAtividade,
+
+        @Schema(description = "Informa se o servidor possui conta de acesso ao sistema", example = "true")
+        Boolean hasUsuario,
+
+        @Schema(description = "ID do usuário associado ao servidor, se houver", example = "3")
+        Integer usuarioId,
 
         // Relações N:1 devolvidas como DTOs
         CargoResponseDTO cargo,
