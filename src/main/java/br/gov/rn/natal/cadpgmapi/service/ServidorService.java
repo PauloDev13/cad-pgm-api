@@ -13,12 +13,7 @@ import br.gov.rn.natal.cadpgmapi.exception.ResourceNotFoundException;
 import br.gov.rn.natal.cadpgmapi.load_pdf.services.DocumentoStorageService;
 import br.gov.rn.natal.cadpgmapi.mapper.ServidorMapper;
 import br.gov.rn.natal.cadpgmapi.models.ServidorShadowProjection;
-import br.gov.rn.natal.cadpgmapi.repository.AliasRepository;
-import br.gov.rn.natal.cadpgmapi.repository.ProcuradorRepository;
-import br.gov.rn.natal.cadpgmapi.repository.ServidorRepository;
-import br.gov.rn.natal.cadpgmapi.repository.SetorRepository;
-import br.gov.rn.natal.cadpgmapi.repository.SistemaRepository;
-import br.gov.rn.natal.cadpgmapi.repository.StatusRepository;
+import br.gov.rn.natal.cadpgmapi.repository.*;
 import br.gov.rn.natal.cadpgmapi.service.generic.BaseGenericService;
 import br.gov.rn.natal.cadpgmapi.utils.EntityChangeEvent;
 import jakarta.persistence.EntityManager;
@@ -51,6 +46,7 @@ public class ServidorService extends BaseGenericService<
     private final SetorRepository setorRepository;
     private final StatusRepository statusRepository;
     private final EntityManager entityManager;
+    private final UsuarioRepository usuarioRepository;
 
     // Construtor
     public ServidorService(
@@ -62,7 +58,7 @@ public class ServidorService extends BaseGenericService<
             DocumentoStorageService storageService,
             SetorRepository setorRepository,
             EntityManager entityManager,
-            ApplicationEventPublisher eventPublisher, StatusRepository statusRepository
+            ApplicationEventPublisher eventPublisher, StatusRepository statusRepository, UsuarioRepository usuarioRepository
     ){
         super(repository, mapper, eventPublisher);
         this.servidorRepository = repository;
@@ -73,6 +69,7 @@ public class ServidorService extends BaseGenericService<
         this.statusRepository = statusRepository;
         this.entityManager = entityManager;
         this.storageService = storageService;
+        this.usuarioRepository = usuarioRepository;
     }
 
     /*================================================================
@@ -87,6 +84,12 @@ public class ServidorService extends BaseGenericService<
         // 'Inativo' (comportamento original). O status é resolvido PELO NOME na consulta
         // nativa do repositório, sem magic numbers acoplados à ordem do seed (V05).
         servidorRepository.softDeleteByID(entity.getId(), Status.STATUS_INATIVO);
+
+        // Bloqueia automaticamente a conta de usuário associada ao servidor inativado/excluído
+        usuarioRepository.findByServidorId(entity.getId()).ifPresent(usuario -> {
+            usuario.setActivated(false);
+            usuarioRepository.save(usuario);
+        });
     }
 
     @Override
