@@ -84,6 +84,7 @@ public class TokenService {
                     .withSubject(usuario.getUsername())
                     .withClaim("roles", permissions)
                     .withClaim("email", usuario.getEmail())
+                    .withClaim("servidorId", usuario.getServidor().getId())
                     .withClaim("isForcePasswordChange", usuario.isForcePasswordChange())
                     .withIssuedAt(new Date())
                     .withExpiresAt(generateExpirationDate())
