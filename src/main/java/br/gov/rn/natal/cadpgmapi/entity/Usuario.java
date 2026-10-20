@@ -82,6 +82,10 @@ public class Usuario implements UserDetails {
         return (this.servidor != null) ? this.servidor.getNome() : this.name;
     }
 
+    public Integer getServidorId() {
+        return (this.servidor != null) ? this.servidor.getId() : null;
+    }
+
     public String getEmail() {
         if (this.servidor != null) {
             if (this.servidor.getEmailInstitucional() != null && !this.servidor.getEmailInstitucional().isBlank()) {

@@ -79,16 +79,20 @@ public class TokenService {
                     .map(GrantedAuthority::getAuthority)
                     .toList();
 
-            return JWT.create()
+            var builder =  JWT.create()
                     .withIssuer(ISSUER)
                     .withSubject(usuario.getUsername())
                     .withClaim("roles", permissions)
                     .withClaim("email", usuario.getEmail())
-                    .withClaim("servidorId", usuario.getServidor().getId())
                     .withClaim("isForcePasswordChange", usuario.isForcePasswordChange())
                     .withIssuedAt(new Date())
-                    .withExpiresAt(generateExpirationDate())
-                    .sign(algorithm);
+                    .withExpiresAt(generateExpirationDate());
+            // 2. Anexa a claim servidorId apenas se o usuário possuir vínculo funcional com Servidor
+            Integer servidorId = usuario.getServidorId();
+            if (servidorId != null) {
+                builder.withClaim("servidorId", servidorId);
+            }
+            return builder.sign(algorithm);
         } catch (JWTCreationException exception) {
             throw new RuntimeException("Erro ao gerar token JWT", exception);
         }
