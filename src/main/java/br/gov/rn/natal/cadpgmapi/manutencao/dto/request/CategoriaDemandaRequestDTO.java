@@ -2,7 +2,7 @@ package br.gov.rn.natal.cadpgmapi.manutencao.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+//import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 @Schema(description = "Dados para cadastro/atualização de Categoria de Demanda")

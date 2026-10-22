@@ -9,7 +9,7 @@ import br.gov.rn.natal.cadpgmapi.manutencao.dto.request.TipoServicoRequestDTO;
 import br.gov.rn.natal.cadpgmapi.manutencao.dto.response.CategoriaDemandaResponseDTO;
 import br.gov.rn.natal.cadpgmapi.manutencao.dto.response.TipoServicoResponseDTO;
 import br.gov.rn.natal.cadpgmapi.manutencao.repository.CategoriaDemandaRepository;
-import br.gov.rn.natal.cadpgmapi.manutencao.repository.ChamadoManutencaoRepository;
+//import br.gov.rn.natal.cadpgmapi.manutencao.repository.ChamadoManutencaoRepository;
 import br.gov.rn.natal.cadpgmapi.manutencao.repository.TipoServicoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,7 +23,7 @@ public class CatalogoManutencaoService {
 
     private final CategoriaDemandaRepository categoriaRepository;
     private final TipoServicoRepository tipoServicoRepository;
-    private final ChamadoManutencaoRepository chamadoRepository;
+//    private final ChamadoManutencaoRepository chamadoRepository;
 
     @Transactional(readOnly = true)
     public List<CategoriaDemandaResponseDTO> listarCategoriasAtivas() {
