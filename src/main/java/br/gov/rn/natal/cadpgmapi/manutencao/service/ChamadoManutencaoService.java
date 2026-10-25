@@ -1,5 +1,8 @@
 package br.gov.rn.natal.cadpgmapi.manutencao.service;
 
+import br.gov.rn.natal.cadpgmapi.audit.annotations.Auditable;
+import br.gov.rn.natal.cadpgmapi.audit.AuditContextHolder;
+import br.gov.rn.natal.cadpgmapi.audit.enums.AuditAction;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
 import br.gov.rn.natal.cadpgmapi.exception.BusinessException;
 import br.gov.rn.natal.cadpgmapi.exception.ForbiddenException;
@@ -10,6 +13,7 @@ import br.gov.rn.natal.cadpgmapi.manutencao.dto.request.*;
 import br.gov.rn.natal.cadpgmapi.manutencao.dto.response.*;
 import br.gov.rn.natal.cadpgmapi.manutencao.repository.*;
 import br.gov.rn.natal.cadpgmapi.repository.UsuarioRepository;
+import br.gov.rn.natal.cadpgmapi.security.SecurityRoles;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -38,10 +42,12 @@ public class ChamadoManutencaoService {
     private final UsuarioRepository usuarioRepository;
 
     @Transactional
+    @Auditable(action = AuditAction.INSERT, entity = "Chamado de Manutenção")
     public ChamadoDetalheResponseDTO abrirChamado(AberturaChamadoRequestDTO dto) {
         Usuario solicitante = getUsuarioAutenticado();
 
         Sala sala = null;
+
         if (dto.salaId() != null) {
             sala = salaRepository.findById(dto.salaId())
                     .orElseThrow(() -> new ResourceNotFoundException("Sala selecionada não encontrada."));
@@ -99,6 +105,19 @@ public class ChamadoManutencaoService {
                 .build();
         historicoRepository.save(historico);
 
+        // REGISTRO NO FLUXO DE AUDITORIA GERAL (PGM)
+        String localExibicao = (sala != null) ? sala.getNumeroIdentificacao() : dto.localDescricao().trim();
+        AuditContextHolder.setFriendlyId(chamado.getProtocolo());
+        AuditContextHolder.setLogDetalhes(String.format(
+                "ABERTURA: Chamado aberto com protocolo %s. Demanda: '%s' - '%s'. Local: %s (%s). Solicitante: %s.",
+                chamado.getProtocolo(),
+                categoria.getNome(),
+                tipoServico.getNome(),
+                chamado.getAndar().getRotulo(),
+                localExibicao,
+                solicitante.getName()
+        ));
+
         return buscarDetalhes(chamado.getId());
     }
 
@@ -119,7 +138,7 @@ public class ChamadoManutencaoService {
             Integer responsavelId,
             Pageable pageable
     ) {
-        validarPermissao("MANUTENCAO_FILA_GERAL");
+//        validarPermissao("MANUTENCAO_FILA_GERAL");
 
         Specification<ChamadoManutencao> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -140,15 +159,6 @@ public class ChamadoManutencaoService {
         ChamadoManutencao chamado = chamadoRepository.findDetailById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Chamado de manutenção não encontrado: " + id));
 
-        Usuario autenticado = getUsuarioAutenticado();
-        boolean isOwner = chamado.getSolicitante().getId().equals(autenticado.getId());
-        boolean hasQueueAccess = autenticado.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("MANUTENCAO_FILA_GERAL") || a.getAuthority().equals("admin"));
-
-        if (!isOwner && !hasQueueAccess) {
-            throw new ForbiddenException("Você não tem autorização para visualizar este chamado.");
-        }
-
         List<HistoricoChamadoResponseDTO> historico = historicoRepository.findByChamadoIdOrderByDataHoraAsc(id)
                 .stream()
                 .map(this::toHistoricoDTO)
@@ -158,8 +168,10 @@ public class ChamadoManutencaoService {
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE, entity = "Chamado de Manutenção")
     public ChamadoDetalheResponseDTO atribuirResponsavel(Integer id, AtribuicaoChamadoRequestDTO dto) {
-        validarPermissao("MANUTENCAO_ATENDER");
+        // validarPermissao("MANUTENCAO_ATENDER");
+
         Usuario ator = getUsuarioAutenticado();
 
         ChamadoManutencao chamado = chamadoRepository.findById(id)
@@ -176,14 +188,26 @@ public class ChamadoManutencaoService {
             throw new BusinessException("O responsável selecionado está desativado no sistema.");
         }
 
+        // Validação: Somente servidores com perfil 'almoxarifado' podem receber atribuição
+        boolean isAlmoxarifado = novoResponsavel.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equalsIgnoreCase(SecurityRoles.ALMOXARIFADO));
+
+        if (!isAlmoxarifado) {
+            throw new BusinessException("O usuário selecionado não possui a role 'almoxarifado' para receber atribuição.");
+        }
+
         Usuario responsavelAnterior = chamado.getResponsavel();
         EstadoChamado estadoAnterior = chamado.getEstado();
+
+        boolean isReatribuicao = (estadoAnterior != EstadoChamado.ABERTO && responsavelAnterior != null);
+
         EventoHistoricoChamado evento = (estadoAnterior == EstadoChamado.ABERTO)
                 ? EventoHistoricoChamado.ATRIBUICAO
                 : EventoHistoricoChamado.REATRIBUICAO;
 
         chamado.setEstado(EstadoChamado.ATRIBUIDO);
         chamado.setResponsavel(novoResponsavel);
+
         if (chamado.getAtribuidoEm() == null) {
             chamado.setAtribuidoEm(LocalDateTime.now());
         }
@@ -202,12 +226,43 @@ public class ChamadoManutencaoService {
                 .build();
         historicoRepository.save(hist);
 
+        // REGISTRO NO FLUXO DE AUDITORIA GERAL (PGM)
+        String obsAuditoria = (dto.observacao() != null && !dto.observacao().isBlank())
+                ? dto.observacao().trim()
+                : "Sem observação";
+
+        AuditContextHolder.setFriendlyId(chamado.getProtocolo());
+        if (isReatribuicao) {
+            AuditContextHolder.setLogDetalhes(String.format(
+                    "REATRIBUIÇÃO: Chamado %s reatribuído de '%s' para '%s' pelo operador '%s'. Observação: %s.",
+                    chamado.getProtocolo(),
+                    responsavelAnterior.getName(),
+                    novoResponsavel.getName(),
+                    ator.getName(),
+                    obsAuditoria
+            ));
+        } else {
+            AuditContextHolder.setLogDetalhes(String.format(
+                    "ATRIBUIÇÃO: Chamado %s atribuído ao responsável '%s' pelo operador '%s'. Observação: %s.",
+                    chamado.getProtocolo(),
+                    novoResponsavel.getName(),
+                    ator.getName(),
+                    obsAuditoria
+            ));
+        }
+
         return buscarDetalhes(id);
     }
 
+    @Transactional(readOnly = true)
+    public List<ResponsavelComboResponseDTO> listarResponsaveisDisponiveis() {
+        return usuarioRepository.findUsuariosAptosAtribuicaoManutencao();
+    }
+
     @Transactional
+    @Auditable(action = AuditAction.UPDATE, entity = "Chamado de Manutenção")
     public ChamadoDetalheResponseDTO iniciarAtendimento(Integer id, IniciarAtendimentoRequestDTO dto) {
-        validarPermissao("MANUTENCAO_ATENDER");
+//        validarPermissao("MANUTENCAO_ATENDER");
         Usuario ator = getUsuarioAutenticado();
 
         ChamadoManutencao chamado = chamadoRepository.findById(id)
@@ -233,12 +288,27 @@ public class ChamadoManutencaoService {
                 .build();
         historicoRepository.save(hist);
 
+        // REGISTRO NO FLUXO DE AUDITORIA GERAL (PGM)
+        String obsInicio = (dto != null && dto.observacao() != null && !dto.observacao().isBlank())
+                ? dto.observacao().trim()
+                : "Sem observação";
+        AuditContextHolder.setFriendlyId(chamado.getProtocolo());
+        AuditContextHolder.setLogDetalhes(String.format(
+                "INÍCIO DE ATENDIMENTO: Execução dos serviços iniciada no chamado %s pelo operador '%s'. Observações iniciais: %s.",
+                chamado.getProtocolo(),
+                ator.getName(),
+                obsInicio
+        ));
+
+
         return buscarDetalhes(id);
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE, entity = "Chamado de Manutenção")
     public ChamadoDetalheResponseDTO concluirAtendimento(Integer id, ConcluirChamadoRequestDTO dto) {
-        validarPermissao("MANUTENCAO_ATENDER");
+//        validarPermissao("MANUTENCAO_ATENDER");
+
         Usuario ator = getUsuarioAutenticado();
 
         ChamadoManutencao chamado = chamadoRepository.findById(id)
@@ -264,23 +334,59 @@ public class ChamadoManutencaoService {
                 .build();
         historicoRepository.save(hist);
 
+        // REGISTRO NO FLUXO DE AUDITORIA GERAL (PGM)
+        String laudoConclusao = (dto != null && dto.observacao() != null && !dto.observacao().isBlank())
+                ? dto.observacao().trim()
+                : "Sem laudo informado";
+        AuditContextHolder.setFriendlyId(chamado.getProtocolo());
+        AuditContextHolder.setLogDetalhes(String.format(
+                "CONCLUSÃO: Serviços concluídos no chamado %s pelo operador '%s'. Laudo/Observação: %s.",
+                chamado.getProtocolo(),
+                ator.getName(),
+                laudoConclusao
+        ));
+
         return buscarDetalhes(id);
     }
 
     @Transactional
+    @Auditable(action = AuditAction.UPDATE, entity = "Chamado de Manutenção")
     public ChamadoDetalheResponseDTO cancelarChamado(Integer id, CancelarChamadoRequestDTO dto) {
-        Usuario solicitante = getUsuarioAutenticado();
+
+        Usuario autenticado = getUsuarioAutenticado();
 
         ChamadoManutencao chamado = chamadoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Chamado não encontrado: " + id));
 
-        if (!chamado.getSolicitante().getId().equals(solicitante.getId())) {
-            throw new ForbiddenException("Apenas o próprio solicitante pode cancelar o seu chamado.");
-        }
+//        if (!chamado.getSolicitante().getId().equals(solicitante.getId())) {
+//            throw new ForbiddenException("Apenas o próprio solicitante pode cancelar o seu chamado.");
+//        }
 
         if (chamado.getEstado().isFinalizado()) {
             throw new BusinessException("Não é possível cancelar um chamado que já se encontra " + chamado.getEstado().getRotulo() + ".");
         }
+
+        boolean isSolicitante = chamado.getSolicitante().getId().equals(autenticado.getId());
+
+        boolean isTramitador = autenticado.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equalsIgnoreCase(SecurityRoles.TRAMITADOR));
+
+        // Regra de Negócio de Cancelamento:
+        // - Se ABERTO: Solicitante ou Tramitador podem cancelar.
+        // - Se DIFERENTE DE ABERTO: SOMENTE Tramitador pode cancelar.
+        if (chamado.getEstado() == EstadoChamado.ABERTO) {
+
+            if (!isSolicitante && !isTramitador) {
+                throw new ForbiddenException("Apenas o próprio solicitante ou um usuário tramitador pode cancelar um chamado aberto.");
+            }
+        } else {
+
+            if (!isTramitador) {
+                throw new ForbiddenException("Apenas usuários com a role 'tramitador' têm permissão para cancelar chamados em andamento.");
+            }
+        }
+
+        String papelAtor = isSolicitante ? "Solicitante" : "Tramitador";
 
         EstadoChamado estadoAnt = chamado.getEstado();
         chamado.setEstado(EstadoChamado.CANCELADO);
@@ -293,10 +399,21 @@ public class ChamadoManutencaoService {
                 .evento(EventoHistoricoChamado.CANCELAMENTO)
                 .estadoAnterior(estadoAnt)
                 .estadoNovo(EstadoChamado.CANCELADO)
-                .ator(solicitante)
+                .ator(autenticado)
                 .observacao("Motivo: " + dto.motivo().trim())
                 .build();
         historicoRepository.save(hist);
+
+        // REGISTRO NO FLUXO DE AUDITORIA GERAL (PGM)
+        AuditContextHolder.setFriendlyId(chamado.getProtocolo());
+        AuditContextHolder.setLogDetalhes(String.format(
+                "CANCELAMENTO: Chamado %s cancelado no estado '%s' por '%s' (%s). Motivo: %s.",
+                chamado.getProtocolo(),
+                estadoAnt.getRotulo(),
+                autenticado.getName(),
+                papelAtor,
+                dto.motivo().trim()
+        ));
 
         return buscarDetalhes(id);
     }

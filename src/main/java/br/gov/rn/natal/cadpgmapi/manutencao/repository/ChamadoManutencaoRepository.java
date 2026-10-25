@@ -38,7 +38,6 @@ public interface ChamadoManutencaoRepository extends JpaRepository<ChamadoManute
     long countChamadosCriadosApos(@Param("inicioDoDia") LocalDateTime inicioDoDia);
 
     // --- AGREGADOS DO DASHBOARD ---
-
     @Query("""
         SELECT COUNT(c) FROM ChamadoManutencao c
         WHERE c.criadoEm BETWEEN :inicio AND :fim

@@ -2,6 +2,7 @@ package br.gov.rn.natal.cadpgmapi.repository;
 
 import br.gov.rn.natal.cadpgmapi.dto.response.ServidorComboDTO;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
+import br.gov.rn.natal.cadpgmapi.manutencao.dto.response.ResponsavelComboResponseDTO;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,6 +11,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -56,8 +58,35 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer>, JpaS
     List<ServidorComboDTO> findServidoresSemUsuario();
 
     boolean existsByUserName(String userName);
+
+    @Query("SELECT COUNT(u) > 0 FROM Usuario u WHERE u.servidor.id = :servidorId")
     boolean existsByServidorId(Integer servidorId);
 
     @EntityGraph(attributePaths = {"permissions", "servidor"})
-    Optional<Usuario> findByServidorId(Integer servidorId);
+    @Query("SELECT u FROM Usuario u WHERE u.servidor.id = :servidorId")
+    Optional<Usuario> findByServidorId(@Param("servidorId") Integer servidorId);
+
+    /*====================================
+        Para o módulo manutenção
+     ===================================*/
+
+    /**
+     * Recupera os usuários ativos aptos a receber atribuição de chamados (possuem a role 'almoxarifado').
+     * Retorna a projeção ResponsavelComboDTO com nome e e-mail consolidados do Servidor ou da conta de Usuário.
+     */
+    @Query("""
+        SELECT DISTINCT new br.gov.rn.natal.cadpgmapi.manutencao.dto.response.ResponsavelComboResponseDTO(
+            u.id,
+            COALESCE(s.nome, u.name),
+            COALESCE(s.emailInstitucional, COALESCE(s.emailPessoal, u.email))
+        )
+        FROM Usuario u
+        LEFT JOIN u.servidor s
+        JOIN u.permissions p
+        WHERE u.activated = true
+          AND (s IS NULL OR s.excluded = false)
+          AND LOWER(p) = 'almoxarifado'
+        ORDER BY COALESCE(s.nome, u.name) ASC
+    """)
+    List<ResponsavelComboResponseDTO> findUsuariosAptosAtribuicaoManutencao();
 }

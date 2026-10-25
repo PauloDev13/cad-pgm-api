@@ -1,5 +1,6 @@
 package br.gov.rn.natal.cadpgmapi.manutencao.dto.response;
 
+import br.gov.rn.natal.cadpgmapi.audit.annotations.AuditFriendlyId;
 import br.gov.rn.natal.cadpgmapi.manutencao.domain.enums.AndarCodigo;
 import br.gov.rn.natal.cadpgmapi.manutencao.domain.enums.EstadoChamado;
 
@@ -8,6 +9,7 @@ import java.util.List;
 
 public record ChamadoDetalheResponseDTO(
         Integer id,
+        @AuditFriendlyId
         String protocolo,
         AndarCodigo andar,
         String rotuloAndar,
