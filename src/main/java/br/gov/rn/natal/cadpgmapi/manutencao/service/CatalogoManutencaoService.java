@@ -9,7 +9,6 @@ import br.gov.rn.natal.cadpgmapi.manutencao.dto.request.TipoServicoRequestDTO;
 import br.gov.rn.natal.cadpgmapi.manutencao.dto.response.CategoriaDemandaResponseDTO;
 import br.gov.rn.natal.cadpgmapi.manutencao.dto.response.TipoServicoResponseDTO;
 import br.gov.rn.natal.cadpgmapi.manutencao.repository.CategoriaDemandaRepository;
-//import br.gov.rn.natal.cadpgmapi.manutencao.repository.ChamadoManutencaoRepository;
 import br.gov.rn.natal.cadpgmapi.manutencao.repository.TipoServicoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,8 +22,20 @@ public class CatalogoManutencaoService {
 
     private final CategoriaDemandaRepository categoriaRepository;
     private final TipoServicoRepository tipoServicoRepository;
-//    private final ChamadoManutencaoRepository chamadoRepository;
 
+    /*
+     BUSCA TODAS AS CATEGORIAS (ATIVAS E INATIVAS)
+     */
+    @Transactional(readOnly = true)
+    public List<CategoriaDemandaResponseDTO> listarCategorias() {
+        return categoriaRepository.findAllByOrderByOrdemExibicaoAscNomeAsc().stream()
+                .map(this::toCategoriaDTO)
+                .toList();
+    }
+
+    /*
+     LISTA AS CATEGORIAS ATIVAS
+     */
     @Transactional(readOnly = true)
     public List<CategoriaDemandaResponseDTO> listarCategoriasAtivas() {
         return categoriaRepository.findByAtivoTrueOrderByOrdemExibicaoAscNomeAsc().stream()
@@ -32,9 +43,24 @@ public class CatalogoManutencaoService {
                 .toList();
     }
 
+    /*
+    LISTA OS TIPOS DE SERVIÇOS ATIVOS POR CATEGORIA
+   */
     @Transactional(readOnly = true)
-    public List<TipoServicoResponseDTO> listarTiposPorCategoriaAtivos(Integer categoriaId) {
-        return tipoServicoRepository.findByCategoriaIdAndAtivoTrueOrderByOrdemExibicaoAscNomeAsc(categoriaId).stream()
+    public List<TipoServicoResponseDTO> listarTiposAtivosPorCategoria(Integer categoriaId) {
+        return tipoServicoRepository.findByCategoriaIdAndAtivoTrueOrderByOrdemExibicaoAscNomeAsc(categoriaId)
+                .stream()
+                .map(this::toTipoDTO)
+                .toList();
+    }
+
+    /*
+    LISTA TODOS OS TIPOS DE SERVIÇOS (ATIVOS E INATIVOS) POR CATEGORIA
+   */
+    @Transactional(readOnly = true)
+    public List<TipoServicoResponseDTO> listarTiposPorCategoria(Integer categoriaId) {
+        return tipoServicoRepository.findByCategoriaIdOrderByOrdemExibicaoAscNomeAsc(categoriaId)
+                .stream()
                 .map(this::toTipoDTO)
                 .toList();
     }
@@ -116,7 +142,13 @@ public class CatalogoManutencaoService {
     }
 
     private CategoriaDemandaResponseDTO toCategoriaDTO(CategoriaDemanda cat) {
-        return new CategoriaDemandaResponseDTO(cat.getId(), cat.getNome(), cat.getDescricao(), cat.isAtivo(), cat.getOrdemExibicao());
+        return new CategoriaDemandaResponseDTO(
+                cat.getId(),
+                cat.getNome(),
+                cat.getDescricao(),
+                cat.isAtivo(),
+                cat.getOrdemExibicao()
+        );
     }
 
     private TipoServicoResponseDTO toTipoDTO(TipoServico tipo) {

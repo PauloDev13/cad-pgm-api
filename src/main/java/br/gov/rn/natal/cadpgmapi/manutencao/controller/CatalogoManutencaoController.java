@@ -24,16 +24,40 @@ public class CatalogoManutencaoController {
 
     private final CatalogoManutencaoService catalogoService;
 
+    /*
+     LISTA TODAS AS CATEGORIAS (ATIVA E INATIVAS)
+     */
     @GetMapping("/categorias")
-    @Operation(summary = "Lista categorias ativas de demanda")
+    @Operation(summary = "Lista categorias (ativas e inativas) de demanda")
     public ResponseEntity<List<CategoriaDemandaResponseDTO>> listarCategorias() {
+        return ResponseEntity.ok(catalogoService.listarCategorias());
+    }
+
+    /*
+     LISTA TODAS AS CATEGORIAS ATIVAS
+     */
+    @GetMapping("/categorias-ativas")
+    @Operation(summary = "Lista categorias ativas de demanda")
+    public ResponseEntity<List<CategoriaDemandaResponseDTO>> listarCategoriasAtivas() {
         return ResponseEntity.ok(catalogoService.listarCategoriasAtivas());
     }
 
+    /*
+    LISTA TODOS OS TIPOS DE SERVIÇOS (ATIVOS E INATIVOS) POR CATEGORIA
+   */
     @GetMapping("/categorias/{id}/tipos-servico")
-    @Operation(summary = "Lista os tipos de serviço ativos para a categoria informada")
+    @Operation(summary = "Lista os tipos de serviço (ativos e inativos) para a categoria informada")
     public ResponseEntity<List<TipoServicoResponseDTO>> listarTiposPorCategoria(@PathVariable Integer id) {
-        return ResponseEntity.ok(catalogoService.listarTiposPorCategoriaAtivos(id));
+        return ResponseEntity.ok(catalogoService.listarTiposPorCategoria(id));
+    }
+
+    /*
+    LISTA TOS TIPOS DE SERVIÇOS ATIVOS POR CATEGORIA
+    */
+    @GetMapping("/categorias/{id}/tipos-servico-ativos")
+    @Operation(summary = "Lista os tipos de serviço ativos para a categoria informada")
+    public ResponseEntity<List<TipoServicoResponseDTO>> listarTiposAtivosPorCategoria(@PathVariable Integer id) {
+        return ResponseEntity.ok(catalogoService.listarTiposAtivosPorCategoria(id));
     }
 
     @PostMapping("/admin/categorias")
