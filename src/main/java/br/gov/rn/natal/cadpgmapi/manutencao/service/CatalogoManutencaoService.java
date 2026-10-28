@@ -11,6 +11,8 @@ import br.gov.rn.natal.cadpgmapi.manutencao.dto.response.TipoServicoResponseDTO;
 import br.gov.rn.natal.cadpgmapi.manutencao.repository.CategoriaDemandaRepository;
 import br.gov.rn.natal.cadpgmapi.manutencao.repository.TipoServicoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +36,15 @@ public class CatalogoManutencaoService {
     }
 
     /*
+    BUSCA TODAS AS CATEGORIAS (ATIVAS E INATIVAS) PAGINADAS
+    */
+    @Transactional(readOnly = true)
+    public Page<CategoriaDemandaResponseDTO> listarCategoriasPaginada(Pageable pageable) {
+        return categoriaRepository.findAll(pageable)
+                .map(this::toCategoriaDTO);
+    }
+
+    /*
      LISTA AS CATEGORIAS ATIVAS
      */
     @Transactional(readOnly = true)
@@ -41,6 +52,15 @@ public class CatalogoManutencaoService {
         return categoriaRepository.findByAtivoTrueOrderByOrdemExibicaoAscNomeAsc().stream()
                 .map(this::toCategoriaDTO)
                 .toList();
+    }
+
+    /*
+    LISTA TODOS OS TIPOS DE SERVIÇOS (ATIVOS E INATIVOS) POR CATEGORIA PAGINADOS
+    */
+    @Transactional(readOnly = true)
+    public Page<TipoServicoResponseDTO> listarTiposPorCategoriaPaginada(Integer categoriaId, Pageable pageable) {
+        return tipoServicoRepository.findByCategoriaId(categoriaId, pageable)
+                .map(this::toTipoDTO);
     }
 
     /*
