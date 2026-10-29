@@ -28,12 +28,12 @@ public class CatalogoManutencaoService {
     /*
      BUSCA TODAS AS CATEGORIAS (ATIVAS E INATIVAS)
      */
-    @Transactional(readOnly = true)
-    public List<CategoriaDemandaResponseDTO> listarCategorias() {
-        return categoriaRepository.findAllByOrderByOrdemExibicaoAscNomeAsc().stream()
-                .map(this::toCategoriaDTO)
-                .toList();
-    }
+//    @Transactional(readOnly = true)
+//    public List<CategoriaDemandaResponseDTO> listarCategorias() {
+//        return categoriaRepository.findAllByOrderByOrdemExibicaoAscNomeAsc().stream()
+//                .map(this::toCategoriaDTO)
+//                .toList();
+//    }
 
     /*
     BUSCA TODAS AS CATEGORIAS (ATIVAS E INATIVAS) PAGINADAS
@@ -77,13 +77,13 @@ public class CatalogoManutencaoService {
     /*
     LISTA TODOS OS TIPOS DE SERVIÇOS (ATIVOS E INATIVOS) POR CATEGORIA
    */
-    @Transactional(readOnly = true)
-    public List<TipoServicoResponseDTO> listarTiposPorCategoria(Integer categoriaId) {
-        return tipoServicoRepository.findByCategoriaIdOrderByOrdemExibicaoAscNomeAsc(categoriaId)
-                .stream()
-                .map(this::toTipoDTO)
-                .toList();
-    }
+//    @Transactional(readOnly = true)
+//    public List<TipoServicoResponseDTO> listarTiposPorCategoria(Integer categoriaId) {
+//        return tipoServicoRepository.findByCategoriaIdOrderByOrdemExibicaoAscNomeAsc(categoriaId)
+//                .stream()
+//                .map(this::toTipoDTO)
+//                .toList();
+//    }
 
     @Transactional
     public CategoriaDemandaResponseDTO criarCategoria(CategoriaDemandaRequestDTO dto) {

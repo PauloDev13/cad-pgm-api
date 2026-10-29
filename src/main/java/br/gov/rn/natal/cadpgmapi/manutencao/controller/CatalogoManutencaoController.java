@@ -32,11 +32,11 @@ public class CatalogoManutencaoController {
     /*
      LISTA TODAS AS CATEGORIAS (ATIVA E INATIVAS)
      */
-    @GetMapping("/categorias")
-    @Operation(summary = "Lista categorias (ativas e inativas) de demanda")
-    public ResponseEntity<List<CategoriaDemandaResponseDTO>> listarCategorias() {
-        return ResponseEntity.ok(catalogoService.listarCategorias());
-    }
+//    @GetMapping("/categorias")
+//    @Operation(summary = "Lista categorias (ativas e inativas) de demanda")
+//    public ResponseEntity<List<CategoriaDemandaResponseDTO>> listarCategorias() {
+//        return ResponseEntity.ok(catalogoService.listarCategorias());
+//    }
 
     /*
      LISTA TODAS AS CATEGORIAS PAGINADAS
@@ -63,11 +63,11 @@ public class CatalogoManutencaoController {
     /*
     LISTA TODOS OS TIPOS DE SERVIÇOS (ATIVOS E INATIVOS) POR CATEGORIA
    */
-    @GetMapping("/categorias/{id}/tipos-servico")
-    @Operation(summary = "Lista os tipos de serviço (ativos e inativos) para a categoria informada")
-    public ResponseEntity<List<TipoServicoResponseDTO>> listarTiposPorCategoria(@PathVariable Integer id) {
-        return ResponseEntity.ok(catalogoService.listarTiposPorCategoria(id));
-    }
+//    @GetMapping("/categorias/{id}/tipos-servico")
+//    @Operation(summary = "Lista os tipos de serviço (ativos e inativos) para a categoria informada")
+//    public ResponseEntity<List<TipoServicoResponseDTO>> listarTiposPorCategoria(@PathVariable Integer id) {
+//        return ResponseEntity.ok(catalogoService.listarTiposPorCategoria(id));
+//    }
 
     /*
      LISTA TODOS OS TIPOS DE SERVIÇO POR CATEGORIA PAGINADOS

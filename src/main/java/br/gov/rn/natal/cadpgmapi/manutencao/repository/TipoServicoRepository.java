@@ -12,11 +12,11 @@ import java.util.List;
 @Repository
 public interface TipoServicoRepository extends JpaRepository<TipoServico, Integer> {
     List<TipoServico> findByCategoriaIdAndAtivoTrueOrderByOrdemExibicaoAscNomeAsc(Integer categoriaId);
-    List<TipoServico> findByCategoriaIdOrderByOrdemExibicaoAscNomeAsc(Integer categoriaId);
+//    List<TipoServico> findByCategoriaIdOrderByOrdemExibicaoAscNomeAsc(Integer categoriaId);
     boolean existsByCategoriaIdAndNomeIgnoreCase(Integer categoriaId, String nome);
     boolean existsByCategoriaIdAndNomeIgnoreCaseAndIdNot(Integer categoriaId, String nome, Integer id);
 
-    // Cenário 3: Todos os tipos de serviço por categoria (paginado)
+    // TODOS OS TIPOS DE SERVIÇO POR CATEGORIA PAGINADA
     @EntityGraph(attributePaths = {"categoria"})
     Page<TipoServico> findByCategoriaId(Integer categoriaId, Pageable pageable);
 

@@ -9,7 +9,7 @@ import java.util.List;
 @Repository
 public interface CategoriaDemandaRepository extends JpaRepository<CategoriaDemanda, Integer> {
     List<CategoriaDemanda> findByAtivoTrueOrderByOrdemExibicaoAscNomeAsc();
-    List<CategoriaDemanda> findAllByOrderByOrdemExibicaoAscNomeAsc();
+//    List<CategoriaDemanda> findAllByOrderByOrdemExibicaoAscNomeAsc();
     boolean existsByNomeIgnoreCase(String nome);
     boolean existsByNomeIgnoreCaseAndIdNot(String nome, Integer id);
 }
