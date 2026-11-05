@@ -27,6 +27,11 @@ public class TipoServico {
     @JoinColumn(name = "categoria_id", nullable = false)
     private CategoriaDemanda categoria;
 
+    // Em TipoServico.java:
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "subcategoria_id", nullable = false)
+    private Subcategoria subcategoria;
+
     @Column(name = "nome", nullable = false, length = 150)
     private String nome;
 
@@ -48,4 +53,9 @@ public class TipoServico {
     @UpdateTimestamp
     @Column(name = "data_atualizacao", nullable = false)
     private LocalDateTime dataAtualizacao;
+
+    // Méthod de conveniência para obter a categoria raiz de forma segura:
+    public CategoriaDemanda getCategoria() {
+        return subcategoria != null ? subcategoria.getCategoria() : null;
+    }
 }

@@ -3,10 +3,12 @@ package br.gov.rn.natal.cadpgmapi.manutencao.domain.entity;
 import br.gov.rn.natal.cadpgmapi.entity.Usuario;
 import br.gov.rn.natal.cadpgmapi.manutencao.domain.enums.AndarCodigo;
 import br.gov.rn.natal.cadpgmapi.manutencao.domain.enums.EstadoChamado;
+import br.gov.rn.natal.cadpgmapi.manutencao.domain.enums.PrioridadeChamado;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -49,6 +51,10 @@ public class ChamadoManutencao {
     @JoinColumn(name = "tipo_servico_id", nullable = false)
     private TipoServico tipoServico;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "subcategoria_id", nullable = false)
+    private Subcategoria subcategoria;
+
     @Column(name = "descricao", nullable = false, columnDefinition = "TEXT")
     private String descricao;
 
@@ -56,6 +62,11 @@ public class ChamadoManutencao {
     @Column(name = "estado", nullable = false, length = 30)
     @Builder.Default
     private EstadoChamado estado = EstadoChamado.ABERTO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "prioridade", nullable = false, length = 20)
+    @Builder.Default
+    private PrioridadeChamado prioridade = PrioridadeChamado.MEDIA;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "responsavel_id")
@@ -79,4 +90,13 @@ public class ChamadoManutencao {
 
     @Column(name = "motivo_cancelamento", length = 500)
     private String motivoCancelamento;
+
+    @Column(name = "prazo_conclusao")
+    private LocalDate prazoConclusao;
+
+    @Column(name = "movel_relacionado", length = 100)
+    private String movelRelacionado;
+
+    @Column(name = "numero_requisicao_ecidade", length = 50)
+    private String numeroRequisicaoEcidade;
 }

@@ -3,6 +3,7 @@ package br.gov.rn.natal.cadpgmapi.manutencao.controller;
 import br.gov.rn.natal.cadpgmapi.manutencao.dto.request.CategoriaDemandaRequestDTO;
 import br.gov.rn.natal.cadpgmapi.manutencao.dto.request.TipoServicoRequestDTO;
 import br.gov.rn.natal.cadpgmapi.manutencao.dto.response.CategoriaDemandaResponseDTO;
+import br.gov.rn.natal.cadpgmapi.manutencao.dto.response.SubcategoriaResponseDTO;
 import br.gov.rn.natal.cadpgmapi.manutencao.dto.response.TipoServicoResponseDTO;
 import br.gov.rn.natal.cadpgmapi.manutencao.service.CatalogoManutencaoService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,18 +30,6 @@ public class CatalogoManutencaoController {
 
     private final CatalogoManutencaoService catalogoService;
 
-    /*
-     LISTA TODAS AS CATEGORIAS (ATIVA E INATIVAS)
-     */
-//    @GetMapping("/categorias")
-//    @Operation(summary = "Lista categorias (ativas e inativas) de demanda")
-//    public ResponseEntity<List<CategoriaDemandaResponseDTO>> listarCategorias() {
-//        return ResponseEntity.ok(catalogoService.listarCategorias());
-//    }
-
-    /*
-     LISTA TODAS AS CATEGORIAS PAGINADAS
-     */
     @GetMapping("/categorias/paginadas")
     @Operation(summary = "Lista categorias (ativas e inativas) de demanda com paginação")
     public ResponseEntity<Page<CategoriaDemandaResponseDTO>> listarCategoriasPaginadas(
@@ -61,26 +50,39 @@ public class CatalogoManutencaoController {
     }
 
     /*
-    LISTA TODOS OS TIPOS DE SERVIÇOS (ATIVOS E INATIVOS) POR CATEGORIA
-   */
-//    @GetMapping("/categorias/{id}/tipos-servico")
-//    @Operation(summary = "Lista os tipos de serviço (ativos e inativos) para a categoria informada")
-//    public ResponseEntity<List<TipoServicoResponseDTO>> listarTiposPorCategoria(@PathVariable Integer id) {
-//        return ResponseEntity.ok(catalogoService.listarTiposPorCategoria(id));
-//    }
-
-    /*
-     LISTA TODOS OS TIPOS DE SERVIÇO POR CATEGORIA PAGINADOS
+     * LISTA TODAS AS SUBCATEGORIAS ATIVAS POR CATEGORIA (DROPDOWN EM CASCATA - NÍVEL 2)
      */
-    @GetMapping("/categorias/{id}/tipos-servico/paginados")
-    @Operation(summary = "Lista os tipos de serviço (ativos e inativos) para a categoria com paginação")
-    public ResponseEntity<Page<TipoServicoResponseDTO>> listarTiposPorCategoriaPaginados(
+    @GetMapping("/categorias/{id}/subcategorias-ativas")
+    @Operation(summary = "Lista as subcategorias ativas para a categoria informada")
+    public ResponseEntity<List<SubcategoriaResponseDTO>> listarSubcategoriasAtivasPorCategoria(@PathVariable Integer id) {
+        return ResponseEntity.ok(catalogoService.listarSubcategoriasAtivasPorCategoria(id));
+    }
+    /*
+     * LISTA TODAS AS SUBCATEGORIAS POR CATEGORIA COM PAGINAÇÃO (ADMINISTRATIVO)
+     */
+    @GetMapping("/categorias/{id}/subcategorias/paginadas")
+    @Operation(summary = "Lista as subcategorias (ativas e inativas) para a categoria com paginação")
+    public ResponseEntity<Page<SubcategoriaResponseDTO>> listarSubcategoriasPorCategoriaPaginadas(
             @PathVariable Integer id,
             @ParameterObject
             @PageableDefault(sort = {"ordemExibicao", "nome"}, direction = Sort.Direction.ASC)
             Pageable pageable
     ) {
-        return ResponseEntity.ok(catalogoService.listarTiposPorCategoriaPaginada(id, pageable));
+        return ResponseEntity.ok(catalogoService.listarSubcategoriasPorCategoriaPaginada(id, pageable));
+    }
+
+    /*
+    LISTA TODOS OS TIPOS DE SERVIÇOS (ATIVOS E INATIVOS) POR CATEGORIA
+   */
+    @GetMapping("/categorias/{id}/tipos-servico/paginados")
+    @Operation(summary = "Lista os tipos de serviço (ativos e inativos) para a categoria com paginação")
+    public ResponseEntity<Page<TipoServicoResponseDTO>> listarTiposPorSubcategoriaPaginados(
+            @PathVariable Integer id,
+            @ParameterObject
+            @PageableDefault(sort = {"ordemExibicao", "nome"}, direction = Sort.Direction.ASC)
+            Pageable pageable
+    ) {
+        return ResponseEntity.ok(catalogoService.listarTiposPorSubcategoriaPaginada(id, pageable));
     }
 
     /*
@@ -88,8 +90,8 @@ public class CatalogoManutencaoController {
     */
     @GetMapping("/categorias/{id}/tipos-servico-ativos")
     @Operation(summary = "Lista os tipos de serviço ativos para a categoria informada")
-    public ResponseEntity<List<TipoServicoResponseDTO>> listarTiposAtivosPorCategoria(@PathVariable Integer id) {
-        return ResponseEntity.ok(catalogoService.listarTiposAtivosPorCategoria(id));
+    public ResponseEntity<List<TipoServicoResponseDTO>> listarTiposAtivosPorSubcategoria(@PathVariable Integer id) {
+        return ResponseEntity.ok(catalogoService.listarTiposAtivosPorSubcategoria(id));
     }
 
     @PostMapping("/admin/categorias")

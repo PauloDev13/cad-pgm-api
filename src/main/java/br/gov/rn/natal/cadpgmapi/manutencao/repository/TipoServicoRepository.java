@@ -16,6 +16,12 @@ public interface TipoServicoRepository extends JpaRepository<TipoServico, Intege
     boolean existsByCategoriaIdAndNomeIgnoreCase(Integer categoriaId, String nome);
     boolean existsByCategoriaIdAndNomeIgnoreCaseAndIdNot(Integer categoriaId, String nome, Integer id);
 
+    List<TipoServico> findBySubcategoriaIdAndAtivoTrueOrderByOrdemExibicaoAscNomeAsc(Integer subcategoriaId);
+    @EntityGraph(attributePaths = {"subcategoria", "subcategoria.categoria"})
+    Page<TipoServico> findBySubcategoriaId(Integer subcategoriaId, Pageable pageable);
+    boolean existsBySubcategoriaIdAndNomeIgnoreCase(Integer subcategoriaId, String nome);
+    boolean existsBySubcategoriaIdAndNomeIgnoreCaseAndIdNot(Integer subcategoriaId, String nome, Integer id);
+
     // TODOS OS TIPOS DE SERVIÇO POR CATEGORIA PAGINADA
     @EntityGraph(attributePaths = {"categoria"})
     Page<TipoServico> findByCategoriaId(Integer categoriaId, Pageable pageable);

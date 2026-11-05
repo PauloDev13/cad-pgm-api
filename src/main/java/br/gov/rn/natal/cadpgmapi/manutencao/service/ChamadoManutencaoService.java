@@ -38,6 +38,7 @@ public class ChamadoManutencaoService {
     private final HistoricoChamadoRepository historicoRepository;
     private final SalaRepository salaRepository;
     private final CategoriaDemandaRepository categoriaRepository;
+    private final SubcategoriaRepository subcategoriaRepository;
     private final TipoServicoRepository tipoServicoRepository;
     private final UsuarioRepository usuarioRepository;
 
@@ -46,38 +47,85 @@ public class ChamadoManutencaoService {
     public ChamadoDetalheResponseDTO abrirChamado(AberturaChamadoRequestDTO dto) {
         Usuario solicitante = getUsuarioAutenticado();
 
+        // 1. Validação de Localização (Sala / Outro Local)
         Sala sala = null;
 
         if (dto.salaId() != null) {
             sala = salaRepository.findById(dto.salaId())
                     .orElseThrow(() -> new ResourceNotFoundException("Sala selecionada não encontrada."));
+
             if (!sala.isAtivo()) {
                 throw new BusinessException("A sala selecionada está inativa.");
             }
+
             if (sala.getAndar() != dto.andar()) {
                 throw new BusinessException("A sala informada não pertence ao andar selecionado.");
             }
+
         } else {
             if (dto.localDescricao() == null || dto.localDescricao().trim().isBlank()) {
                 throw new BusinessException("A descrição do local é obrigatória quando a opção 'Outro' for selecionada.");
             }
         }
 
+        // 2. Validação da Hierarquia Tripla em Cascata
+        // 2.1 Categoria
         CategoriaDemanda categoria = categoriaRepository.findById(dto.categoriaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Categoria informada não encontrada."));
+
         if (!categoria.isAtivo()) {
             throw new BusinessException("A categoria selecionada encontra-se inativa.");
         }
 
+        // 2.2 Subcategoria
+        Subcategoria subcategoria = subcategoriaRepository.findById(dto.subcategoriaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Subcategoria informada não encontrada."));
+
+        if (!subcategoria.isAtivo()) {
+            throw new BusinessException("A subcategoria selecionada encontra-se inativa.");
+        }
+
+        if (!subcategoria.getCategoria().getId().equals(categoria.getId())) {
+            throw new BusinessException(String.format(
+                    "A subcategoria '%s' (ID: %d) não pertence à categoria '%s' (ID: %d).",
+                    subcategoria.getNome(), subcategoria.getId(), categoria.getNome(), categoria.getId()
+            ));
+        }
+
+        // 2.3 Tipo de Serviço
         TipoServico tipoServico = tipoServicoRepository.findById(dto.tipoServicoId())
                 .orElseThrow(() -> new ResourceNotFoundException("Tipo de serviço não encontrado."));
+
         if (!tipoServico.isAtivo()) {
             throw new BusinessException("O tipo de serviço selecionado encontra-se inativo.");
         }
-        if (!tipoServico.getCategoria().getId().equals(categoria.getId())) {
-            throw new BusinessException("O tipo de serviço informado não pertence à categoria selecionada.");
+
+        if (!tipoServico.getSubcategoria().getId().equals(subcategoria.getId())) {
+            throw new BusinessException(String.format(
+                    "O tipo de serviço '%s' (ID: %d) não pertence à subcategoria '%s' (ID: %d).",
+                    tipoServico.getNome(), tipoServico.getId(), subcategoria.getNome(), subcategoria.getId()
+            ));
         }
 
+        // 3. Validação do Prazo de Conclusão (Data limite maior ou igual Data de Abertura)
+        LocalDate hoje = LocalDate.now();
+        if (dto.prazoConclusao() != null) {
+            if (dto.prazoConclusao().isBefore(hoje)) {
+                throw new BusinessException(String.format(
+                        "O prazo de conclusão informado (%s) não pode ser anterior à data de abertura do chamado (%s).",
+                        dto.prazoConclusao(), hoje
+                ));
+            }
+        }
+
+        // 4. Validação Condicional de Tombamento/Mobiliário
+        if (subcategoria.isRequerTombamento() && (dto.movelRelacionado() == null || dto.movelRelacionado().trim().isBlank())) {
+            throw new BusinessException(String.format(
+                    "Para a subcategoria '%s', é obrigatório informar o número do tombo/patrimônio do móvel.",
+                    subcategoria.getNome()
+            ));
+        }
+        // 5. Persistência do Chamado com os novos campos
         String protocolo = gerarProtocoloUnico();
 
         ChamadoManutencao chamado = ChamadoManutencao.builder()
@@ -87,8 +135,19 @@ public class ChamadoManutencaoService {
                 .sala(sala)
                 .localDescricao(sala == null ? dto.localDescricao().trim() : null)
                 .categoria(categoria)
+                .subcategoria(subcategoria)
                 .tipoServico(tipoServico)
                 .descricao(dto.descricao().trim())
+                .prioridade(dto.prioridade() != null ? dto.prioridade() : PrioridadeChamado.MEDIA)
+                .prazoConclusao(dto.prazoConclusao())
+                .movelRelacionado(dto.movelRelacionado() != null
+                        && !dto.movelRelacionado().trim().isBlank()
+                        ? dto.movelRelacionado().trim() : null
+                )
+                .numeroRequisicaoEcidade(dto.numeroRequisicaoEcidade() != null
+                        && !dto.numeroRequisicaoEcidade().trim().isBlank()
+                        ? dto.numeroRequisicaoEcidade().trim() : null
+                )
                 .estado(EstadoChamado.ABERTO)
                 .build();
 
@@ -101,7 +160,11 @@ public class ChamadoManutencaoService {
                 .estadoAnterior(null)
                 .estadoNovo(EstadoChamado.ABERTO)
                 .ator(solicitante)
-                .observacao("Abertura do chamado pelo solicitante")
+                .observacao(String.format(
+                        "Abertura do chamado pelo solicitante. Prioridade: %s. Prazo estimado: %s.",
+                        chamado.getPrioridade().getRotulo(),
+                        chamado.getPrazoConclusao() != null ? chamado.getPrazoConclusao().toString() : "Não informado"
+                ))
                 .build();
         historicoRepository.save(historico);
 
@@ -112,7 +175,9 @@ public class ChamadoManutencaoService {
                 "ABERTURA: Chamado aberto com protocolo %s. Demanda: '%s' - '%s'. Local: %s (%s). Solicitante: %s.",
                 chamado.getProtocolo(),
                 categoria.getNome(),
+                subcategoria.getNome(),
                 tipoServico.getNome(),
+                chamado.getPrioridade().getRotulo(),
                 chamado.getAndar().getRotulo(),
                 localExibicao,
                 solicitante.getName()
@@ -138,7 +203,6 @@ public class ChamadoManutencaoService {
             Integer responsavelId,
             Pageable pageable
     ) {
-//        validarPermissao("MANUTENCAO_FILA_GERAL");
 
         Specification<ChamadoManutencao> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -170,8 +234,6 @@ public class ChamadoManutencaoService {
     @Transactional
     @Auditable(action = AuditAction.UPDATE, entity = "Chamado de Manutenção")
     public ChamadoDetalheResponseDTO atribuirResponsavel(Integer id, AtribuicaoChamadoRequestDTO dto) {
-        // validarPermissao("MANUTENCAO_ATENDER");
-
         Usuario ator = getUsuarioAutenticado();
 
         ChamadoManutencao chamado = chamadoRepository.findById(id)
@@ -358,10 +420,6 @@ public class ChamadoManutencaoService {
         ChamadoManutencao chamado = chamadoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Chamado não encontrado: " + id));
 
-//        if (!chamado.getSolicitante().getId().equals(solicitante.getId())) {
-//            throw new ForbiddenException("Apenas o próprio solicitante pode cancelar o seu chamado.");
-//        }
-
         if (chamado.getEstado().isFinalizado()) {
             throw new BusinessException("Não é possível cancelar um chamado que já se encontra " + chamado.getEstado().getRotulo() + ".");
         }
@@ -419,7 +477,6 @@ public class ChamadoManutencaoService {
     }
 
     // --- MÉTODOS AUXILIARES ---
-
     private Usuario getUsuarioAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || auth.getPrincipal().equals("anonymousUser")) {

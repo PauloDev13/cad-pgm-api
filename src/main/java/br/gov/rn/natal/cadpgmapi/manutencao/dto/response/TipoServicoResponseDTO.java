@@ -4,6 +4,8 @@ public record TipoServicoResponseDTO(
         Integer id,
         Integer categoriaId,
         String categoriaNome,
+        Integer subcategoriaId,
+        String subcategoriaNome,
         String nome,
         String descricao,
         boolean ativo,
