@@ -11,7 +11,7 @@ import br.gov.rn.natal.cadpgmapi.manutencao.dto.request.TipoServicoRequestDTO;
 import br.gov.rn.natal.cadpgmapi.manutencao.dto.response.CategoriaDemandaResponseDTO;
 import br.gov.rn.natal.cadpgmapi.manutencao.dto.response.SubcategoriaResponseDTO;
 import br.gov.rn.natal.cadpgmapi.manutencao.dto.response.TipoServicoResponseDTO;
-import br.gov.rn.natal.cadpgmapi.manutencao.repository.CategoriaDemandaRepository;
+import br.gov.rn.natal.cadpgmapi.manutencao.repository.CategoriaRepository;
 import br.gov.rn.natal.cadpgmapi.manutencao.repository.SubcategoriaRepository;
 import br.gov.rn.natal.cadpgmapi.manutencao.repository.TipoServicoRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CatalogoManutencaoService {
 
-    private final CategoriaDemandaRepository categoriaRepository;
+    private final CategoriaRepository categoriaRepository;
     private final TipoServicoRepository tipoServicoRepository;
     private final SubcategoriaRepository subcategoriaRepository;
 
@@ -48,41 +48,32 @@ public class CatalogoManutencaoService {
      */
     @Transactional(readOnly = true)
     public Page<SubcategoriaResponseDTO> listarSubcategoriasPaginada(
-            Integer categoriaId, Boolean ativo, Pageable pageable) {
+            Integer categoriaId,
+            Pageable pageable) {
 
         Page<Subcategoria> page;
 
-        if (categoriaId != null && ativo != null) {
-            page = subcategoriaRepository.findByCategoriaIdAndAtivo(categoriaId, ativo, pageable);
-        } else if (categoriaId != null) {
+        if (categoriaId != null) {
             page = subcategoriaRepository.findByCategoriaId(categoriaId, pageable);
-        } else if (ativo != null) {
-            page = subcategoriaRepository.findByAtivo(ativo, pageable);
         } else {
             page = subcategoriaRepository.findAll(pageable);
         }
+
         return page.map(this::toSubcategoriaDTO);
     }
 
-    /*
-    LISTA TIPOS DE SERVIÇOS (ATIVOS E INATIVOS) COM FILTROS OPCIONAIS E PAGINAÇÃO (ADMINISTRATIVO)
+    /**
+    * LISTA TIPOS DE SERVIÇOS (ATIVOS E INATIVOS) COM FILTROS OPCIONAIS E PAGINAÇÃO (ADMINISTRATIVO)
    */
     @Transactional(readOnly = true)
     public Page<TipoServicoResponseDTO> listarTiposServicosPaginada(
-            Integer subcategoriaId, Boolean ativo, Pageable pageable) {
-
-        System.out.println("============================");
-        System.out.println("PARAMS " + subcategoriaId + " - " + ativo);
-        System.out.println("============================");
+            Integer subcategoriaId,
+            Pageable pageable) {
 
         Page<TipoServico> page;
 
-        if (subcategoriaId != null && ativo != null) {
-            page = tipoServicoRepository.findBySubcategoriaIdAndAtivo(subcategoriaId, ativo, pageable);
-        } else if (subcategoriaId != null) {
+        if (subcategoriaId != null) {
             page = tipoServicoRepository.findBySubcategoriaId(subcategoriaId, pageable);
-        } else if (ativo != null) {
-            page = tipoServicoRepository.findByAtivo(ativo, pageable);
         } else {
             page = tipoServicoRepository.findAll(pageable);
         }
@@ -98,7 +89,8 @@ public class CatalogoManutencaoService {
      */
     @Transactional(readOnly = true)
     public List<CategoriaDemandaResponseDTO> listarCategoriasAtivas() {
-        return categoriaRepository.findByAtivoTrueOrderByOrdemExibicaoAscNomeAsc().stream()
+        return categoriaRepository.findAllByOrderByOrdemExibicaoAscNomeAsc()
+                .stream()
                 .map(this::toCategoriaDTO)
                 .toList();
     }
@@ -119,14 +111,14 @@ public class CatalogoManutencaoService {
      */
     @Transactional(readOnly = true)
     public List<SubcategoriaResponseDTO> listarSubcategoriasAtivas() {
-        return subcategoriaRepository.findByAtivoTrueOrderByOrdemExibicaoAscNomeAsc()
+        return subcategoriaRepository.findAllByOrderByOrdemExibicaoAscNomeAsc()
                 .stream()
                 .map(this::toSubcategoriaDTO)
                 .toList();
     }
 
-    /*
-   LISTA TOS TIPOS DE SERVIÇOS ATIVOS POR SUBCATEGORIA (DROPDOWN EM CASCATA - NÍVEL 3)
+    /**
+    * LISTA TOS TIPOS DE SERVIÇOS ATIVOS POR SUBCATEGORIA (DROPDOWN EM CASCATA - NÍVEL 3)
    */
     @Transactional(readOnly = true)
     public List<TipoServicoResponseDTO> listarTiposAtivosPorSubcategoria(Integer subcategoriaId) {
@@ -140,8 +132,8 @@ public class CatalogoManutencaoService {
     //              CREATE
     // ==============================
 
-    /*
-     CRIAR UMA NOVA CATEGORIA
+    /**
+    * CRIAR UMA NOVA CATEGORIA
     */
     @Transactional
     public CategoriaDemandaResponseDTO criarCategoria(CategoriaDemandaRequestDTO dto) {
@@ -157,8 +149,8 @@ public class CatalogoManutencaoService {
         return toCategoriaDTO(categoriaRepository.save(cat));
     }
 
-    /*
-     CRIAR UMA NOVA SUBCATEGORIA
+    /**
+    * CRIAR UMA NOVA SUBCATEGORIA
     */
     @Transactional
     public SubcategoriaResponseDTO criarSubcategoria(SubcategoriaRequestDTO dto) {
@@ -166,6 +158,12 @@ public class CatalogoManutencaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada com o ID: " +
                         dto.categoriaId())
                 );
+
+            if (!categoria.isAtivo()) {
+                throw new BusinessException("Não foi possível cria a Subcategoria '<strong>" + dto.nome().toUpperCase() +
+                        "</strong>'.\n Ative a Categoria '<strong>" + categoria.getNome().toUpperCase() +
+                        "</strong>' e tente novamente.");
+            }
 
         if (subcategoriaRepository.existsByCategoriaIdAndNomeIgnoreCase(dto.categoriaId(), dto.nome().trim())) {
             throw new BusinessException("Já existe uma subcategoria cadastrada com o nome '" + dto.nome().trim() +
@@ -184,8 +182,8 @@ public class CatalogoManutencaoService {
         return toSubcategoriaDTO(subcategoriaRepository.save(sub));
     }
 
-    /*
-    CRIA UM NOVO TIPO DE SERVIÇO
+    /**
+    * CRIA UM NOVO TIPO DE SERVIÇO
     */
     @Transactional
     public TipoServicoResponseDTO criarTipoServico(TipoServicoRequestDTO dto) {
@@ -215,11 +213,11 @@ public class CatalogoManutencaoService {
     }
 
     // ==============================
-    //              UPDATE
+    //              UPDATES
     // ==============================
 
     /*
-    ATUALIZAR UMA CATEGORIA
+    * ATUALIZAR UMA CATEGORIA
     */
     @Transactional
     public CategoriaDemandaResponseDTO atualizarCategoria(Integer id, CategoriaDemandaRequestDTO dto) {
@@ -235,8 +233,6 @@ public class CatalogoManutencaoService {
 
         if (dto.ordemExibicao() != null) cat.setOrdemExibicao(dto.ordemExibicao());
 
-//        if (dto.ativo() != null) cat.setAtivo(dto.ativo());
-
         // Se houve alteração no status ativo através do formulário de edição, dispara a cascata
         if (dto.ativo() != null && dto.ativo() != cat.isAtivo()) {
             alterarStatusCategoria(id, dto.ativo());
@@ -245,11 +241,10 @@ public class CatalogoManutencaoService {
         }
 
         return toCategoriaDTO(cat);
-//        return toCategoriaDTO(categoriaRepository.save(cat));
     }
 
     /*
-    ATUALIZAR UMA SUBCATEGORIA
+    * ATUALIZAR UMA SUBCATEGORIA
     */
     @Transactional
     public SubcategoriaResponseDTO atualizarSubcategoria(Integer id, SubcategoriaRequestDTO dto) {
@@ -286,8 +281,8 @@ public class CatalogoManutencaoService {
         return toSubcategoriaDTO(subcategoriaRepository.save(sub));
     }
 
-    /*
-    ATUALIZAR UM TIPO DE SERVIÇO
+    /**
+     * ATUALIZAR UM TIPO DE SERVIÇO
     */
     @Transactional
     public TipoServicoResponseDTO atualizarTipoServico(Integer id, TipoServicoRequestDTO dto) {
@@ -300,8 +295,10 @@ public class CatalogoManutencaoService {
                 );
 
 
-        if (tipoServicoRepository.existsBySubcategoriaIdAndNomeIgnoreCaseAndIdNot(dto.subcategoriaId(), dto.nome().trim(), id)) {
-            throw new BusinessException("Já existe outro serviço nesta categoria com o nome '" + dto.nome().trim() + "'.");
+        if (tipoServicoRepository.existsBySubcategoriaIdAndNomeIgnoreCaseAndIdNot(
+                dto.subcategoriaId(), dto.nome().trim(), id)) {
+            throw new BusinessException(
+                    "Já existe outro serviço nesta categoria com o nome '" + dto.nome().trim() + "'.");
         }
 
         tipo.setSubcategoria(subcategoria);
@@ -320,13 +317,71 @@ public class CatalogoManutencaoService {
     //              UPDATE ADMINISTRATIVOS
     // =================================================
 
-    /*
-    ALTERAR O STATUS (ATIVO/INATIVO) DE UMA SUBCATEGORIA
+    /**
+     *  ALTERAR STATUS DE CATEGORIA COM PROPAGAÇÃO TRANSACIONAL EM CASCATA
+     */
+    @Transactional
+    public void alterarStatusCategoria(Integer categoriaId, boolean ativo) {
+        CategoriaDemanda categoria = categoriaRepository.findById(categoriaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada com o ID: " + categoriaId));
+        if (categoria.isAtivo() == ativo) {
+            return;
+        }
+        categoria.setAtivo(ativo);
+        categoriaRepository.save(categoria);
+        if (!ativo) {
+            // DESABILITAR CATEGORIA
+            // 1. Localiza apenas as subcategorias que estão ativas imediatamente antes da operação
+            List<Subcategoria> subcategoriasAtivas = subcategoriaRepository.findByCategoriaIdAndAtivoTrue(categoriaId);
+            for (Subcategoria sub : subcategoriasAtivas) {
+                sub.setAtivo(false);
+                sub.setInativadoPorCascata(true); // Marca que foi inativada por cascata
+                subcategoriaRepository.save(sub);
+                // Propaga cascata para os tipos de serviço ativos desta subcategoria
+                List<TipoServico> tiposAtivos = tipoServicoRepository.findBySubcategoriaIdAndAtivoTrue(sub.getId());
+                for (TipoServico tipo : tiposAtivos) {
+                    tipo.setAtivo(false);
+                    tipo.setInativadoPorCascata(true);
+                    tipoServicoRepository.save(tipo);
+                }
+            }
+            // Subcategorias que já estavam com ativo == false permanecem com inativadoPorCascata == false
+        } else {
+            // HABILITAR CATEGORIA
+            // 1. Restaura SOMENTE as subcategorias que foram inativadas por cascata
+            List<Subcategoria> subcategoriasParaRestaurar =
+                    subcategoriaRepository.findByCategoriaIdAndInativadoPorCascataTrue(categoriaId);
+            for (Subcategoria sub : subcategoriasParaRestaurar) {
+                sub.setAtivo(true);
+                sub.setInativadoPorCascata(false);
+                subcategoriaRepository.save(sub);
+                // Restaura os tipos de serviço que também foram inativados por cascata
+                List<TipoServico> tiposParaRestaurar =
+                        tipoServicoRepository.findBySubcategoriaIdAndInativadoPorCascataTrue(sub.getId());
+                for (TipoServico tipo : tiposParaRestaurar) {
+                    tipo.setAtivo(true);
+                    tipo.setInativadoPorCascata(false);
+                    tipoServicoRepository.save(tipo);
+                }
+            }
+            // Subcategorias que estavam desabilitadas manualmente (inativadoPorCascata == false) permanecem desabilitadas!
+        }
+    }
+
+    /**
+     * ALTERAR O STATUS (ATIVO/INATIVO) DE UMA SUBCATEGORIA
     */
     @Transactional
     public void alterarStatusSubcategoria(Integer id, boolean ativo) {
         Subcategoria sub = subcategoriaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Subcategoria não encontrada com o ID: " + id));
+
+        if (ativo) {
+            if (!sub.getCategoria().isAtivo()) {
+                throw new BusinessException("Não é possível habilitar a Subcategoria pois a categoria '"
+                        + sub.getCategoria().getNome() + "' está desabilitada.");
+            }
+        }
 
         if (sub.isAtivo() == ativo) {
             return;
@@ -338,7 +393,7 @@ public class CatalogoManutencaoService {
         subcategoriaRepository.save(sub);
 
         if (!ativo) {
-            // REGRA 4.3: Desabilitar tipos ativos vinculados
+            // Desabilitar tipos ativos vinculados
             List<TipoServico> tiposAtivos = tipoServicoRepository.findBySubcategoriaIdAndAtivoTrue(id);
             for (TipoServico tipo : tiposAtivos) {
                 tipo.setAtivo(false);
@@ -346,7 +401,7 @@ public class CatalogoManutencaoService {
                 tipoServicoRepository.save(tipo);
             }
         } else {
-            // REGRA 4.4: Reabilitar apenas tipos inativados por cascata
+            // Reabilitar apenas tipos inativados por cascata
             List<TipoServico> tiposParaRestaurar =
                     tipoServicoRepository.findBySubcategoriaIdAndInativadoPorCascataTrue(id);
             for (TipoServico tipo : tiposParaRestaurar) {
@@ -357,8 +412,8 @@ public class CatalogoManutencaoService {
         }
     }
 
-    /*
-    ALTERAR O STATUS (ATIVO/INATIVO) DE UM TIPO DE SERVIÇO
+    /**
+     * ALTERAR O STATUS (ATIVO/INATIVO) DE UM TIPO DE SERVIÇO
     */
     @Transactional
     public void alterarStatusTipoServico(Integer id, boolean ativo) {
@@ -382,55 +437,9 @@ public class CatalogoManutencaoService {
         tipoServicoRepository.save(tipo);
     }
 
-    // Alternar status de categoria com propagação transacional em cascata
-    @Transactional
-    public void alterarStatusCategoria(Integer categoriaId, boolean ativo) {
-        CategoriaDemanda categoria = categoriaRepository.findById(categoriaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada com o ID: " + categoriaId));
-        if (categoria.isAtivo() == ativo) {
-            return;
-        }
-        categoria.setAtivo(ativo);
-        categoriaRepository.save(categoria);
-        if (!ativo) {
-            // REGRA: DESABILITAR CATEGORIA
-            // 1. Localiza apenas as subcategorias que estão ativas imediatamente antes da operação
-            List<Subcategoria> subcategoriasAtivas = subcategoriaRepository.findByCategoriaIdAndAtivoTrue(categoriaId);
-            for (Subcategoria sub : subcategoriasAtivas) {
-                sub.setAtivo(false);
-                sub.setInativadoPorCascata(true); // Marca que foi inativada por cascata
-                subcategoriaRepository.save(sub);
-                // Propaga cascata para os tipos de serviço ativos desta subcategoria
-                List<TipoServico> tiposAtivos = tipoServicoRepository.findBySubcategoriaIdAndAtivoTrue(sub.getId());
-                for (TipoServico tipo : tiposAtivos) {
-                    tipo.setAtivo(false);
-                    tipo.setInativadoPorCascata(true);
-                    tipoServicoRepository.save(tipo);
-                }
-            }
-            // Subcategorias que já estavam com ativo == false permanecem com inativadoPorCascata == false
-        } else {
-            // REGRA 4.2: HABILITAR CATEGORIA
-            // 1. Restaura SOMENTE as subcategorias que foram inativadas por cascata
-            List<Subcategoria> subcategoriasParaRestaurar =
-                    subcategoriaRepository.findByCategoriaIdAndInativadoPorCascataTrue(categoriaId);
-            for (Subcategoria sub : subcategoriasParaRestaurar) {
-                sub.setAtivo(true);
-                sub.setInativadoPorCascata(false);
-                subcategoriaRepository.save(sub);
-                // Restaura os tipos de serviço que também foram inativados por cascata
-                List<TipoServico> tiposParaRestaurar =
-                        tipoServicoRepository.findBySubcategoriaIdAndInativadoPorCascataTrue(sub.getId());
-                for (TipoServico tipo : tiposParaRestaurar) {
-                    tipo.setAtivo(true);
-                    tipo.setInativadoPorCascata(false);
-                    tipoServicoRepository.save(tipo);
-                }
-            }
-            // Subcategorias que estavam desabilitadas manualmente (inativadoPorCascata == false) permanecem desabilitadas!
-        }
-    }
-
+    /**
+     * Mapeia a entidade Categoria o Record CategoriaDemandaResponseDTO
+     */
     private CategoriaDemandaResponseDTO toCategoriaDTO(CategoriaDemanda cat) {
         return new CategoriaDemandaResponseDTO(
                 cat.getId(),
@@ -441,6 +450,10 @@ public class CatalogoManutencaoService {
         );
     }
 
+    /**
+     * Mapeia a entidade Tipo Servico para o Record TipoServicoResponseDTO,
+     * navegando pelo relacionamento com Subcategoria de forma segura.
+     */
     private TipoServicoResponseDTO toTipoDTO(TipoServico tipo) {
         return new TipoServicoResponseDTO(
                 tipo.getId(),
@@ -457,7 +470,7 @@ public class CatalogoManutencaoService {
 
     /**
      * Mapeia a entidade Subcategoria para o Record SubcategoriaResponseDTO,
-     * navegando pelo relacionamento com CategoriaDemanda de forma segura.
+     * navegando pelo relacionamento com Categoria de forma segura.
      */
     private SubcategoriaResponseDTO toSubcategoriaDTO(Subcategoria sub) {
         return new SubcategoriaResponseDTO(

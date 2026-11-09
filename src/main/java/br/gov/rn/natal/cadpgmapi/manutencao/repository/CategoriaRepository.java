@@ -7,8 +7,8 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface CategoriaDemandaRepository extends JpaRepository<CategoriaDemanda, Integer> {
-    List<CategoriaDemanda> findByAtivoTrueOrderByOrdemExibicaoAscNomeAsc();
+public interface CategoriaRepository extends JpaRepository<CategoriaDemanda, Integer> {
+    List<CategoriaDemanda> findAllByOrderByOrdemExibicaoAscNomeAsc();
     boolean existsByNomeIgnoreCase(String nome);
     boolean existsByNomeIgnoreCaseAndIdNot(String nome, Integer id);
 }

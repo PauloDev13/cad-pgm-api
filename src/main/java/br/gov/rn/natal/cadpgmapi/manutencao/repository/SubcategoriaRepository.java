@@ -10,15 +10,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface SubcategoriaRepository extends JpaRepository<Subcategoria, Integer> {
-    List<Subcategoria> findByAtivoTrueOrderByOrdemExibicaoAscNomeAsc();
+    List<Subcategoria> findAllByOrderByOrdemExibicaoAscNomeAsc();
     List<Subcategoria> findByCategoriaIdAndAtivoTrueOrderByOrdemExibicaoAscNomeAsc(Integer categoriaId);
 
     List<Subcategoria> findByCategoriaIdAndAtivoTrue(Integer categoriaId);
 
     List<Subcategoria> findByCategoriaIdAndInativadoPorCascataTrue(Integer categoriaId);
-
-    @EntityGraph(attributePaths = {"categoria"})
-    Page<Subcategoria> findByCategoriaIdAndAtivo(Integer categoriaId, Boolean ativo, Pageable pageable);
 
     @EntityGraph(attributePaths = {"categoria"})
     Page<Subcategoria> findByCategoriaId(Integer categoriaId, Pageable pageable);

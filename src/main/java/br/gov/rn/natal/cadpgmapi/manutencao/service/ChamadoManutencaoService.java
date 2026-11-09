@@ -37,7 +37,7 @@ public class ChamadoManutencaoService {
     private final ChamadoManutencaoRepository chamadoRepository;
     private final HistoricoChamadoRepository historicoRepository;
     private final SalaRepository salaRepository;
-    private final CategoriaDemandaRepository categoriaRepository;
+    private final CategoriaRepository categoriaRepository;
     private final SubcategoriaRepository subcategoriaRepository;
     private final TipoServicoRepository tipoServicoRepository;
     private final UsuarioRepository usuarioRepository;

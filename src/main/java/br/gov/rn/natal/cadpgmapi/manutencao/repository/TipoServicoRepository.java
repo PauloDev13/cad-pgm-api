@@ -15,10 +15,8 @@ public interface TipoServicoRepository extends JpaRepository<TipoServico, Intege
 
     List<TipoServico> findBySubcategoriaIdAndAtivoTrueOrderByOrdemExibicaoAscNomeAsc(Integer subcategoriaId);
 
-//    @EntityGraph(attributePaths = {"subcategoria", "subcategoria.categoria"})
     List<TipoServico> findBySubcategoriaIdAndAtivoTrue(Integer subcategoriaId);
 
-//    @EntityGraph(attributePaths = {"subcategoria", "subcategoria.categoria"})
     List<TipoServico> findBySubcategoriaIdAndInativadoPorCascataTrue(Integer subcategoriaId);
 
     @EntityGraph(attributePaths = {"subcategoria", "subcategoria.categoria"})

@@ -34,7 +34,6 @@ public class CatalogoManutencaoController {
                 // ==============================
                 //          TABELAS
                 // ==============================
-
     /*
      * LISTA TODAS AS CATEGORIAS (ATIVAS/INATIVAS) COM PAGINAÇÃO (ADMINISTRATIVO)
      */
@@ -57,12 +56,11 @@ public class CatalogoManutencaoController {
                     "opcionais por categoria e ativo")
     public ResponseEntity<Page<SubcategoriaResponseDTO>> listarSubcategoriasPaginadas(
             @RequestParam(required = false) Integer categoriaId,
-            @RequestParam(required = false) Boolean ativo,
             @ParameterObject
             @PageableDefault(sort = {"ordemExibicao", "nome"}, direction = Sort.Direction.ASC)
             Pageable pageable
     ) {
-        return ResponseEntity.ok(catalogoService.listarSubcategoriasPaginada(categoriaId, ativo,pageable));
+        return ResponseEntity.ok(catalogoService.listarSubcategoriasPaginada(categoriaId, pageable));
     }
 
     /*
@@ -70,17 +68,15 @@ public class CatalogoManutencaoController {
    */
     @GetMapping("/tipos-servico/paginados")
     @Operation(summary = "Lista os TIPOS DE SERVIÇOS (ativos e inativos) com paginação e filtros " +
-            "opcionais por categoria e ativo\"")
+            "opcionais por categoria e ativo")
     public ResponseEntity<Page<TipoServicoResponseDTO>> listarTiposServicosPaginada(
             @RequestParam(required = false) Integer subcategoriaId,
-            @RequestParam(required = false) Boolean ativo,
             @ParameterObject
             @PageableDefault(sort = {"ordemExibicao", "nome"}, direction = Sort.Direction.ASC)
             Pageable pageable
     ) {
-        return ResponseEntity.ok(catalogoService.listarTiposServicosPaginada(subcategoriaId, ativo, pageable));
+        return ResponseEntity.ok(catalogoService.listarTiposServicosPaginada(subcategoriaId, pageable));
     }
-
                 // ==============================
                 //          DROPDOWNS
                 // ==============================
