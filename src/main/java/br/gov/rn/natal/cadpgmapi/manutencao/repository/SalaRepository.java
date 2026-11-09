@@ -10,6 +10,5 @@ import java.util.List;
 @Repository
 public interface SalaRepository extends JpaRepository<Sala, Integer> {
     List<Sala> findByAndarAndAtivoTrueOrderByNumeroIdentificacaoAsc(AndarCodigo andar);
-    List<Sala> findAllByOrderByAndarAscNumeroIdentificacaoAsc();
 }
 

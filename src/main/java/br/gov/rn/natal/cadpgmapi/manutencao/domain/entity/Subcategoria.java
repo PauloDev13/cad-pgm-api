@@ -55,4 +55,8 @@ public class Subcategoria {
     @UpdateTimestamp
     @Column(name = "data_atualizacao", nullable = false)
     private LocalDateTime dataAtualizacao;
+
+    @Column(name = "inativado_por_cascata", nullable = false)
+    @Builder.Default
+    private boolean inativadoPorCascata = false;
 }

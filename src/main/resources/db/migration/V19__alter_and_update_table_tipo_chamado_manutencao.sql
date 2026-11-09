@@ -4,7 +4,7 @@ ALTER TABLE `chamado_manutencao`
     ADD COLUMN `prioridade` VARCHAR(20) NOT NULL DEFAULT 'MEDIA' AFTER `descricao`,
     ADD COLUMN `prazo_conclusao` DATE NULL AFTER `prioridade`,
     ADD COLUMN `movel_relacionado` VARCHAR(100) NULL AFTER `prazo_conclusao`,
-    ADD COLUMN `numero_requisicao_ecidade` VARCHAR(50) NULL AFTER `movelRelacionado`;
+    ADD COLUMN `numero_requisicao_ecidade` VARCHAR(50) NULL AFTER `movel_relacionado`;
 
 -- Atualiza chamados legados com a subcategoria vinculada ao seu tipo de serviço
 UPDATE `chamado_manutencao` c

@@ -21,7 +21,10 @@ import java.util.Optional;
 @Repository
 public interface ChamadoManutencaoRepository extends JpaRepository<ChamadoManutencao, Integer>, JpaSpecificationExecutor<ChamadoManutencao> {
 
-    @EntityGraph(attributePaths = {"solicitante", "solicitante.servidor", "responsavel", "responsavel.servidor", "sala", "categoria", "tipoServico"})
+    @EntityGraph(attributePaths = {
+            "solicitante", "solicitante.servidor",
+            "responsavel", "responsavel.servidor",
+            "sala", "categoria", "subcategoria", "tipoServico"})
     Optional<ChamadoManutencao> findDetailById(Integer id);
 
     @EntityGraph(attributePaths = {"solicitante", "solicitante.servidor", "responsavel", "responsavel.servidor", "sala", "categoria", "tipoServico"})
@@ -31,8 +34,6 @@ public interface ChamadoManutencaoRepository extends JpaRepository<ChamadoManute
     @Override
     @EntityGraph(attributePaths = {"solicitante", "solicitante.servidor", "responsavel", "responsavel.servidor", "sala", "categoria", "tipoServico"})
     Page<ChamadoManutencao> findAll(@NotNull Specification<ChamadoManutencao> spec, @NotNull Pageable pageable);
-
-    boolean existsByTipoServicoId(Integer tipoServicoId);
 
     @Query("SELECT COUNT(c) FROM ChamadoManutencao c WHERE c.criadoEm >= :inicioDoDia")
     long countChamadosCriadosApos(@Param("inicioDoDia") LocalDateTime inicioDoDia);

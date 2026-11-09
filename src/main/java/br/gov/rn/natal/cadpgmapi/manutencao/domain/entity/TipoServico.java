@@ -54,6 +54,10 @@ public class TipoServico {
     @Column(name = "data_atualizacao", nullable = false)
     private LocalDateTime dataAtualizacao;
 
+    @Column(name = "inativado_por_cascata", nullable = false)
+    @Builder.Default
+    private boolean inativadoPorCascata = false;
+
     // Méthod de conveniência para obter a categoria raiz de forma segura:
     public CategoriaDemanda getCategoria() {
         return subcategoria != null ? subcategoria.getCategoria() : null;

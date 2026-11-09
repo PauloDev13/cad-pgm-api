@@ -30,9 +30,13 @@ public class CatalogoManutencaoService {
     private final TipoServicoRepository tipoServicoRepository;
     private final SubcategoriaRepository subcategoriaRepository;
 
+                    // ==============================
+                    //          TABELAS
+                    // ==============================
+
     /*
-    LISTAR TODAS AS CATEGORIAS (ATIVAS E INATIVAS) PAGINADAS
-    */
+     * LISTA TODAS AS CATEGORIAS (ATIVAS/INATIVAS) COM PAGINAÇÃO (ADMINISTRATIVO)
+     */
     @Transactional(readOnly = true)
     public Page<CategoriaDemandaResponseDTO> listarCategoriasPaginada(Pageable pageable) {
         return categoriaRepository.findAll(pageable)
@@ -40,7 +44,57 @@ public class CatalogoManutencaoService {
     }
 
     /*
-     LISTA AS CATEGORIAS ATIVAS
+     * LISTA TODAS AS SUBCATEGORIAS (ATIVAS/INATIVAS) COM FILTROS OPCIONAIS E PAGINAÇÃO (ADMINISTRATIVO)
+     */
+    @Transactional(readOnly = true)
+    public Page<SubcategoriaResponseDTO> listarSubcategoriasPaginada(
+            Integer categoriaId, Boolean ativo, Pageable pageable) {
+
+        Page<Subcategoria> page;
+
+        if (categoriaId != null && ativo != null) {
+            page = subcategoriaRepository.findByCategoriaIdAndAtivo(categoriaId, ativo, pageable);
+        } else if (categoriaId != null) {
+            page = subcategoriaRepository.findByCategoriaId(categoriaId, pageable);
+        } else if (ativo != null) {
+            page = subcategoriaRepository.findByAtivo(ativo, pageable);
+        } else {
+            page = subcategoriaRepository.findAll(pageable);
+        }
+        return page.map(this::toSubcategoriaDTO);
+    }
+
+    /*
+    LISTA TIPOS DE SERVIÇOS (ATIVOS E INATIVOS) COM FILTROS OPCIONAIS E PAGINAÇÃO (ADMINISTRATIVO)
+   */
+    @Transactional(readOnly = true)
+    public Page<TipoServicoResponseDTO> listarTiposServicosPaginada(
+            Integer subcategoriaId, Boolean ativo, Pageable pageable) {
+
+        System.out.println("============================");
+        System.out.println("PARAMS " + subcategoriaId + " - " + ativo);
+        System.out.println("============================");
+
+        Page<TipoServico> page;
+
+        if (subcategoriaId != null && ativo != null) {
+            page = tipoServicoRepository.findBySubcategoriaIdAndAtivo(subcategoriaId, ativo, pageable);
+        } else if (subcategoriaId != null) {
+            page = tipoServicoRepository.findBySubcategoriaId(subcategoriaId, pageable);
+        } else if (ativo != null) {
+            page = tipoServicoRepository.findByAtivo(ativo, pageable);
+        } else {
+            page = tipoServicoRepository.findAll(pageable);
+        }
+        return page.map(this::toTipoDTO);
+    }
+
+                        // ==============================
+                        //          DROPDOWNS
+                        // ==============================
+
+    /*
+     LISTA TODAS AS CATEGORIAS ATIVAS (DROPDOWN EM CASCATA - NÍVEL 1)
      */
     @Transactional(readOnly = true)
     public List<CategoriaDemandaResponseDTO> listarCategoriasAtivas() {
@@ -50,7 +104,7 @@ public class CatalogoManutencaoService {
     }
 
     /*
-     LISTA AS SUBCATEGORIAS ATIVAS
+     * LISTA TODAS AS SUBCATEGORIAS ATIVAS POR CATEGORIA (DROPDOWN EM CASCATA - NÍVEL 2)
      */
     @Transactional(readOnly = true)
     public List<SubcategoriaResponseDTO> listarSubcategoriasAtivasPorCategoria(Integer categoriaId) {
@@ -61,16 +115,18 @@ public class CatalogoManutencaoService {
     }
 
     /*
-    LISTAR TODAS AS SUBCATEGORIAS (ATIVAS E INATIVAS) PAGINADAS
-    */
+     * LISTA TODAS AS SUBCATEGORIAS ATIVAS POR CATEGORIA (DROPDOWN EM CASCATA - NÍVEL 2)
+     */
     @Transactional(readOnly = true)
-    public Page<SubcategoriaResponseDTO> listarSubcategoriasPorCategoriaPaginada(Integer categoriaId, Pageable pageable) {
-        return subcategoriaRepository.findByCategoriaId(categoriaId, pageable)
-                .map(this::toSubcategoriaDTO);
+    public List<SubcategoriaResponseDTO> listarSubcategoriasAtivas() {
+        return subcategoriaRepository.findByAtivoTrueOrderByOrdemExibicaoAscNomeAsc()
+                .stream()
+                .map(this::toSubcategoriaDTO)
+                .toList();
     }
 
     /*
-    LISTA OS TIPOS DE SERVIÇOS ATIVOS POR SUBCATEGORIA
+   LISTA TOS TIPOS DE SERVIÇOS ATIVOS POR SUBCATEGORIA (DROPDOWN EM CASCATA - NÍVEL 3)
    */
     @Transactional(readOnly = true)
     public List<TipoServicoResponseDTO> listarTiposAtivosPorSubcategoria(Integer subcategoriaId) {
@@ -80,15 +136,13 @@ public class CatalogoManutencaoService {
                 .toList();
     }
 
-    /*
-    LISTA TODOS OS TIPOS DE SERVIÇOS (ATIVOS E INATIVOS) POR CATEGORIA PAGINADOS
-    */
-    @Transactional(readOnly = true)
-    public Page<TipoServicoResponseDTO> listarTiposPorSubcategoriaPaginada(Integer subcategoriaId, Pageable pageable) {
-        return tipoServicoRepository.findBySubcategoriaId(subcategoriaId, pageable)
-                .map(this::toTipoDTO);
-    }
+    // ==============================
+    //              CREATE
+    // ==============================
 
+    /*
+     CRIAR UMA NOVA CATEGORIA
+    */
     @Transactional
     public CategoriaDemandaResponseDTO criarCategoria(CategoriaDemandaRequestDTO dto) {
         if (categoriaRepository.existsByNomeIgnoreCase(dto.nome().trim())) {
@@ -103,30 +157,20 @@ public class CatalogoManutencaoService {
         return toCategoriaDTO(categoriaRepository.save(cat));
     }
 
-    @Transactional
-    public CategoriaDemandaResponseDTO atualizarCategoria(Integer id, CategoriaDemandaRequestDTO dto) {
-        CategoriaDemanda cat = categoriaRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada com o ID: " + id));
-
-        if (categoriaRepository.existsByNomeIgnoreCaseAndIdNot(dto.nome().trim(), id)) {
-            throw new BusinessException("Já existe outra categoria com o nome '" + dto.nome().trim() + "'.");
-        }
-
-        cat.setNome(dto.nome().trim());
-        cat.setDescricao(dto.descricao());
-        if (dto.ordemExibicao() != null) cat.setOrdemExibicao(dto.ordemExibicao());
-        if (dto.ativo() != null) cat.setAtivo(dto.ativo());
-
-        return toCategoriaDTO(categoriaRepository.save(cat));
-    }
-
+    /*
+     CRIAR UMA NOVA SUBCATEGORIA
+    */
     @Transactional
     public SubcategoriaResponseDTO criarSubcategoria(SubcategoriaRequestDTO dto) {
         CategoriaDemanda categoria = categoriaRepository.findById(dto.categoriaId())
-                .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada com o ID: " + dto.categoriaId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada com o ID: " +
+                        dto.categoriaId())
+                );
 
         if (subcategoriaRepository.existsByCategoriaIdAndNomeIgnoreCase(dto.categoriaId(), dto.nome().trim())) {
-            throw new BusinessException("Já existe uma subcategoria cadastrada com o nome '" + dto.nome().trim() + "' nesta categoria.");
+            throw new BusinessException("Já existe uma subcategoria cadastrada com o nome '" + dto.nome().trim() +
+                    "' nesta categoria."
+            );
         }
         Subcategoria sub = Subcategoria.builder()
                 .categoria(categoria)
@@ -139,29 +183,10 @@ public class CatalogoManutencaoService {
                 .build();
         return toSubcategoriaDTO(subcategoriaRepository.save(sub));
     }
-    @Transactional
-    public SubcategoriaResponseDTO atualizarSubcategoria(Integer id, SubcategoriaRequestDTO dto) {
-        Subcategoria sub = subcategoriaRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Subcategoria não encontrada com o ID: " + id));
-        if (subcategoriaRepository.existsByCategoriaIdAndNomeIgnoreCaseAndIdNot(sub.getCategoria().getId(), dto.nome().trim(), id)) {
-            throw new BusinessException("Já existe outra subcategoria nesta categoria com o nome '" + dto.nome().trim() + "'.");
-        }
-        sub.setNome(dto.nome().trim());
-        sub.setDescricao(dto.descricao());
-        if (dto.ordemExibicao() != null) sub.setOrdemExibicao(dto.ordemExibicao());
-        if (dto.ativo() != null) sub.setAtivo(dto.ativo());
-        if (dto.prazoEstimadoDias() != null) sub.setPrazoEstimadoDias(dto.prazoEstimadoDias());
-        if (dto.requerTombamento() != null) sub.setRequerTombamento(dto.requerTombamento());
-        return toSubcategoriaDTO(subcategoriaRepository.save(sub));
-    }
-    @Transactional
-    public void alterarStatusSubcategoria(Integer id, boolean ativo) {
-        Subcategoria sub = subcategoriaRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Subcategoria não encontrada com o ID: " + id));
-        sub.setAtivo(ativo);
-        subcategoriaRepository.save(sub);
-    }
 
+    /*
+    CRIA UM NOVO TIPO DE SERVIÇO
+    */
     @Transactional
     public TipoServicoResponseDTO criarTipoServico(TipoServicoRequestDTO dto) {
         Subcategoria subcategoria = subcategoriaRepository.findById(dto.subcategoriaId())
@@ -189,6 +214,81 @@ public class CatalogoManutencaoService {
         return toTipoDTO(tipoServicoRepository.save(tipo));
     }
 
+    // ==============================
+    //              UPDATE
+    // ==============================
+
+    /*
+    ATUALIZAR UMA CATEGORIA
+    */
+    @Transactional
+    public CategoriaDemandaResponseDTO atualizarCategoria(Integer id, CategoriaDemandaRequestDTO dto) {
+        CategoriaDemanda cat = categoriaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada com o ID: " + id));
+
+        if (categoriaRepository.existsByNomeIgnoreCaseAndIdNot(dto.nome().trim(), id)) {
+            throw new BusinessException("Já existe outra categoria com o nome '" + dto.nome().trim() + "'.");
+        }
+
+        cat.setNome(dto.nome().trim());
+        cat.setDescricao(dto.descricao());
+
+        if (dto.ordemExibicao() != null) cat.setOrdemExibicao(dto.ordemExibicao());
+
+//        if (dto.ativo() != null) cat.setAtivo(dto.ativo());
+
+        // Se houve alteração no status ativo através do formulário de edição, dispara a cascata
+        if (dto.ativo() != null && dto.ativo() != cat.isAtivo()) {
+            alterarStatusCategoria(id, dto.ativo());
+        } else {
+            categoriaRepository.save(cat);
+        }
+
+        return toCategoriaDTO(cat);
+//        return toCategoriaDTO(categoriaRepository.save(cat));
+    }
+
+    /*
+    ATUALIZAR UMA SUBCATEGORIA
+    */
+    @Transactional
+    public SubcategoriaResponseDTO atualizarSubcategoria(Integer id, SubcategoriaRequestDTO dto) {
+        Subcategoria sub = subcategoriaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Subcategoria não encontrada com o ID: " + id));
+
+        CategoriaDemanda categoriaPai = sub.getCategoria();
+
+        if (dto.categoriaId() != null && !dto.categoriaId().equals(categoriaPai.getId())) {
+            categoriaPai = categoriaRepository.findById(dto.categoriaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada com o ID: " +
+                            dto.categoriaId())
+                    );
+
+            sub.setCategoria(categoriaPai);
+        }
+
+        if (subcategoriaRepository.existsByCategoriaIdAndNomeIgnoreCaseAndIdNot(
+                categoriaPai.getId(), dto.nome().trim(), id)
+        ) {
+            throw new BusinessException("Já existe outra subcategoria nesta categoria com o nome '" +
+                    dto.nome().trim() + "'."
+            );
+        }
+
+        sub.setNome(dto.nome().trim());
+        sub.setDescricao(dto.descricao());
+
+        if (dto.ordemExibicao() != null) sub.setOrdemExibicao(dto.ordemExibicao());
+        if (dto.ativo() != null) sub.setAtivo(dto.ativo());
+        if (dto.prazoEstimadoDias() != null) sub.setPrazoEstimadoDias(dto.prazoEstimadoDias());
+        if (dto.requerTombamento() != null) sub.setRequerTombamento(dto.requerTombamento());
+
+        return toSubcategoriaDTO(subcategoriaRepository.save(sub));
+    }
+
+    /*
+    ATUALIZAR UM TIPO DE SERVIÇO
+    */
     @Transactional
     public TipoServicoResponseDTO atualizarTipoServico(Integer id, TipoServicoRequestDTO dto) {
         TipoServico tipo = tipoServicoRepository.findById(id)
@@ -216,12 +316,119 @@ public class CatalogoManutencaoService {
         return toTipoDTO(tipoServicoRepository.save(tipo));
     }
 
+    // =================================================
+    //              UPDATE ADMINISTRATIVOS
+    // =================================================
+
+    /*
+    ALTERAR O STATUS (ATIVO/INATIVO) DE UMA SUBCATEGORIA
+    */
+    @Transactional
+    public void alterarStatusSubcategoria(Integer id, boolean ativo) {
+        Subcategoria sub = subcategoriaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Subcategoria não encontrada com o ID: " + id));
+
+        if (sub.isAtivo() == ativo) {
+            return;
+        }
+
+        sub.setAtivo(ativo);
+        sub.setInativadoPorCascata(false); // Ação explícita do administrador limpa flag de cascata
+
+        subcategoriaRepository.save(sub);
+
+        if (!ativo) {
+            // REGRA 4.3: Desabilitar tipos ativos vinculados
+            List<TipoServico> tiposAtivos = tipoServicoRepository.findBySubcategoriaIdAndAtivoTrue(id);
+            for (TipoServico tipo : tiposAtivos) {
+                tipo.setAtivo(false);
+                tipo.setInativadoPorCascata(true);
+                tipoServicoRepository.save(tipo);
+            }
+        } else {
+            // REGRA 4.4: Reabilitar apenas tipos inativados por cascata
+            List<TipoServico> tiposParaRestaurar =
+                    tipoServicoRepository.findBySubcategoriaIdAndInativadoPorCascataTrue(id);
+            for (TipoServico tipo : tiposParaRestaurar) {
+                tipo.setAtivo(true);
+                tipo.setInativadoPorCascata(false);
+                tipoServicoRepository.save(tipo);
+            }
+        }
+    }
+
+    /*
+    ALTERAR O STATUS (ATIVO/INATIVO) DE UM TIPO DE SERVIÇO
+    */
     @Transactional
     public void alterarStatusTipoServico(Integer id, boolean ativo) {
         TipoServico tipo = tipoServicoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tipo de serviço não encontrado com o ID: " + id));
+
+        if (ativo) {
+            if (!tipo.getSubcategoria().isAtivo()) {
+                throw new BusinessException("Não é possível habilitar o tipo de serviço pois a subcategoria '"
+                        + tipo.getSubcategoria().getNome() + "' está desabilitada.");
+            }
+            if (!tipo.getCategoria().isAtivo()) {
+                throw new BusinessException("Não é possível habilitar o tipo de serviço pois a categoria raiz '"
+                        + tipo.getCategoria().getNome() + "' está desabilitada.");
+            }
+        }
+
         tipo.setAtivo(ativo);
+        tipo.setInativadoPorCascata(false); // Ação manual explícit
+
         tipoServicoRepository.save(tipo);
+    }
+
+    // Alternar status de categoria com propagação transacional em cascata
+    @Transactional
+    public void alterarStatusCategoria(Integer categoriaId, boolean ativo) {
+        CategoriaDemanda categoria = categoriaRepository.findById(categoriaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada com o ID: " + categoriaId));
+        if (categoria.isAtivo() == ativo) {
+            return;
+        }
+        categoria.setAtivo(ativo);
+        categoriaRepository.save(categoria);
+        if (!ativo) {
+            // REGRA: DESABILITAR CATEGORIA
+            // 1. Localiza apenas as subcategorias que estão ativas imediatamente antes da operação
+            List<Subcategoria> subcategoriasAtivas = subcategoriaRepository.findByCategoriaIdAndAtivoTrue(categoriaId);
+            for (Subcategoria sub : subcategoriasAtivas) {
+                sub.setAtivo(false);
+                sub.setInativadoPorCascata(true); // Marca que foi inativada por cascata
+                subcategoriaRepository.save(sub);
+                // Propaga cascata para os tipos de serviço ativos desta subcategoria
+                List<TipoServico> tiposAtivos = tipoServicoRepository.findBySubcategoriaIdAndAtivoTrue(sub.getId());
+                for (TipoServico tipo : tiposAtivos) {
+                    tipo.setAtivo(false);
+                    tipo.setInativadoPorCascata(true);
+                    tipoServicoRepository.save(tipo);
+                }
+            }
+            // Subcategorias que já estavam com ativo == false permanecem com inativadoPorCascata == false
+        } else {
+            // REGRA 4.2: HABILITAR CATEGORIA
+            // 1. Restaura SOMENTE as subcategorias que foram inativadas por cascata
+            List<Subcategoria> subcategoriasParaRestaurar =
+                    subcategoriaRepository.findByCategoriaIdAndInativadoPorCascataTrue(categoriaId);
+            for (Subcategoria sub : subcategoriasParaRestaurar) {
+                sub.setAtivo(true);
+                sub.setInativadoPorCascata(false);
+                subcategoriaRepository.save(sub);
+                // Restaura os tipos de serviço que também foram inativados por cascata
+                List<TipoServico> tiposParaRestaurar =
+                        tipoServicoRepository.findBySubcategoriaIdAndInativadoPorCascataTrue(sub.getId());
+                for (TipoServico tipo : tiposParaRestaurar) {
+                    tipo.setAtivo(true);
+                    tipo.setInativadoPorCascata(false);
+                    tipoServicoRepository.save(tipo);
+                }
+            }
+            // Subcategorias que estavam desabilitadas manualmente (inativadoPorCascata == false) permanecem desabilitadas!
+        }
     }
 
     private CategoriaDemandaResponseDTO toCategoriaDTO(CategoriaDemanda cat) {
@@ -265,4 +472,5 @@ public class CatalogoManutencaoService {
                 sub.isRequerTombamento()
         );
     }
+
 }

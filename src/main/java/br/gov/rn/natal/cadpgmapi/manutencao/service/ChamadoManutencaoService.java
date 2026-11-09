@@ -218,6 +218,116 @@ public class ChamadoManutencaoService {
         return chamadoRepository.findAll(spec, pageable).map(this::toResumoDTO);
     }
 
+
+    @Transactional
+    @Auditable(action = AuditAction.UPDATE, entity = "Chamado de Manutenção")
+    public ChamadoDetalheResponseDTO atualizarDadosAdministrativos(Integer id, AtualizarDadosAdministrativosRequestDTO dto) {
+        Usuario ator = getUsuarioAutenticado();
+
+        ChamadoManutencao chamado = chamadoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Chamado não encontrado: " + id));
+
+        if (chamado.getEstado().isFinalizado()) {
+            throw new BusinessException("Não é possível alterar dados administrativos de um chamado que já se encontra "
+                    + chamado.getEstado().getRotulo() + ".");
+        }
+
+        List<String> alteracoes = new ArrayList<>();
+
+        // 1. Atualização de Prioridade
+        if (dto.prioridade() != null && dto.prioridade() != chamado.getPrioridade()) {
+            alteracoes.add(String.format("Prioridade alterada de '%s' para '%s'",
+                    chamado.getPrioridade().getRotulo(), dto.prioridade().getRotulo()));
+            chamado.setPrioridade(dto.prioridade());
+        }
+
+        // 2. Validação e atualização do Prazo de Conclusão (Não retroativo à abertura)
+        if (dto.prazoConclusao() != null && !dto.prazoConclusao().equals(chamado.getPrazoConclusao())) {
+            LocalDate dataCriacao = chamado.getCriadoEm().toLocalDate();
+
+            if (dto.prazoConclusao().isBefore(dataCriacao)) {
+                throw new BusinessException(String.format(
+                        "O prazo de conclusão informado (%s) não pode ser anterior à data de abertura do chamado (%s).",
+                        dto.prazoConclusao(), dataCriacao
+                ));
+            }
+            alteracoes.add(String.format("Prazo de conclusão alterado para %s", dto.prazoConclusao()));
+            chamado.setPrazoConclusao(dto.prazoConclusao());
+        }
+
+        // 3. Validação e atualização de Tombamento (Móvel Relacionado)
+        if (dto.movelRelacionado() != null) {
+            String tomboLimpo = dto.movelRelacionado().trim();
+
+            if (chamado.getSubcategoria().isRequerTombamento() && tomboLimpo.isBlank()) {
+                throw new BusinessException(String.format(
+                        "Para a subcategoria '%s', é obrigatório informar o número do tombo/patrimônio do móvel.",
+                        chamado.getSubcategoria().getNome()
+                ));
+            }
+
+            String novoTombo = tomboLimpo.isBlank() ? null : tomboLimpo;
+
+            if ((novoTombo != null && !novoTombo.equals(chamado.getMovelRelacionado())) ||
+                    (novoTombo == null && chamado.getMovelRelacionado() != null)) {
+
+                alteracoes.add(String.format("Móvel/Tombo atualizado para '%s'", novoTombo != null
+                        ? novoTombo
+                        : "Não informado")
+                );
+
+                chamado.setMovelRelacionado(novoTombo);
+            }
+        }
+
+        // 4. Atualização da Requisição e-Cidade
+        if (dto.numeroRequisicaoEcidade() != null) {
+            String reqLimpa = dto.numeroRequisicaoEcidade().trim();
+            String novaReq = reqLimpa.isBlank() ? null : reqLimpa;
+
+            if ((novaReq != null && !novaReq.equals(chamado.getNumeroRequisicaoEcidade())) ||
+                    (novaReq == null && chamado.getNumeroRequisicaoEcidade() != null)) {
+                alteracoes.add(String.format("Nº da requisição e-Cidade alterado para '%s'", novaReq != null
+                        ? novaReq
+                        : "Não informado")
+                );
+
+                chamado.setNumeroRequisicaoEcidade(novaReq);
+            }
+        }
+
+        // Se nenhum campo mudou, retorna o detalhe sem escrita redundante
+        if (alteracoes.isEmpty()) {
+            return buscarDetalhes(id);
+        }
+
+        chamadoRepository.save(chamado);
+
+        String resumoAlteracoes = String.join("; ", alteracoes);
+
+        // Registro na Timeline do Chamado (Histórico)
+        HistoricoChamado historico = HistoricoChamado.builder()
+                .chamado(chamado)
+                .evento(EventoHistoricoChamado.ATRIBUICAO)
+                .estadoAnterior(chamado.getEstado())
+                .estadoNovo(chamado.getEstado())
+                .ator(ator)
+                .observacao("Atualização administrativa: " + resumoAlteracoes)
+                .build();
+        historicoRepository.save(historico);
+
+        // Registro de Auditoria Geral PGM
+        AuditContextHolder.setFriendlyId(chamado.getProtocolo());
+        AuditContextHolder.setLogDetalhes(String.format(
+                "ATUALIZAÇÃO ADMINISTRATIVA: Chamado %s atualizado por %s. Detalhes: %s.",
+                chamado.getProtocolo(),
+                ator.getName(),
+                resumoAlteracoes
+        ));
+
+        return buscarDetalhes(id);
+    }
+
     @Transactional(readOnly = true)
     public ChamadoDetalheResponseDTO buscarDetalhes(Integer id) {
         ChamadoManutencao chamado = chamadoRepository.findDetailById(id)
@@ -324,7 +434,6 @@ public class ChamadoManutencaoService {
     @Transactional
     @Auditable(action = AuditAction.UPDATE, entity = "Chamado de Manutenção")
     public ChamadoDetalheResponseDTO iniciarAtendimento(Integer id, IniciarAtendimentoRequestDTO dto) {
-//        validarPermissao("MANUTENCAO_ATENDER");
         Usuario ator = getUsuarioAutenticado();
 
         ChamadoManutencao chamado = chamadoRepository.findById(id)
@@ -369,8 +478,6 @@ public class ChamadoManutencaoService {
     @Transactional
     @Auditable(action = AuditAction.UPDATE, entity = "Chamado de Manutenção")
     public ChamadoDetalheResponseDTO concluirAtendimento(Integer id, ConcluirChamadoRequestDTO dto) {
-//        validarPermissao("MANUTENCAO_ATENDER");
-
         Usuario ator = getUsuarioAutenticado();
 
         ChamadoManutencao chamado = chamadoRepository.findById(id)
@@ -536,11 +643,18 @@ public class ChamadoManutencaoService {
                 c.getLocalDescricao(),
                 c.getCategoria().getId(),
                 c.getCategoria().getNome(),
+                c.getSubcategoria().getId(),
+                c.getSubcategoria().getNome(),
                 c.getTipoServico().getId(),
                 c.getTipoServico().getNome(),
                 c.getDescricao(),
                 c.getEstado(),
                 c.getEstado().getRotulo(),
+                c.getPrioridade(),
+                c.getPrioridade().getRotulo(),
+                c.getPrazoConclusao(),
+                c.getMovelRelacionado(),
+                c.getNumeroRequisicaoEcidade(),
                 c.getSolicitante().getId(),
                 c.getSolicitante().getName(),
                 c.getResponsavel() != null ? c.getResponsavel().getId() : null,

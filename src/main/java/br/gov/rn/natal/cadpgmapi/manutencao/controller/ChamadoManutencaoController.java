@@ -51,7 +51,8 @@ public class ChamadoManutencaoController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('almoxarifado') and hasAuthority('tramitador')")
-    @Operation(summary = "Consulta a fila geral de chamados", description = "Acesso restrito à equipe autorizada do almoxarifado e administradores.")
+    @Operation(summary = "Consulta a fila geral de chamados",
+            description = "Acesso restrito à equipe autorizada do almoxarifado e administradores.")
     public ResponseEntity<Page<ChamadoResumoResponseDTO>> listarFilaGeral(
             @RequestParam(required = false) EstadoChamado estado,
             @RequestParam(required = false) Integer categoriaId,
@@ -127,5 +128,19 @@ public class ChamadoManutencaoController {
             @Valid @RequestBody CancelarChamadoRequestDTO dto
     ) {
         return ResponseEntity.ok(chamadoService.cancelarChamado(id, dto));
+    }
+
+    // 7. Atualização de Dados Administrativos: Requer roles 'almoxarifado' E 'tramitador'
+    @PatchMapping("/{id}/dados-administrativos")
+    @PreAuthorize("hasAuthority('almoxarifado') and hasAuthority('tramitador')")
+    @Operation(summary = "Atualiza dados administrativos do chamado (prioridade, prazo de conclusão, tombo e e-Cidade)",
+            description = "Operação restrita à equipe do almoxarifado/tramitadores para manutenção de metadados " +
+                    "operacionais e integrações sem alterar o estado do chamado."
+    )
+    public ResponseEntity<ChamadoDetalheResponseDTO> atualizarDadosAdministrativos(
+            @PathVariable Integer id,
+            @Valid @RequestBody AtualizarDadosAdministrativosRequestDTO dto
+    ) {
+        return ResponseEntity.ok(chamadoService.atualizarDadosAdministrativos(id, dto));
     }
 }
