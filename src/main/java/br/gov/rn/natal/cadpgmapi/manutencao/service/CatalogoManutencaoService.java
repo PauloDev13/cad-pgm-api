@@ -348,7 +348,7 @@ public class CatalogoManutencaoService {
             // Subcategorias que já estavam com ativo == false permanecem com inativadoPorCascata == false
         } else {
             // HABILITAR CATEGORIA
-            // 1. Restaura SOMENTE as subcategorias que foram inativadas por cascata
+            // 1. Restaura SOMENTE as subcategorias que estão inativadas por cascata
             List<Subcategoria> subcategoriasParaRestaurar =
                     subcategoriaRepository.findByCategoriaIdAndInativadoPorCascataTrue(categoriaId);
             for (Subcategoria sub : subcategoriasParaRestaurar) {
@@ -378,8 +378,9 @@ public class CatalogoManutencaoService {
 
         if (ativo) {
             if (!sub.getCategoria().isAtivo()) {
-                throw new BusinessException("Não é possível habilitar a Subcategoria pois a categoria '"
-                        + sub.getCategoria().getNome() + "' está desabilitada.");
+                throw new BusinessException("Não é possível habilitar a Subcategoria <strong>'"
+                        + sub.getNome().toUpperCase() + "'</strong> pois o Grupo <strong>'"
+                        + sub.getCategoria().getNome().toUpperCase() + "</strong>' ao qual ela pertence está desabilitado.");
             }
         }
 
@@ -422,12 +423,14 @@ public class CatalogoManutencaoService {
 
         if (ativo) {
             if (!tipo.getSubcategoria().isAtivo()) {
-                throw new BusinessException("Não é possível habilitar o tipo de serviço pois a subcategoria '"
-                        + tipo.getSubcategoria().getNome() + "' está desabilitada.");
+                throw new BusinessException("Não é possível habilitar a Subcategoria <strong>'"
+                        + tipo.getNome().toUpperCase() + "'</strong> pois a Categoria <strong>'"
+                        + tipo.getSubcategoria().getNome().toUpperCase() + "'</strong> a qual ela pertence está desabilitada.");
             }
             if (!tipo.getCategoria().isAtivo()) {
-                throw new BusinessException("Não é possível habilitar o tipo de serviço pois a categoria raiz '"
-                        + tipo.getCategoria().getNome() + "' está desabilitada.");
+                throw new BusinessException("Não é possível habilitar a Subcategoria <strong>'"
+                        + tipo.getNome().toUpperCase() + "'</strong> pois a Categoria <strong>'"
+                        + tipo.getSubcategoria().getNome().toUpperCase() + "'</strong> a qual ela pertence está desabilitada.");
             }
         }
 
