@@ -27,7 +27,6 @@ public class TipoServico {
     @JoinColumn(name = "categoria_id", nullable = false)
     private CategoriaDemanda categoria;
 
-    // Em TipoServico.java:
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "subcategoria_id", nullable = false)
     private Subcategoria subcategoria;

@@ -159,17 +159,19 @@ public class CatalogoManutencaoService {
                         dto.categoriaId())
                 );
 
+            // Bloqueia a criação de uma 'Categoria" vinculada a um 'Grupo de demanda' Inativo
             if (!categoria.isAtivo()) {
-                throw new BusinessException("Não foi possível cria a Subcategoria '<strong>" + dto.nome().toUpperCase() +
-                        "</strong>'.\n Ative a Categoria '<strong>" + categoria.getNome().toUpperCase() +
+                throw new BusinessException("Não foi possível criar a Categoria '<strong>" + dto.nome().toUpperCase() +
+                        "</strong>'.\n Ative o Grupo '<strong>" + categoria.getNome().toUpperCase() +
                         "</strong>' e tente novamente.");
             }
 
         if (subcategoriaRepository.existsByCategoriaIdAndNomeIgnoreCase(dto.categoriaId(), dto.nome().trim())) {
-            throw new BusinessException("Já existe uma subcategoria cadastrada com o nome '" + dto.nome().trim() +
+            throw new BusinessException("Já existe uma Categoria cadastrada com o nome '" + dto.nome().trim() +
                     "' nesta categoria."
             );
         }
+
         Subcategoria sub = Subcategoria.builder()
                 .categoria(categoria)
                 .nome(dto.nome().trim())
@@ -192,12 +194,19 @@ public class CatalogoManutencaoService {
                         "Subcategoria não encontrada com o ID: " + dto.subcategoriaId())
                 );
 
+        // Bloqueia a criação de uma 'Subcategoria" vinculada a uma 'Categoria' Inativa
+        if (!subcategoria.isAtivo()) {
+            throw new BusinessException("Não foi possível criar a Subcategoria '<strong>" + dto.nome().toUpperCase() +
+                    "</strong>'.\n Ative a Categoria '<strong>" + subcategoria.getNome().toUpperCase() +
+                    "</strong>' e tente novamente.");
+        }
+
         if (tipoServicoRepository.existsBySubcategoriaIdAndNomeIgnoreCase(
                 dto.subcategoriaId(),
                 dto.nome().trim()
         )) {
             throw new BusinessException(
-                    "Já existe um tipo de serviço com o nome '" + dto.nome().trim() + "' nesta subcategoria.");
+                    "Já existe uma Subcategoria com o nome '" + dto.nome().trim() + "' neste grupo de demanda.");
         }
 
         TipoServico tipo = TipoServico.builder()
@@ -249,7 +258,14 @@ public class CatalogoManutencaoService {
     @Transactional
     public SubcategoriaResponseDTO atualizarSubcategoria(Integer id, SubcategoriaRequestDTO dto) {
         Subcategoria sub = subcategoriaRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Subcategoria não encontrada com o ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada com o ID: " + id));
+
+        // Bloqueia a edição de uma 'Categoria' quando o Grupo pai está Inativo
+        if (!sub.getCategoria().isAtivo()) {
+            throw new BusinessException("Não é possível atualizar a Categoria <strong>'"
+                    + sub.getNome().toUpperCase() + "'</strong> pois o Grupo <strong>'"
+                    + sub.getCategoria().getNome().toUpperCase() + "</strong>' ao qual ela pertence está desabilitado.");
+        }
 
         CategoriaDemanda categoriaPai = sub.getCategoria();
 
@@ -288,6 +304,13 @@ public class CatalogoManutencaoService {
     public TipoServicoResponseDTO atualizarTipoServico(Integer id, TipoServicoRequestDTO dto) {
         TipoServico tipo = tipoServicoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tipo de serviço não encontrado com o ID: " + id));
+
+        // Bloqueia a edição de uma 'Subcategoria' quando a categoria pai está Inativa
+        if (!tipo.getSubcategoria().isAtivo()) {
+            throw new BusinessException("Não é possível atualizar a Subcategoria <strong>'"
+                    + tipo.getNome().toUpperCase() + "'</strong> pois a Categoria <strong>'"
+                    + tipo.getSubcategoria().getNome().toUpperCase() + "'</strong> a qual ela pertence está desabilitada.");
+        }
 
         Subcategoria subcategoria = subcategoriaRepository.findById(dto.subcategoriaId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -374,11 +397,11 @@ public class CatalogoManutencaoService {
     @Transactional
     public void alterarStatusSubcategoria(Integer id, boolean ativo) {
         Subcategoria sub = subcategoriaRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Subcategoria não encontrada com o ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Categoria não encontrada com o ID: " + id));
 
         if (ativo) {
             if (!sub.getCategoria().isAtivo()) {
-                throw new BusinessException("Não é possível habilitar a Subcategoria <strong>'"
+                throw new BusinessException("Não é possível habilitar a Categoria <strong>'"
                         + sub.getNome().toUpperCase() + "'</strong> pois o Grupo <strong>'"
                         + sub.getCategoria().getNome().toUpperCase() + "</strong>' ao qual ela pertence está desabilitado.");
             }
