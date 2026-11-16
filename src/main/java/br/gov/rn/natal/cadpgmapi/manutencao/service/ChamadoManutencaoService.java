@@ -163,7 +163,9 @@ public class ChamadoManutencaoService {
                 .observacao(String.format(
                         "Abertura do chamado pelo solicitante. Prioridade: %s. Prazo estimado: %s.",
                         chamado.getPrioridade().getRotulo(),
-                        chamado.getPrazoConclusao() != null ? chamado.getPrazoConclusao().toString() : "Não informado"
+                        chamado.getPrazoConclusao() != null ? chamado.getPrazoConclusao().format(
+                                DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                        ) : "Não informado"
                 ))
                 .build();
         historicoRepository.save(historico);
