@@ -491,6 +491,13 @@ public class ChamadoManutencaoService {
 
         chamado.setEstado(EstadoChamado.CONCLUIDO);
         chamado.setConcluidoEm(LocalDateTime.now());
+
+        // Atualização opcional do número da requisição e-Cidade no encerramento
+        if (dto != null && dto.numeroRequisicaoEcidade() != null) {
+            String reqLimpa = dto.numeroRequisicaoEcidade().trim();
+            chamado.setNumeroRequisicaoEcidade(reqLimpa.isBlank() ? null : reqLimpa);
+        }
+
         chamadoRepository.save(chamado);
 
         HistoricoChamado hist = HistoricoChamado.builder()
@@ -509,12 +516,18 @@ public class ChamadoManutencaoService {
         String laudoConclusao = (dto != null && dto.observacao() != null && !dto.observacao().isBlank())
                 ? dto.observacao().trim()
                 : "Sem laudo informado";
+
+        String infoEcidade = (chamado.getNumeroRequisicaoEcidade() != null)
+                ? String.format(" | Req. e-Cidade: %s", chamado.getNumeroRequisicaoEcidade())
+                : "";
+
         AuditContextHolder.setFriendlyId(chamado.getProtocolo());
         AuditContextHolder.setLogDetalhes(String.format(
                 "CONCLUSÃO: Serviços concluídos no chamado %s pelo operador '%s'. Laudo/Observação: %s.",
                 chamado.getProtocolo(),
                 ator.getName(),
-                laudoConclusao
+                laudoConclusao,
+                infoEcidade
         ));
 
         return buscarDetalhes(id);

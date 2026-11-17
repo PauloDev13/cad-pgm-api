@@ -113,7 +113,7 @@ public class ChamadoManutencaoController {
             description = "Transiciona de EM_ATENDIMENTO para CONCLUIDO.")
     public ResponseEntity<ChamadoDetalheResponseDTO> concluirAtendimento(
             @PathVariable Integer id,
-            @RequestBody(required = false) ConcluirChamadoRequestDTO dto
+            @Valid @RequestBody(required = false) ConcluirChamadoRequestDTO dto
     ) {
         return ResponseEntity.ok(chamadoService.concluirAtendimento(id, dto));
     }
