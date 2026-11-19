@@ -174,14 +174,20 @@ public class ChamadoManutencaoService {
         String localExibicao = (sala != null) ? sala.getNumeroIdentificacao() : dto.localDescricao().trim();
         AuditContextHolder.setFriendlyId(chamado.getProtocolo());
         AuditContextHolder.setLogDetalhes(String.format(
-                "ABERTURA: Chamado aberto com protocolo %s. Demanda: '%s' - '%s'. Local: %s (%s). Solicitante: %s.",
+                "ABERTURA: Chamado aberto com protocolo %s. " +
+                        "Demanda: '%s' - '%s'. " +
+                        "Local: %s. " +
+                        "Tipo de Serviço: %s. " +
+                        "Prioridade: %s. " +
+                        "Andar: %s. " +
+                        "Solicitante: %s.",
                 chamado.getProtocolo(),
                 categoria.getNome(),
                 subcategoria.getNome(),
+                localExibicao,
                 tipoServico.getNome(),
                 chamado.getPrioridade().getRotulo(),
                 chamado.getAndar().getRotulo(),
-                localExibicao,
                 solicitante.getName()
         ));
 

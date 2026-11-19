@@ -28,11 +28,11 @@ public class AuditService {
     }
 
     // ==========================================
-    // MÉTODO NOVO: SALVAMENTO MANUAL (Para Falhas e Exceções)
+    // METHOD NOVO: SALVAMENTO MANUAL (Para Falhas e Exceções)
     // ==========================================
 
     // O REQUIRES_NEW garante que este log será salvo no banco MESMO QUE
-    // o método original exploda e dê um "Rollback" no banco de dados.
+    // o method original exploda e dê um "Rollback" no banco de dados.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveLog(
             AuditAction typeAction,

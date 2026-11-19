@@ -322,7 +322,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
                 .collect(Collectors.joining());
     }
 
-    // Método utilitário para pegar o login de quem fez a requisição
+    // Method utilitário para pegar o login de quem fez a requisição
     private String getLoggedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -333,8 +333,7 @@ public class UsuarioService extends BaseGenericService<Usuario, UsuarioRequestDT
         return null;
     }
 
-    // Método utilitário que impede outro usuário
-    // de alterar os dados do Administrador Geral
+    // Method utilitário que impede outro usuário de alterar os dados do Administrador Geral
     private void onlyAdminMakeChange(Usuario existingUsuario) {
         String loggedUser = getLoggedUser();
         String targetUser = existingUsuario.getUsername().trim();

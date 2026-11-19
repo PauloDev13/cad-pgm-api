@@ -47,6 +47,7 @@ public class AuthService {
 
             // 🌟 3. Preparamos o registro de auditoria
             AuditContextHolder.setEntityName("Autenticação");
+            assert authenticatedUser != null;
             AuditContextHolder.setFriendlyId(authenticatedUser.getUsername()); // ou getLogin()
             AuditContextHolder.setLogDetalhes("Login realizado com sucesso.");
 
@@ -91,10 +92,10 @@ public class AuthService {
     }
 
     // MÉTODOS PRIVADOS
-    // 🌟 Método auxiliar para gravar a falha direto no banco, sem depender da anotação
+    // 🌟 Method auxiliar para gravar a falha direto no banco, sem depender da anotação
     private void registerLoginFailure(String usernameTentado, String motivo) {
         // Como o usuário não logou, o nome dele será o que ele digitou no campo de login.
-        // Adapte o método abaixo para a forma como o seu AuditoriaService salva os dados.
+        // Adapte o method abaixo para a forma como o seu AuditoriaService salva os dados.
         auditService.saveLog(
                 AuditAction.LOGIN_FAILED,
                 "Autenticação",

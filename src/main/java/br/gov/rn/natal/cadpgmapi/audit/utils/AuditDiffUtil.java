@@ -46,7 +46,7 @@ public class AuditDiffUtil {
                     String newStr = formatValue(newValue);
 
                     diffBuilder.append("[")
-                            .append(field.getName()) // Ex: "emailInstitucional"
+                            .append(field.getName()) // Ex: "email Institucional"
                             .append(": de '").append(oldStr)
                             .append("' para '").append(newStr)
                             .append("'] ");
@@ -61,7 +61,7 @@ public class AuditDiffUtil {
 
     /**
      * Tenta extrair o atributo anotado com @AuditFriendlyId.
-     * Se não encontrar, faz o fallback para o método id() padrão.
+     * Se não encontrar, faz o fallback para o method id() padrão.
      */
     public static String extractFriendlyId(Object result) {
         try {
