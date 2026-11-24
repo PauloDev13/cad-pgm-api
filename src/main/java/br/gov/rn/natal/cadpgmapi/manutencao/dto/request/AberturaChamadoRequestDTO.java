@@ -50,9 +50,5 @@ public record AberturaChamadoRequestDTO(
 
         @Schema(description = "Número do tombo cadastrado para o equipamento alvo da demanda", example = "15131104")
         @Size(max = 100, message = "O número do tombo/patrimônio deve ter no máximo 100 caracteres")
-        String movelRelacionado,
-
-        @Schema(description = "Número do protocolo do pedido de material feito no eCidade", example = "002359")
-        @Size(max = 50, message = "O número da requisição no e-Cidade deve ter no máximo 50 caracteres")
-        String numeroRequisicaoEcidade
+        String movelRelacionado
 ) {}

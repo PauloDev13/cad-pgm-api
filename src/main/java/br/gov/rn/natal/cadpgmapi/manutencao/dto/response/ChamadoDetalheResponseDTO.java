@@ -4,6 +4,7 @@ import br.gov.rn.natal.cadpgmapi.audit.annotations.AuditFriendlyId;
 import br.gov.rn.natal.cadpgmapi.manutencao.domain.enums.AndarCodigo;
 import br.gov.rn.natal.cadpgmapi.manutencao.domain.enums.EstadoChamado;
 import br.gov.rn.natal.cadpgmapi.manutencao.domain.enums.PrioridadeChamado;
+import br.gov.rn.natal.cadpgmapi.manutencao.domain.enums.TipoExecutorChamado;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -31,11 +32,14 @@ public record ChamadoDetalheResponseDTO(
         String rotuloPrioridade,
         LocalDate prazoConclusao,
         String movelRelacionado,
-        String numeroRequisicaoEcidade,
+        List<RequisicaoEcidadeResponseDTO> requisicoesEcidade,
         Integer solicitanteId,
         String solicitanteNome,
         Integer responsavelId,
         String responsavelNome,
+        TipoExecutorChamado tipoExecutor,
+        String rotuloTipoExecutor,
+        String outroExecutor,
         LocalDateTime criadoEm,
         LocalDateTime atribuidoEm,
         LocalDateTime iniciadoEm,

@@ -41,6 +41,7 @@ public class ChamadoManutencaoService {
     private final SubcategoriaRepository subcategoriaRepository;
     private final TipoServicoRepository tipoServicoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final RequisicaoEcidadeService requisicaoEcidadeService;
 
     @Transactional
     @Auditable(action = AuditAction.INSERT, entity = "Chamado de Manutenção")
@@ -143,10 +144,6 @@ public class ChamadoManutencaoService {
                 .movelRelacionado(dto.movelRelacionado() != null
                         && !dto.movelRelacionado().trim().isBlank()
                         ? dto.movelRelacionado().trim() : null
-                )
-                .numeroRequisicaoEcidade(dto.numeroRequisicaoEcidade() != null
-                        && !dto.numeroRequisicaoEcidade().trim().isBlank()
-                        ? dto.numeroRequisicaoEcidade().trim() : null
                 )
                 .estado(EstadoChamado.ABERTO)
                 .build();
@@ -288,20 +285,10 @@ public class ChamadoManutencaoService {
             }
         }
 
-        // 4. Atualização da Requisição e-Cidade
-        if (dto.numeroRequisicaoEcidade() != null) {
-            String reqLimpa = dto.numeroRequisicaoEcidade().trim();
-            String novaReq = reqLimpa.isBlank() ? null : reqLimpa;
-
-            if ((novaReq != null && !novaReq.equals(chamado.getNumeroRequisicaoEcidade())) ||
-                    (novaReq == null && chamado.getNumeroRequisicaoEcidade() != null)) {
-                alteracoes.add(String.format("Nº da requisição e-Cidade alterado para '%s'", novaReq != null
-                        ? novaReq
-                        : "Não informado")
-                );
-
-                chamado.setNumeroRequisicaoEcidade(novaReq);
-            }
+        // 4. Atualização de Requisições e-Cidade
+        if (dto.numerosRequisicaoEcidade() != null && !dto.numerosRequisicaoEcidade().isEmpty()) {
+            requisicaoEcidadeService.vincularRequisicoes(chamado.getId(), dto.numerosRequisicaoEcidade());
+            alteracoes.add("Requisições e-Cidade vinculadas: " + String.join(", ", dto.numerosRequisicaoEcidade()));
         }
 
         // Se nenhum campo mudou, retorna o detalhe sem escrita redundante
@@ -448,11 +435,26 @@ public class ChamadoManutencaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Chamado não encontrado: " + id));
 
         if (!chamado.getEstado().podeTransicionarPara(EstadoChamado.EM_ATENDIMENTO)) {
-            throw new BusinessException("Transição não permitida: O chamado está " + chamado.getEstado().getRotulo() + " e não pode ser iniciado.");
+            throw new BusinessException("Transição não permitida: O chamado está " + chamado.getEstado().getRotulo() +
+                    " e não pode ser iniciado.");
+        }
+
+        // Validação de Regra de Negócio: Tipo de Executor obrigatório
+        if (dto == null || dto.tipoExecutor() == null) {
+            throw new BusinessException("O tipo de executor é obrigatório ao iniciar o atendimento.");
+        }
+        // Validação de Regra de Negócio: Campo obrigatório se OUTROS
+        if (dto.tipoExecutor() == TipoExecutorChamado.OUTROS && (
+                dto.outroExecutor() == null || dto.outroExecutor().trim().isBlank())
+        ) {
+            throw new BusinessException("Informe quem será o executor da demanda quando a opção selecionada for 'Outros'.");
         }
 
         chamado.setEstado(EstadoChamado.EM_ATENDIMENTO);
         chamado.setIniciadoEm(LocalDateTime.now());
+        chamado.setTipoExecutor(dto.tipoExecutor());
+        chamado.setOutroExecutor(dto.tipoExecutor() == TipoExecutorChamado.OUTROS ? dto.outroExecutor().trim() : null);
+
         chamadoRepository.save(chamado);
 
         HistoricoChamado hist = HistoricoChamado.builder()
@@ -498,10 +500,9 @@ public class ChamadoManutencaoService {
         chamado.setEstado(EstadoChamado.CONCLUIDO);
         chamado.setConcluidoEm(LocalDateTime.now());
 
-        // Atualização opcional do número da requisição e-Cidade no encerramento
-        if (dto != null && dto.numeroRequisicaoEcidade() != null) {
-            String reqLimpa = dto.numeroRequisicaoEcidade().trim();
-            chamado.setNumeroRequisicaoEcidade(reqLimpa.isBlank() ? null : reqLimpa);
+        // Vinculação de requisições e-Cidade no encerramento
+        if (dto != null && dto.numerosRequisicaoEcidade() != null && !dto.numerosRequisicaoEcidade().isEmpty()) {
+            requisicaoEcidadeService.vincularRequisicoes(chamado.getId(), dto.numerosRequisicaoEcidade());
         }
 
         chamadoRepository.save(chamado);
@@ -523,8 +524,9 @@ public class ChamadoManutencaoService {
                 ? dto.observacao().trim()
                 : "Sem laudo informado";
 
-        String infoEcidade = (chamado.getNumeroRequisicaoEcidade() != null)
-                ? String.format(" | Req. e-Cidade: %s", chamado.getNumeroRequisicaoEcidade())
+        List<RequisicaoEcidadeResponseDTO> reqs = requisicaoEcidadeService.listarPorChamado(chamado.getId());
+        String infoEcidade = !reqs.isEmpty()
+                ? " | Reqs. e-Cidade: " + reqs.stream().map(RequisicaoEcidadeResponseDTO::numeroRequisicao).collect(java.util.stream.Collectors.joining(", "))
                 : "";
 
         AuditContextHolder.setFriendlyId(chamado.getProtocolo());
@@ -675,11 +677,16 @@ public class ChamadoManutencaoService {
                 c.getPrioridade().getRotulo(),
                 c.getPrazoConclusao(),
                 c.getMovelRelacionado(),
-                c.getNumeroRequisicaoEcidade(),
+                (c.getRequisicoesEcidade() != null)
+                        ? c.getRequisicoesEcidade().stream().map(requisicaoEcidadeService::toResponseDTO).toList()
+                        : List.of(),
                 c.getSolicitante().getId(),
                 c.getSolicitante().getName(),
                 c.getResponsavel() != null ? c.getResponsavel().getId() : null,
                 c.getResponsavel() != null ? c.getResponsavel().getName() : null,
+                c.getTipoExecutor(),
+                c.getTipoExecutor() != null ? c.getTipoExecutor().getRotulo() : null,
+                c.getOutroExecutor(),
                 c.getCriadoEm(),
                 c.getAtribuidoEm(),
                 c.getIniciadoEm(),

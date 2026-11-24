@@ -24,7 +24,7 @@ public interface ChamadoManutencaoRepository extends JpaRepository<ChamadoManute
     @EntityGraph(attributePaths = {
             "solicitante", "solicitante.servidor",
             "responsavel", "responsavel.servidor",
-            "sala", "categoria", "subcategoria", "tipoServico"})
+            "sala", "categoria", "subcategoria", "tipoServico", "requisicoesEcidade"})
     Optional<ChamadoManutencao> findDetailById(Integer id);
 
     @EntityGraph(attributePaths = {"solicitante", "solicitante.servidor", "responsavel", "responsavel.servidor", "sala", "categoria", "tipoServico"})

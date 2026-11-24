@@ -4,12 +4,15 @@ import br.gov.rn.natal.cadpgmapi.entity.Usuario;
 import br.gov.rn.natal.cadpgmapi.manutencao.domain.enums.AndarCodigo;
 import br.gov.rn.natal.cadpgmapi.manutencao.domain.enums.EstadoChamado;
 import br.gov.rn.natal.cadpgmapi.manutencao.domain.enums.PrioridadeChamado;
+import br.gov.rn.natal.cadpgmapi.manutencao.domain.enums.TipoExecutorChamado;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "chamado_manutencao")
@@ -72,6 +75,13 @@ public class ChamadoManutencao {
     @JoinColumn(name = "responsavel_id")
     private Usuario responsavel;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_executor", length = 30)
+    private TipoExecutorChamado tipoExecutor;
+
+    @Column(name = "outro_executor")
+    private String outroExecutor;
+
     @CreationTimestamp
     @Column(name = "criado_em", nullable = false, updatable = false)
     private LocalDateTime criadoEm;
@@ -97,6 +107,16 @@ public class ChamadoManutencao {
     @Column(name = "movel_relacionado", length = 100)
     private String movelRelacionado;
 
-    @Column(name = "numero_requisicao_ecidade", length = 50)
-    private String numeroRequisicaoEcidade;
+    @OneToMany(mappedBy = "chamado", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<RequisicaoEcidade> requisicoesEcidade = new ArrayList<>();
+
+    public void adicionarRequisicao(RequisicaoEcidade requisicao) {
+        requisicoesEcidade.add(requisicao);
+        requisicao.setChamado(this);
+    }
+    public void removerRequisicao(RequisicaoEcidade requisicao) {
+        requisicoesEcidade.remove(requisicao);
+        requisicao.setChamado(null);
+    }
 }

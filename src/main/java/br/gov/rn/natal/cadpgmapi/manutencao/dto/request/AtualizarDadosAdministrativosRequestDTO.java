@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Schema(description = "Dados para atualização administrativa/operacional do chamado de manutenção")
 public record AtualizarDadosAdministrativosRequestDTO(
@@ -18,9 +19,7 @@ public record AtualizarDadosAdministrativosRequestDTO(
         @Size(max = 50, message = "O número do tombo/patrimônio deve ter no máximo 50 caracteres")
         String movelRelacionado,
 
-        @Schema(description = "Número do protocolo da requisição de compra/material no sistema e-Cidade",
-                example = "002359/2026"
-        )
-        @Size(max = 50, message = "O número da requisição no e-Cidade deve ter no máximo 50 caracteres")
-        String numeroRequisicaoEcidade
+        @Schema(description = "Lista com múltiplos números de requisições de materiais no e-Cidade",
+                example = "[\"002359/2026\", \"002360/2026\"]")
+        List<@Size(max = 50, message = "Cada requisição deve ter no máximo 50 caracteres") String> numerosRequisicaoEcidade
 ) {}

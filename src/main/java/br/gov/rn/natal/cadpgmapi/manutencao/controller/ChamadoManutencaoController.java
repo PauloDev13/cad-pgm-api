@@ -101,7 +101,7 @@ public class ChamadoManutencaoController {
             description = "Transiciona de ATRIBUIDO para EM_ATENDIMENTO.")
     public ResponseEntity<ChamadoDetalheResponseDTO> iniciarAtendimento(
             @PathVariable Integer id,
-            @RequestBody(required = false) IniciarAtendimentoRequestDTO dto
+            @Valid @RequestBody(required = false) IniciarAtendimentoRequestDTO dto
     ) {
         return ResponseEntity.ok(chamadoService.iniciarAtendimento(id, dto));
     }
